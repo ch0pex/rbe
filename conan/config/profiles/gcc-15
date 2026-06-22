@@ -1,0 +1,11 @@
+[settings]
+arch=x86_64
+os=Linux
+compiler=gcc
+compiler.version=15
+compiler.cppstd=26
+compiler.libcxx=libstdc++11
+build_type=Debug
+[conf]
+tools.cmake.cmaketoolchain:generator=Ninja
+tools.build:cflags+=["-Wno-error=implicit-function-declaration", "-Wno-error=int-conversion", "-Wno-error=incompatible-pointer-types", "-std=gnu11"]
