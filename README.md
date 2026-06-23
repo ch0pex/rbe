@@ -40,8 +40,10 @@ struct PacketHeader {
 
 [[=rbe::little, =rbe::packing]]
 struct AddOrder {
-    [[=rbe::length]] std::uint8_t  length;
-    [[=rbe::id]]     std::uint8_t  message_type;
+    [[=rbe::length]] 
+    std::uint8_t  length;
+    [[=rbe::id]] 
+    std::uint8_t  message_type;
     std::uint32_t time_offset;
     std::uint32_t order_id;
     std::uint8_t  side_indicator;
@@ -95,7 +97,7 @@ rbe::serialize(cboe::AddOrder{}, buffer);
 | CMake | 3.30 |
 | Conan | 2.x |
 | Ninja | any recent |
-| GCC | C++26 capable (reflection support required) |
+| Compiler | C++26 capable (reflection support required) |
 | ccache *(optional)* | any |
 
 > **Compiler support:** RBE relies on C++ static reflection, which is currently only implemented in GCC. Clang and MSVC presets are included in the build system for future compatibility but are not supported yet.
