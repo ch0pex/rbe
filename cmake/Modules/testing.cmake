@@ -11,7 +11,7 @@ function(create_test test_name test_src)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     add_executable(${target_exe} ${test_src})
-    target_link_libraries(${target_exe} PRIVATE doctest::doctest ${PROJECT_NAME}-lib)
+    target_link_libraries(${target_exe} PRIVATE doctest::doctest rbe::rbe)
 
     add_test(NAME ${target_exe} COMMAND ${target_exe})
 
@@ -38,27 +38,14 @@ function(create_test test_name test_src)
         )
     endif ()
 
-    if (SANITIZED_BUILD)
-        set_tests_properties(${target_exe} PROPERTIES
-                ENVIRONMENT "ASAN_OPTIONS=detect_odr_violation=0;LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/cmake/supp/lsan.supp"
-        )
-    endif ()
+    # if (SANITIZED_BUILD)
+    #     set_tests_properties(${target_exe} PROPERTIES
+    #             ENVIRONMENT "ASAN_OPTIONS=detect_odr_violation=0;LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/cmake/supp/lsan.supp"
+    #     )
+    # endif ()
 
 endfunction()
 
-
-function(integration_test test_name test_src)
-    if (NOT TARGET ${PROJECT_NAME}-tests)
-        add_custom_target(${PROJECT_NAME}-tests)
-    endif ()
-
-    set(target_exe "ftest_${PROJECT_NAME}_${test_name}")
-
-    add_executable(${target_exe} ${test_src})
-    target_link_libraries(${target_exe} PRIVATE ${PROJECT_NAME}-lib)
-
-    add_dependencies(${PROJECT_NAME}-tests ${target_exe})
-endfunction()
 
 # Common testing setup
 if (BUILD_TESTING)

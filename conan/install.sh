@@ -119,7 +119,7 @@ conan config install "$SCRIPT_DIR/config"
 if [ "$1" == "all" ]; then
     echo "Executing batch installation for current OS..."
     if [ "$IS_LINUX" = true ]; then
-        PRESETS=("Debug-gcc" "Release-gcc" "Debug-clang" "Release-clang")
+        PRESETS=("Debug-gcc" "Release-gcc")
         for p in "${PRESETS[@]}"; do
             install_preset "$p"
         done
