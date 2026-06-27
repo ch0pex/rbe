@@ -14,6 +14,7 @@ target_sources(
   # detail
   rbe/detail/endian.hpp
   rbe/detail/introspection.hpp
+  rbe/detail/memcpy_constexpr.hpp
 
 )
 

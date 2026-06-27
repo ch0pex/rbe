@@ -19,12 +19,18 @@
 // --- External dependencies ---
 
 // --- STD ---
+#include <cassert>
+#include <ranges>
+#include <span>
 
 // --- System ---
 
 
 namespace rbe::detail {
 
+
+// NOTE: this function can only copy in compiletime if the src struct
+// doesn't have any padding bytes, otherwise it will fail to compile.
 template<typename T>
   requires(std::is_trivially_copyable_v<T>)
 constexpr void memcpy_constexpr(std::span<std::byte> dst, T const& src) {
