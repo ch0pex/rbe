@@ -8,11 +8,12 @@ target_sources(
   rbe/rbe.hpp
 
   # Core
-  rbe/core/annotations.hpp
+  rbe/core/endian.hpp
+  rbe/core/layout.hpp
   rbe/core/literals.hpp
+  rbe/core/annotations.hpp
 
   # detail
-  rbe/detail/endian.hpp
   rbe/detail/introspection.hpp
   rbe/detail/memcpy_constexpr.hpp
 
