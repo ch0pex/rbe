@@ -107,6 +107,104 @@ struct traits<std::int64_t> {
 };
 
 
+// --- Compile-time tests ---
+
+template<typename T>
+consteval bool test_to_native_identity() {
+  return endian::to_native<order::native>(traits<T>::value) == traits<T>::value;
+}
+
+template<typename T>
+consteval bool test_to_native_involution() {
+  auto v = traits<T>::value;
+  return endian::to_native<order::little>(endian::to_native<order::little>(v)) == v and
+         endian::to_native<order::big>(endian::to_native<order::big>(v)) == v;
+}
+
+template<typename T>
+consteval bool test_to_native_byteswaps() {
+  auto v = traits<T>::value;
+  if constexpr (order::native == order::little) {
+    return endian::to_native<order::little>(v) == v and endian::to_native<order::big>(v) == traits<T>::bswapped;
+  }
+  else {
+    return endian::to_native<order::big>(v) == v and endian::to_native<order::little>(v) == traits<T>::bswapped;
+  }
+}
+
+template<typename T>
+consteval bool test_native_to_alias() {
+  auto v = traits<T>::value;
+  return endian::native_to<order::little>(v) == endian::to_native<order::little>(v) and
+         endian::native_to<order::big>(v) == endian::to_native<order::big>(v) and
+         endian::native_to<order::native>(v) == endian::to_native<order::native>(v);
+}
+
+template<typename T>
+consteval bool test_load_le() {
+  return endian::load<T, order::little>(traits<T>::le_bytes.data()) == traits<T>::value;
+}
+
+template<typename T>
+consteval bool test_load_be() {
+  return endian::load<T, order::big>(traits<T>::be_bytes.data()) == traits<T>::value;
+}
+
+static_assert(test_to_native_identity<std::uint8_t>());
+static_assert(test_to_native_identity<std::int8_t>());
+static_assert(test_to_native_identity<std::uint16_t>());
+static_assert(test_to_native_identity<std::int16_t>());
+static_assert(test_to_native_identity<std::uint32_t>());
+static_assert(test_to_native_identity<std::int32_t>());
+static_assert(test_to_native_identity<std::uint64_t>());
+static_assert(test_to_native_identity<std::int64_t>());
+
+static_assert(test_to_native_involution<std::uint8_t>());
+static_assert(test_to_native_involution<std::int8_t>());
+static_assert(test_to_native_involution<std::uint16_t>());
+static_assert(test_to_native_involution<std::int16_t>());
+static_assert(test_to_native_involution<std::uint32_t>());
+static_assert(test_to_native_involution<std::int32_t>());
+static_assert(test_to_native_involution<std::uint64_t>());
+static_assert(test_to_native_involution<std::int64_t>());
+
+static_assert(test_to_native_byteswaps<std::uint8_t>());
+static_assert(test_to_native_byteswaps<std::int8_t>());
+static_assert(test_to_native_byteswaps<std::uint16_t>());
+static_assert(test_to_native_byteswaps<std::int16_t>());
+static_assert(test_to_native_byteswaps<std::uint32_t>());
+static_assert(test_to_native_byteswaps<std::int32_t>());
+static_assert(test_to_native_byteswaps<std::uint64_t>());
+static_assert(test_to_native_byteswaps<std::int64_t>());
+
+static_assert(test_native_to_alias<std::uint8_t>());
+static_assert(test_native_to_alias<std::int8_t>());
+static_assert(test_native_to_alias<std::uint16_t>());
+static_assert(test_native_to_alias<std::int16_t>());
+static_assert(test_native_to_alias<std::uint32_t>());
+static_assert(test_native_to_alias<std::int32_t>());
+static_assert(test_native_to_alias<std::uint64_t>());
+static_assert(test_native_to_alias<std::int64_t>());
+
+static_assert(test_load_le<std::uint8_t>());
+static_assert(test_load_le<std::int8_t>());
+static_assert(test_load_le<std::uint16_t>());
+static_assert(test_load_le<std::int16_t>());
+static_assert(test_load_le<std::uint32_t>());
+static_assert(test_load_le<std::int32_t>());
+static_assert(test_load_le<std::uint64_t>());
+static_assert(test_load_le<std::int64_t>());
+
+static_assert(test_load_be<std::uint8_t>());
+static_assert(test_load_be<std::int8_t>());
+static_assert(test_load_be<std::uint16_t>());
+static_assert(test_load_be<std::int16_t>());
+static_assert(test_load_be<std::uint32_t>());
+static_assert(test_load_be<std::int32_t>());
+static_assert(test_load_be<std::uint64_t>());
+static_assert(test_load_be<std::int64_t>());
+
+
 // --- to_native ---
 
 TEST_CASE_TEMPLATE(
