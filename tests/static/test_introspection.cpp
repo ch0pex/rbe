@@ -194,6 +194,9 @@ static_assert(test_nsdm_index(^^AccessClass, "pub", 0));
 static_assert(test_nsdm_index(^^AccessClass, "prot", 1));
 static_assert(test_nsdm_index(^^AccessClass, "priv", 2));
 
+// Current access context is public, so only public members should be visible
+static_assert(rbe::detail::nsdm(^^AccessClass, std::meta::access_context::current()).size() == 1);
+
 // ============================================================
 // ManyMembers — boundary / last-index exhaustion
 // ============================================================
