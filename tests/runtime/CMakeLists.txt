@@ -3,3 +3,5 @@ include(testing)
 create_test(memcpy_constexpr test_memcpy_constexpr.cpp)
 create_test(endian test_endian.cpp)
 create_test(format test_format.cpp)
+create_test(memory_layout test_memory_layout.cpp)
+
