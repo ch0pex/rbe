@@ -73,4 +73,9 @@ consteval std::size_t nsdm_index( //
   throw std::meta::exception("invalid member identifier, no such nonstatic data member", ^^nsdm_index);
 }
 
+consteval std::size_t nsdm_count(std::meta::info const info, std::meta::access_context ctx = default_context) {
+  return nsdm(info, ctx).size();
+}
+
+
 } // namespace rbe::detail
