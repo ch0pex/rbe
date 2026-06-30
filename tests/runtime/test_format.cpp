@@ -72,6 +72,30 @@ struct WithSpan {
   int extra = 42;
 };
 
+struct EmptyBase { };
+
+struct DerivedFromEmpty : public EmptyBase {
+  int m0 = 0;
+};
+
+struct Base {
+  int m0 = 0;
+  int m1 = 1;
+  int m2 = 2;
+};
+
+struct EmptyDerived : Base { };
+
+struct UnnamedMember {
+  int _ = 42;
+};
+
+struct Bits {
+  unsigned int a : 3;
+  unsigned int b : 5;
+  unsigned int c : 8;
+};
+
 
 TEST_SUITE_BEGIN("Universal formatter");
 
@@ -171,6 +195,45 @@ TEST_CASE("Struct with span member") {
 })";
 
   std::string const result = std::format("{}", ws);
+  CHECK_EQ(expected, result);
+}
+
+TEST_CASE("Struct derived from empty base class") {
+  std::string const expected = R"(DerivedFromEmpty {
+  EmptyBase {},
+  .m0 = 0,
+})";
+  std::string const result   = std::format("{}", DerivedFromEmpty {});
+  CHECK_EQ(expected, result);
+}
+
+TEST_CASE("Struct with unnamed member") {
+  std::string const expected = R"(UnnamedMember {
+  ._ = 42,
+})";
+  std::string const result   = std::format("{}", UnnamedMember {});
+  CHECK_EQ(expected, result);
+}
+
+TEST_CASE("Struct derived from non-empty base class") {
+  std::string const expected = R"(EmptyDerived {
+  Base {
+    .m0 = 0,
+    .m1 = 1,
+    .m2 = 2,
+  },
+})";
+  std::string const result   = std::format("{}", EmptyDerived {});
+  CHECK_EQ(expected, result);
+}
+
+TEST_CASE("Struct with bit-fields") {
+  std::string const expected = R"(Bits {
+  .a:3 = 0,
+  .b:5 = 0,
+  .c:8 = 0,
+})";
+  std::string const result   = std::format("{}", Bits {});
   CHECK_EQ(expected, result);
 }
 

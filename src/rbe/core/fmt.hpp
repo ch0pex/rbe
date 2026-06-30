@@ -68,7 +68,12 @@ struct universal_formatter {
 
     template for (constexpr auto mem: members) {
       std::string_view mem_label = has_identifier(mem) ? identifier_of(mem) : "(unnamed-member)";
-      out                        = std::format_to(out, "\n{}.{} = {},", inner, mem_label, t.[:mem:]);
+      if (is_bit_field(mem)) {
+        out = std::format_to(out, "\n{}.{}:{} = {},", inner, mem_label, bit_size_of(mem), t.[:mem:]);
+      }
+      else {
+        out = std::format_to(out, "\n{}.{} = {},", inner, mem_label, t.[:mem:]);
+      }
     }
 
     if (members.size() > 0 or bases.size() > 0) {
