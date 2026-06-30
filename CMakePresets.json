@@ -79,7 +79,7 @@
         "rhs": "Linux"
       },
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-Wextra -Wall -Werror -Wpedantic -Wunused -Wshadow -Wconversion -Wsign-conversion -Wold-style-cast -Wformat=2 -Wdouble-promotion -freflection",
+        "CMAKE_CXX_FLAGS": "-Wextra -Wall -Werror -Wpedantic -Wunused -Wshadow -Wconversion -Wsign-conversion -Wold-style-cast -Wformat=2 -Wdouble-promotion -freflection -Wno-attributes",
         "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
       }
     },
