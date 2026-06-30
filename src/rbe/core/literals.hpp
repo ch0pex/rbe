@@ -21,9 +21,10 @@
 // --- STD ---
 
 // --- System ---
+#include <meta>
+#include <string_view>
 
-
-namespace rbe {
+namespace rbe::literals {
 
 /**
  * @brief User-defined literal for static strings.
@@ -33,4 +34,4 @@ consteval auto operator""_ss(char const* str, [[maybe_unused]] size_t length) ->
   return std::define_static_string(sv);
 }
 
-} // namespace rbe
+} // namespace rbe::literals
