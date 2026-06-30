@@ -13,6 +13,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/core/endian.hpp>
 
 // --- Dependencies ---
 
@@ -23,4 +24,15 @@
 // --- System ---
 
 
-namespace rbe { }
+namespace rbe {
+
+// memory layout annotations
+inline constexpr endian::order little = endian::order::little;
+inline constexpr endian::order big    = endian::order::big;
+inline constexpr bool packing         = true;
+
+// message metadata annotations
+inline constexpr bool id     = true;
+inline constexpr bool length = true;
+
+} // namespace rbe
