@@ -57,6 +57,21 @@ struct Deep {
   int w = 40;
 };
 
+struct WithVector {
+  std::vector<int> values {1, 2, 3};
+  int extra = 42;
+};
+
+struct WithArray {
+  std::array<int, 3> values {1, 2, 3};
+  int extra = 42;
+};
+
+struct WithSpan {
+  std::span<int> values {};
+  int extra = 42;
+};
+
 
 TEST_SUITE_BEGIN("Universal formatter");
 
@@ -95,7 +110,7 @@ TEST_CASE("Z struct with base classes") {
   .m3 = 3,
   .m4 = 4,
 })";
-  std::string const result = std::format("{}", Z {});
+  std::string const result   = std::format("{}", Z {});
   CHECK_EQ(expected, result);
 }
 
@@ -107,7 +122,7 @@ TEST_CASE("Struct with nested struct member") {
   },
   .z = 30,
 })";
-  std::string const result = std::format("{}", Outer {});
+  std::string const result   = std::format("{}", Outer {});
   CHECK_EQ(expected, result);
 }
 
@@ -122,7 +137,40 @@ TEST_CASE("Struct with deeply nested struct members") {
   },
   .w = 40,
 })";
-  std::string const result = std::format("{}", Deep {});
+  std::string const result   = std::format("{}", Deep {});
+  CHECK_EQ(expected, result);
+}
+
+TEST_CASE("Struct with range member") {
+  std::string const expected = R"(WithVector {
+  .values = [1, 2, 3],
+  .extra = 42,
+})";
+  std::string const result   = std::format("{}", WithVector {});
+  CHECK_EQ(expected, result);
+}
+
+TEST_CASE("Struct with array member") {
+  std::string const expected = R"(WithArray {
+  .values = [1, 2, 3],
+  .extra = 42,
+})";
+  std::string const result   = std::format("{}", WithArray {});
+  CHECK_EQ(expected, result);
+}
+
+TEST_CASE("Struct with span member") {
+  std::vector<int> vec {1, 2, 3};
+  WithSpan ws {
+    .values = std::span<int>(vec.data(), vec.size()),
+  };
+
+  std::string const expected = R"(WithSpan {
+  .values = [1, 2, 3],
+  .extra = 42,
+})";
+
+  std::string const result = std::format("{}", ws);
   CHECK_EQ(expected, result);
 }
 

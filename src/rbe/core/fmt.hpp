@@ -13,8 +13,8 @@
 #pragma once
 
 // --- Includes ---
-#include "rbe/core/layout.hpp"
-#include "rbe/detail/introspection.hpp"
+#include <rbe/core/layout.hpp>
+#include <rbe/detail/introspection.hpp>
 
 // --- Dependencies ---
 
@@ -23,6 +23,7 @@
 // --- STD ---
 #include <format>
 #include <ostream>
+#include <ranges>
 #include <string>
 
 // --- System ---
@@ -32,7 +33,9 @@ namespace rbe {
 template<rbe::introspectable T>
   requires(not std::is_array_v<T>)
 std::ostream& operator<<(std::ostream& os, T const& val) {
-  return os << std::format("{}", val);
+  auto const formatted = std::format("{}", val);
+  os.write(formatted.data(), static_cast<std::streamsize>(formatted.size()));
+  return os;
 }
 
 } // namespace rbe
@@ -70,7 +73,8 @@ struct universal_formatter {
 
     if (members.size() > 0 or bases.size() > 0) {
       out = std::format_to(out, "\n{}}}", pad);
-    } else {
+    }
+    else {
       *out++ = '}';
     }
 
@@ -88,4 +92,5 @@ struct std::formatter<std::endian> {
 };
 
 template<rbe::introspectable T>
+  requires(not std::ranges::range<T>)
 struct std::formatter<T> : universal_formatter { };
