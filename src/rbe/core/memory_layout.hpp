@@ -32,8 +32,10 @@
 
 namespace rbe {
 
+using member_offset = std::meta::member_offset;
+
 struct member_layout {
-  std::ptrdiff_t offset {};
+  member_offset offset {};
   std::size_t size {};
   std::endian endiannes {std::endian::little};
 
@@ -58,7 +60,7 @@ consteval auto get_layout() -> struct_layout {
 
   for (auto const& member: members) {
     member_layouts.emplace_back(
-        offset_of(member).bytes, // TODO: look for packing annotation, cummulative offsets, have bits version
+        offset_of(member), // TODO: look for packing annotation, cummulative offsets, have bits version
         size_of(type_of(member)), // TODO: custom size tag
         endian::order::little // TODO: endiannes tag
     );

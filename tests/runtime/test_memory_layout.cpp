@@ -65,19 +65,19 @@ TEST_CASE("Test packet hdr layout") {
     .members = std::define_static_array(
         std::vector<rbe::member_layout> {
           rbe::member_layout {
-            .offset = offsetof(PacketHeader, length),
+            .offset = {offsetof(PacketHeader, length), 0},
             .size   = 2,
           },
           rbe::member_layout {
-            .offset = offsetof(PacketHeader, count),
+            .offset = {offsetof(PacketHeader, count), 0},
             .size   = 1,
           },
           rbe::member_layout {
-            .offset = offsetof(PacketHeader, unit),
+            .offset = {offsetof(PacketHeader, unit), 0},
             .size   = 1,
           },
           rbe::member_layout {
-            .offset = offsetof(PacketHeader, sequence),
+            .offset = {offsetof(PacketHeader, sequence), 0},
             .size   = 4,
           },
         }
