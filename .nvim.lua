@@ -84,3 +84,22 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufReadPost" }, {
 		end
 	end,
 })
+
+-- Build and run all tests via overseer
+vim.keymap.set("n", "<leader>jt", function()
+	local ok, overseer = pcall(require, "overseer")
+	if not ok then
+		vim.notify("overseer.nvim not available", vim.log.levels.ERROR)
+		return
+	end
+
+	vim.cmd("wall")
+
+	local task = overseer.new_task({
+		name = "Build & test (Debug-gcc)",
+		cmd = "cmake --build --preset Debug-gcc && ctest --preset Debug-gcc --output-on-failure",
+		components = { "default" },
+	})
+	task:start()
+	overseer.open({ enter = false, direction = "bottom" })
+end, { noremap = true, silent = true, desc = "Build & run all tests (overseer)" })
