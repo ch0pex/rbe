@@ -14,7 +14,7 @@
 
 // --- Dependencies ---
 #include <rbe/core/fmt.hpp>
-#include <rbe/core/layout.hpp>
+#include <rbe/core/memory_layout.hpp>
 
 // --- External dependencies ---
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -27,15 +27,15 @@
 namespace {
 
 // clang-format off
-[[=rbe::little, =rbe::packing]]
-struct PacketHeader {
+
+struct [[=rbe::pack]] PacketHeader {
   std::uint16_t length;
   std::uint8_t count;
   std::uint8_t unit;
   std::uint32_t sequence;
 };
 
-[[=rbe::little, =rbe::packing]]
+[[=rbe::little, =rbe::pack]]
 struct AddOrder {
   [[=rbe::length]] std::uint8_t length;
   [[=rbe::id]] std::uint8_t message_type;
@@ -83,7 +83,7 @@ TEST_CASE("Test packet hdr layout") {
         }
     )
   };
-  static_assert(packet_hdr == packet_hdr_expected, "PacketHeader layout does not match expected layout");
+
   CHECK(packet_hdr == packet_hdr_expected);
 }
 

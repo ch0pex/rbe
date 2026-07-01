@@ -30,7 +30,7 @@ namespace cboeu {
 
 // clang-format off
 //
-// [[=rbe::little, =rbe::packing]]
+// [[=rbe::little, =rbe::pack]]
 // struct PacketHeader {
 //     std::uint16_t length;
 //     std::uint8_t  count;
@@ -38,7 +38,7 @@ namespace cboeu {
 //     std::uint32_t sequence;
 // };
 //
-// [[=rbe::little, =rbe::packing]]
+// [[=rbe::little, =rbe::pack]]
 // struct AddOrder {
 //     [[=rbe::length]] 
 //     std::uint8_t  length;
@@ -52,7 +52,7 @@ namespace cboeu {
 //     std::uint32_t price;
 // };
 //
-// [[=rbe::little, =rbe::packing]]
+// [[=rbe::little, =rbe::pack]]
 // struct ReduceSizeA {
 //     [[=rbe::length]]   std::uint8_t  length;
 //     [[=rbe::id]]       std::uint8_t  message_type;
@@ -68,7 +68,7 @@ namespace cboeu {
 // [[=rbe::size(24)]] using std::uint24_t = std::uint32_t;
 // [[=rbe::size(48)]] using std::uint48_t = std::uint32_t;
 //
-// [[=rbe::little, =rbe::packing]]
+// [[=rbe::little, =rbe::pack]]
 // struct ReduceSizeB {
 //     [[=rbe::length]] std::uint8_t  length;
 //     [[=rbe::id]] std::uint8_t  message_type;

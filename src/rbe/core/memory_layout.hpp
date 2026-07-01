@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file layout.hpp
+ * @file memory_layout.hpp
  * @date 27/06/2026
  * @brief Short description
  *
@@ -14,6 +14,8 @@
 
 // --- Includes ---
 #include <rbe/core/annotations.hpp>
+#include <rbe/core/concepts.hpp>
+#include <rbe/core/endian.hpp>
 #include <rbe/detail/introspection.hpp>
 
 // --- Dependencies ---
@@ -24,19 +26,12 @@
 #include <algorithm>
 #include <cstddef>
 #include <span>
-#include <type_traits>
-#include <vector>
 
 // --- System ---
 
 
 namespace rbe {
 
-// NOTE: For now lets just support aggregate types, we can expand this latter to support more complex types
-template<typename T>
-concept introspectable = std::meta::is_enumerable_type(^^T);
-
-// NOTE: this type contains
 struct member_layout {
   std::ptrdiff_t offset {};
   std::size_t size {};
@@ -46,7 +41,7 @@ struct member_layout {
 };
 
 struct struct_layout {
-  bool packing {true};
+  bool packing {false};
   std::span<member_layout const> members {};
 
   constexpr friend bool operator==(struct_layout const& lhs, struct_layout const& rhs) {
@@ -57,20 +52,21 @@ struct struct_layout {
 template<introspectable T>
 consteval auto get_layout() -> struct_layout {
   auto members = detail::nsdm(^^T);
-  struct_layout layout {};
 
   std::vector<member_layout> member_layouts;
   member_layouts.reserve(members.size());
 
   for (auto const& member: members) {
     member_layouts.emplace_back(
-        offset_of(member).bytes, //
-        size_of(type_of(member)), //
+        offset_of(member).bytes, // TODO: look for packing annotation, cummulative offsets, have bits version
+        size_of(type_of(member)), // TODO: custom size tag
         endian::order::little // TODO: endiannes tag
     );
   }
-  layout.members = std::define_static_array(member_layouts);
-  return layout;
+  return {
+    .packing = detail::has_annotation(^^T, pack), //
+    .members = std::define_static_array(member_layouts),
+  };
 }
 
 } // namespace rbe

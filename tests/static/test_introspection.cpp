@@ -79,6 +79,28 @@ struct ManyMembers {
   int h;
 };
 
+inline constexpr struct {
+} annotation_a {};
+
+inline constexpr struct {
+} annotation_b {};
+
+struct[[= annotation_a]] AnnotatedStructA {
+  int x;
+  double y;
+};
+
+struct[[ = annotation_a, = annotation_b ]] AnnotatedStructB {
+  int x;
+  double y;
+};
+
+[[= annotation_a]] struct WrongAnnotatedStruct {
+  int x;
+  double y;
+};
+
+
 // ============================================================
 // Helpers
 // ============================================================
@@ -211,5 +233,13 @@ static_assert(not test_nsdm_idx(^^ManyMembers, 8, 0)); // Out of bounds
 static_assert(test_nsdm_index(^^ManyMembers, "a", 0));
 static_assert(test_nsdm_index(^^ManyMembers, "h", 7));
 static_assert(not test_nsdm_index(^^ManyMembers, "z", 0)); // No such member
+
+
+// --- Annotation tests ---
+static_assert(rbe::detail::has_annotation(^^AnnotatedStructA, annotation_a));
+static_assert(not rbe::detail::has_annotation(^^AnnotatedStructA, annotation_b));
+static_assert(rbe::detail::has_annotation(^^AnnotatedStructB, annotation_a));
+static_assert(rbe::detail::has_annotation(^^AnnotatedStructB, annotation_b));
+static_assert(not rbe::detail::has_annotation(^^WrongAnnotatedStruct, annotation_a));
 
 } // namespace

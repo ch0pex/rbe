@@ -9,7 +9,7 @@ target_sources(
 
   # Core
   rbe/core/endian.hpp
-  rbe/core/layout.hpp
+  rbe/core/memory_layout.hpp
   rbe/core/literals.hpp
   rbe/core/annotations.hpp
 

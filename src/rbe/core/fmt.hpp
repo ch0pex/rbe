@@ -13,7 +13,8 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/layout.hpp>
+#include <rbe/core/annotations.hpp>
+#include <rbe/core/memory_layout.hpp>
 #include <rbe/detail/introspection.hpp>
 
 // --- Dependencies ---
@@ -21,24 +22,11 @@
 // --- External dependencies ---
 
 // --- STD ---
-#include <format>
+#include <meta>
 #include <ostream>
-#include <ranges>
 #include <string>
 
 // --- System ---
-
-namespace rbe {
-
-template<rbe::introspectable T>
-  requires(not std::is_array_v<T>)
-std::ostream& operator<<(std::ostream& os, T const& val) {
-  auto const formatted = std::format("{}", val);
-  os.write(formatted.data(), static_cast<std::streamsize>(formatted.size()));
-  return os;
-}
-
-} // namespace rbe
 
 inline std::size_t& fmt_depth() {
   thread_local std::size_t depth = 0;
@@ -97,5 +85,13 @@ struct std::formatter<std::endian> {
 };
 
 template<rbe::introspectable T>
-  requires(not std::ranges::range<T>)
+  requires(rbe::detail::has_annotation(^^T, rbe::fmt))
 struct std::formatter<T> : universal_formatter { };
+
+template<rbe::introspectable T>
+  requires(rbe::detail::has_annotation(^^T, rbe::fmt))
+std::ostream& operator<<(std::ostream& os, T const& val) {
+  auto const formatted = std::format("{}", val);
+  os.write(formatted.data(), static_cast<std::streamsize>(formatted.size()));
+  return os;
+}

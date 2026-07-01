@@ -20,7 +20,7 @@ Layout is expressed through the type system rather than annotations. Field sizes
 |---|---|
 | `=rbe::little` | All fields in the struct are little-endian on the wire. |
 | `=rbe::big` | All fields in the struct are big-endian on the wire. |
-| `=rbe::packing` | The struct is packed — no padding between fields. |
+| `=rbe::pack` | The struct is packed — no padding between fields. |
 
 ### Field-level annotations
 

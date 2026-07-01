@@ -13,7 +13,6 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/endian.hpp>
 
 // --- Dependencies ---
 
@@ -26,13 +25,38 @@
 
 namespace rbe {
 
+// clang-format off
+
+
+// annotations list
+template<auto... Args>
+struct annotations_t { };
+
+template<auto... Args>
+inline constexpr annotations_t<Args...> annotations { };
+
+
 // memory layout annotations
-inline constexpr endian::order little = endian::order::little;
-inline constexpr endian::order big    = endian::order::big;
-inline constexpr bool packing         = true;
+inline constexpr struct{} little {};
+inline constexpr struct{} big {};
+inline constexpr struct{} pack {};
+inline constexpr auto pack_le = annotations<pack, little>;
+inline constexpr auto pack_be = annotations<pack, big>;
+
 
 // message metadata annotations
-inline constexpr bool id     = true;
-inline constexpr bool length = true;
+inline constexpr struct{} id {};
+inline constexpr struct{} length {};
+
+
+// debugging annotations 
+
+inline constexpr struct{} fmt {};
+inline constexpr auto debug = annotations<fmt>;
+
+
+
+
+
 
 } // namespace rbe

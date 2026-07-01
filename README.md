@@ -30,7 +30,7 @@ Originally designed for high-frequency trading systems, RBE is suitable for any 
 ```cpp
 namespace cboeu {
 
-[[=rbe::little, =rbe::packing]]
+[[=rbe::little, =rbe::pack]]
 struct PacketHeader {
     std::uint16_t length;
     std::uint8_t  count;
@@ -38,7 +38,7 @@ struct PacketHeader {
     std::uint32_t sequence;
 };
 
-[[=rbe::little, =rbe::packing]]
+[[=rbe::little, =rbe::pack]]
 struct AddOrder {
     [[=rbe::length]] 
     std::uint8_t  length;
@@ -52,7 +52,7 @@ struct AddOrder {
     std::uint32_t price;
 };
 
-[[=rbe::little, =rbe::packing]]
+[[=rbe::little, =rbe::pack]]
 struct ReduceSize {
     [[=rbe::length]] std::uint8_t  length;
     [[=rbe::id]]     std::uint8_t  message_type;
@@ -84,7 +84,7 @@ rbe::serialize(cboe::AddOrder{}, buffer);
 | Annotation | Scope | Effect |
 |---|---|---|
 | `=rbe::little` | struct | Fields are serialized in little-endian byte order |
-| `=rbe::packing` | struct | Fields are packed without padding |
+| `=rbe::pack` | struct | Fields are packed without padding |
 | `=rbe::length` | field | Marks the field that encodes the message length |
 | `=rbe::id` | field | Marks the field that encodes the message type ID |
 
