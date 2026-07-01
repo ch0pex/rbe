@@ -77,14 +77,4 @@ consteval std::size_t nsdm_count(std::meta::info const info, std::meta::access_c
   return nsdm(info, ctx).size();
 }
 
-consteval auto has_annotation(std::meta::info r, auto const& value) -> bool {
-  auto expected = std::meta::reflect_constant(value);
-  for (std::meta::info a: annotations_of(r)) {
-    if (std::meta::constant_of(a) == expected) {
-      return true;
-    }
-  }
-  return false;
-}
-
 } // namespace rbe::detail

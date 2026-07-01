@@ -13,12 +13,14 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/detail/introspection.hpp>
 
 // --- Dependencies ---
 
 // --- External dependencies ---
 
 // --- STD ---
+#include <meta>
 
 // --- System ---
 
@@ -27,36 +29,60 @@ namespace rbe {
 
 // clang-format off
 
+namespace detail {
 
-// annotations list
 template<auto... Args>
 struct annotations_t { };
 
+consteval bool is_annotation_list(std::meta::info const info) { 
+  return has_template_arguments(type_of(info)) and template_of(type_of(info)) == ^^annotations_t; 
+}
+
+consteval auto has_annotation(std::meta::info const info, auto const& value) {
+  auto expected = std::meta::reflect_constant(value);
+  for (std::meta::info a: annotations_of(info)) {
+    if (std::meta::constant_of(a) == expected) {
+      return true;
+    }
+    else if (detail::is_annotation_list(a)) {
+      for (std::meta::info a2: template_arguments_of(type_of(a))) {
+        if (std::meta::constant_of(a2) == expected) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+} // namespace detail
+
+
+// annotation list
+
 template<auto... Args>
-inline constexpr annotations_t<Args...> annotations { };
+inline constexpr detail::annotations_t<Args...>  ann {};
 
 
 // memory layout annotations
-inline constexpr struct{} little {};
-inline constexpr struct{} big {};
-inline constexpr struct{} pack {};
-inline constexpr auto pack_le = annotations<pack, little>;
-inline constexpr auto pack_be = annotations<pack, big>;
+inline constexpr struct {} little {};
+inline constexpr struct {} big {};
+inline constexpr struct {} pack {};
+inline constexpr auto pack_le = ann<pack, little>;
+inline constexpr auto pack_be = ann<pack, big>;
 
 
 // message metadata annotations
-inline constexpr struct{} id {};
-inline constexpr struct{} length {};
+inline constexpr struct {} id {};
+inline constexpr struct {} length {};
 
 
-// debugging annotations 
+// debugging annotations
 
-inline constexpr struct{} fmt {};
-inline constexpr auto debug = annotations<fmt>;
+inline constexpr struct { } fmt {};
+inline constexpr auto debug = ann<fmt>;
 
-
-
-
+// clng-format on
 
 
 } // namespace rbe
