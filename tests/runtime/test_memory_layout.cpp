@@ -15,6 +15,7 @@
 // --- Dependencies ---
 #include <rbe/core/fmt.hpp>
 #include <rbe/core/memory_layout.hpp>
+#include <rbe/srl/serialize.hpp>
 
 // --- External dependencies ---
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -35,8 +36,8 @@ struct [[=rbe::pack]] PacketHeader {
   std::uint32_t sequence;
 };
 
-[[=rbe::little, =rbe::pack]]
-struct AddOrder {
+
+struct [[=rbe::little, =rbe::pack]] AddOrder {
   [[=rbe::length]] std::uint8_t length;
   [[=rbe::id]] std::uint8_t message_type;
   std::uint32_t time_offset;
@@ -59,9 +60,9 @@ struct ReduceSize {
 
 
 TEST_CASE("Test packet hdr layout") {
-  static constexpr rbe::struct_layout packet_hdr          = rbe::get_layout<PacketHeader>();
+  static constexpr rbe::struct_layout packet_hdr          = rbe::get_wire_layout<PacketHeader>();
   static constexpr rbe::struct_layout packet_hdr_expected = {
-    .packing = true,
+    .size    = sizeof(PacketHeader),
     .members = std::define_static_array(
         std::vector<rbe::member_layout> {
           rbe::member_layout {
