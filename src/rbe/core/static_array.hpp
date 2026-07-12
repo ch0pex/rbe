@@ -94,16 +94,16 @@ public:
 
   [[nodiscard]] constexpr const_pointer data() const { return data_.data(); }
 
-  [[nodiscard]] constexpr static_array first(size_type count) const {
-    return std::define_static_array(data_.first(count));
+  [[nodiscard]] consteval static_array first(size_type count) const {
+    return {std::from_range, std::define_static_array(data_.first(count))};
   }
 
-  [[nodiscard]] constexpr static_array last(size_type offset) const {
-    return std::define_static_array(data_.last(offset));
+  [[nodiscard]] consteval static_array last(size_type offset) const {
+    return {std::from_range, std::define_static_array(data_.last(offset))};
   }
 
-  [[nodiscard]] constexpr static_array subspan(size_type offset, size_type count = std::dynamic_extent) const {
-    return std::define_static_array(data_.subspan(offset, count));
+  [[nodiscard]] consteval static_array subspan(size_type offset, size_type count = std::dynamic_extent) const {
+    return {std::from_range, std::define_static_array(data_.subspan(offset, count))};
   }
 
   [[nodiscard]] constexpr bool operator==(static_array const& other) const {

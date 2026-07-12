@@ -143,6 +143,31 @@ consteval bool template_for_iteration() {
   return true;
 }
 
+consteval bool static_array_first_last_subspan() {
+  rbe::static_array arr {1, 2, 3, 4, 5};
+  auto first_three = arr.first(3);
+  auto last_two    = arr.last(2);
+  auto subspan     = arr.subspan(1, 3);
+
+  bool result = true;
+
+  result &= first_three.size() == 3;
+  result &= first_three[0] == 1;
+  result &= first_three[1] == 2;
+  result &= first_three[2] == 3;
+
+  result &= last_two.size() == 2;
+  result &= last_two[0] == 4;
+  result &= last_two[1] == 5;
+
+  result &= subspan.size() == 3;
+  result &= subspan[0] == 2;
+  result &= subspan[1] == 3;
+  result &= subspan[2] == 4;
+  return result;
+}
+
+
 static_assert(construct_default(), "construct_default test failed");
 static_assert(construct_with_vec(), "construct_with_vec test failed");
 static_assert(construct_with_array(), "construct_with_array test failed");
@@ -152,6 +177,7 @@ static_assert(static_array_random_access(), "static_array_random_access test fai
 static_assert(array_iteration(), "array_iteration test failed");
 static_assert(array_reverse_iteration(), "array_reverse_iteration test failed");
 static_assert(template_for_iteration(), "template_for_iteration test failed");
+static_assert(static_array_first_last_subspan(), "static_array_first_last_subspan test failed");
 
 // --- Runtime tests ---
 
@@ -268,6 +294,35 @@ TEST_CASE("Template for iteration") {
 
   int counter = 0;
   template for (constexpr auto member: members) { CHECK(data.[:member:] == counter++); }
+}
+
+TEST_CASE("Static array first elements") {
+  static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
+  static constexpr auto first_three = arr.first(3);
+
+  CHECK(first_three.size() == 3);
+  CHECK(first_three[0] == 1);
+  CHECK(first_three[1] == 2);
+  CHECK(first_three[2] == 3);
+}
+
+TEST_CASE("Static array last elements") {
+  static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
+  static constexpr auto last_two = arr.last(2);
+
+  CHECK(last_two.size() == 2);
+  CHECK(last_two[0] == 4);
+  CHECK(last_two[1] == 5);
+}
+
+TEST_CASE("Static array subspan") {
+  static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
+  static constexpr auto subspan = arr.subspan(1, 3);
+
+  CHECK(subspan.size() == 3);
+  CHECK(subspan[0] == 2);
+  CHECK(subspan[1] == 3);
+  CHECK(subspan[2] == 4);
 }
 
 TEST_SUITE_END();
