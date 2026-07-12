@@ -13,9 +13,11 @@
 #pragma once
 
 // --- Includes ---
+#include <ranges>
 #include <rbe/core/annotations.hpp>
 #include <rbe/core/concepts.hpp>
 #include <rbe/core/endian.hpp>
+#include <rbe/core/static_array.hpp>
 #include <rbe/detail/introspection.hpp>
 
 // --- Dependencies ---
@@ -42,30 +44,27 @@ struct member_layout {
   constexpr bool operator==(member_layout const&) const = default;
 };
 
+//  TODO: add support for bit fields
 struct struct_layout {
   std::size_t size {};
-  // std::size_t size_bits {}; TODO: add support for bit fields
-  std::span<member_layout const> members {};
+  static_array<member_layout> members {};
 
-  constexpr friend bool operator==(struct_layout const& lhs, struct_layout const& rhs) {
-    return lhs.size == rhs.size and std::ranges::equal(lhs.members, rhs.members); //
-  }
+  constexpr bool operator==(struct_layout const& /**/) const = default;
 };
 
 namespace detail {
 
 consteval endian::order get_member_endianness(std::meta::info const member) {
-  if (has_annotation(type_of(member), little)) {
+  if (has_annotation(member, little)) {
     return endian::order::little;
   }
-  else if (has_annotation(type_of(member), big)) {
+  else if (has_annotation(member, big)) {
     return endian::order::big;
   }
   else {
     return endian::order::native;
   }
 }
-
 
 } // namespace detail
 
@@ -88,7 +87,7 @@ consteval auto get_struct_layout() -> struct_layout {
   }
   return {
     .size    = sizeof(T),
-    .members = std::define_static_array(member_layouts),
+    .members = {std::from_range, member_layouts},
   };
 }
 
@@ -105,8 +104,8 @@ consteval auto get_wire_layout() -> struct_layout {
   }
 
   return {
-    .size    = size_of(type_of(^^T)),
-    .members = std::define_static_array(member_layouts),
+    .size    = size_of(^^T),
+    .members = {std::from_range, member_layouts},
   };
 }
 
@@ -128,9 +127,10 @@ consteval auto get_wire_layout() -> struct_layout {
 
   return {
     .size    = static_cast<std::size_t>(current_offset.bytes),
-    .members = std::define_static_array(member_layouts),
+    .members = {std::from_range, member_layouts},
   };
 }
+
 
 /**
  * @brief Concept to check if a type is trivially serializable.
