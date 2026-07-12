@@ -77,4 +77,13 @@ consteval std::size_t nsdm_count(std::meta::info const info, std::meta::access_c
   return nsdm(info, ctx).size();
 }
 
+consteval bool specialization_of(std::meta::info const info, std::meta::info const template_info) {
+  if (not has_template_arguments(info)) {
+    return false;
+  }
+
+  return template_of(info) == template_info;
+}
+
+
 } // namespace rbe::detail
