@@ -85,5 +85,9 @@ consteval bool specialization_of(std::meta::info const info, std::meta::info con
   return template_of(info) == template_info;
 }
 
+consteval auto bases_of(std::meta::info info, std::meta::access_context ctx = default_context) {
+  return std::meta::bases_of(info, ctx);
+}
+
 
 } // namespace rbe::detail

@@ -13,7 +13,6 @@
 #pragma once
 
 // --- Includes ---
-#include <ranges>
 #include <rbe/core/annotations.hpp>
 #include <rbe/core/concepts.hpp>
 #include <rbe/core/endian.hpp>
@@ -27,6 +26,7 @@
 // --- STD ---
 #include <algorithm>
 #include <cstddef>
+#include <ranges>
 #include <span>
 
 // --- System ---
@@ -75,7 +75,7 @@ consteval endian::order get_member_endianness(std::meta::info const member) {
 // - https://github.com/llvm/llvm-project/issues/82994
 // - https://github.com/llvm/llvm-project/issues/61425
 
-template<introspectable T>
+template<wirable T>
 consteval auto get_struct_layout() -> struct_layout {
   auto members = detail::nsdm(^^T);
 
@@ -91,7 +91,7 @@ consteval auto get_struct_layout() -> struct_layout {
   };
 }
 
-template<introspectable T>
+template<wirable T>
   requires(not detail::has_annotation(^^T, pack))
 consteval auto get_wire_layout() -> struct_layout {
   auto members = detail::nsdm(^^T);
@@ -109,7 +109,7 @@ consteval auto get_wire_layout() -> struct_layout {
   };
 }
 
-template<introspectable T>
+template<wirable T>
   requires(detail::has_annotation(^^T, pack))
 consteval auto get_wire_layout() -> struct_layout {
   auto members = detail::nsdm(^^T);
@@ -142,9 +142,6 @@ consteval auto get_wire_layout() -> struct_layout {
  *
  */
 template<typename T>
-concept trivially_serializable = //
-    get_struct_layout<T>() == get_wire_layout<T>() //
-    and std::is_trivially_copyable_v<T> //
-    and introspectable<T>; //
+concept trivially_serializable = get_struct_layout<T>() == get_wire_layout<T>();
 
 } // namespace rbe

@@ -57,8 +57,6 @@ struct ReduceSize {
   std::uint32_t cancelled_shares;
 };
 
-struct Empty {};
-
 struct [[=rbe::pack]] EmptyPacked {};
 
 struct NoPack {
@@ -111,16 +109,6 @@ TEST_CASE("Test packet hdr layout") {
 
   CHECK(packet_hdr == packet_hdr_expected);
 }
-
-// TEST_CASE("Test empty structs") {
-//   static constexpr rbe::struct_layout empty_layout = rbe::get_wire_layout<Empty>();
-//   CHECK(empty_layout.size == sizeof(Empty));
-//   CHECK(empty_layout.members.empty());
-//
-//   static constexpr rbe::struct_layout empty_packed_layout = rbe::get_wire_layout<EmptyPacked>();
-//   CHECK(empty_packed_layout.size == sizeof(EmptyPacked));
-//   CHECK(empty_packed_layout.members.empty());
-// }
 
 TEST_CASE("Test packing vs no packing") {
   static constexpr rbe::struct_layout no_pack_layout = rbe::get_wire_layout<NoPack>();
