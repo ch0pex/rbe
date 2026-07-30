@@ -133,7 +133,7 @@ consteval auto get_wire_layout() -> struct_layout {
 
 
 /**
- * @brief Concept to check if a type is trivially serializable.
+ * @brief Concept to check if a type is trivially wirable.
  *
  * A type is considered trivially serializable if its struct layout matches its wire layout.
  * Meaning that the in-memory representation of the type can be directly used for serialization without any additional
@@ -142,6 +142,6 @@ consteval auto get_wire_layout() -> struct_layout {
  *
  */
 template<typename T>
-concept trivially_serializable = get_struct_layout<T>() == get_wire_layout<T>();
+concept trivially_wirable = wirable<T> and get_struct_layout<T>() == get_wire_layout<T>();
 
 } // namespace rbe
