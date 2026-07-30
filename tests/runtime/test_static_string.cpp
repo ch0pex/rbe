@@ -36,14 +36,17 @@ constexpr auto test() -> bool {
   using namespace std::string_view_literals;
   X<"hello"s> a;
   X<"hello"s> b;
-  X<"other"s> c;
+  X<"other"sv> c;
+  X<"other"> d;
   return std::same_as<decltype(a), decltype(b)> //
          and not std::same_as<decltype(a), decltype(c)> //
          and not std::same_as<decltype(b), decltype(c)> //
          and a.value.size() == 5 //
          and a.value.data()[5] == '\0' //
          and a.value == "hello"sv //
-         and c.value == "other"sv;
+         and b.value == "hello"sv //
+         and c.value == "other"sv //
+         and d.value == "other"sv;
 }
 
 static_assert(test());
