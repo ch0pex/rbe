@@ -53,7 +53,7 @@ template<std::integral T, order O = order::native>
 constexpr T load(std::byte const* src) {
   std::array<std::byte, sizeof(T)> bytes {};
   std::ranges::copy_n(src, sizeof(T), std::ranges::begin(bytes));
-  return native_to<O>(std::bit_cast<T>(bytes));
+  return to_native<O>(std::bit_cast<T>(bytes));
 }
 
 template<std::integral T, order O = order::native>
