@@ -23,65 +23,11 @@
 #include <doctest/doctest.h>
 
 // --- STD ---
-#include <vector>
+#include "common_structs.hpp"
 
 // --- System ---
 
 namespace {
-
-// clang-format off
-struct [[=rbe::pack]] PacketHeader {
-  std::uint16_t length;
-  std::uint8_t count;
-  std::uint8_t unit;
-  std::uint32_t sequence;
-};
-
-struct [[=rbe::little, =rbe::pack]] AddOrder {
-  [[=rbe::length]] std::uint8_t length;
-  [[=rbe::id]] std::uint8_t message_type;
-  std::uint32_t time_offset;
-  std::uint32_t order_id;
-  std::uint8_t side_indicator;
-  std::uint32_t quantity;
-  std::uint64_t symbol;
-  std::uint32_t price;
-};
-
-[[=rbe::little]]
-struct ReduceSize {
-  [[=rbe::length]] std::uint8_t length;
-  [[=rbe::id]] std::uint8_t message_type;
-  std::uint32_t time_offset;
-  std::uint64_t order_id;
-  std::uint32_t cancelled_shares;
-};
-
-struct [[=rbe::pack]] EmptyPacked {};
-
-struct NoPack {
-  std::uint8_t a;
-  std::uint32_t b;
-};
-
-struct [[=rbe::pack]] Packed {
-  std::uint8_t a;
-  std::uint32_t b;
-};
-
-struct MixedEndian {
-  [[=rbe::little]] std::uint32_t a;
-  [[=rbe::big]] std::uint32_t b;
-  std::uint32_t c; 
-};
-
-struct [[=rbe::pack]] Complex {
-  [[=rbe::little]] std::uint16_t a;
-  [[=rbe::big]] std::uint32_t b;
-  std::uint8_t c;
-};
-// clang-format on
-
 
 TEST_CASE("Test packet hdr layout") {
   static constexpr rbe::struct_layout packet_hdr          = rbe::get_wire_layout<PacketHeader>();
@@ -89,19 +35,19 @@ TEST_CASE("Test packet hdr layout") {
     .size    = sizeof(PacketHeader),
     .members = rbe::static_array {
       rbe::member_layout {
-        .offset = {offsetof(PacketHeader, length), 0},
+        .offset = {.bytes=offsetof(PacketHeader, length), .bits=0},
         .size   = 2,
       },
       rbe::member_layout {
-        .offset = {offsetof(PacketHeader, count), 0},
+        .offset = {.bytes=offsetof(PacketHeader, count), .bits=0},
         .size   = 1,
       },
       rbe::member_layout {
-        .offset = {offsetof(PacketHeader, unit), 0},
+        .offset = {.bytes=offsetof(PacketHeader, unit), .bits=0},
         .size   = 1,
       },
       rbe::member_layout {
-        .offset = {offsetof(PacketHeader, sequence), 0},
+        .offset = {.bytes=offsetof(PacketHeader, sequence), .bits=0},
         .size   = 4,
       },
     }

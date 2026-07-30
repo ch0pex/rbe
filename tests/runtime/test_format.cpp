@@ -23,85 +23,11 @@
 // --- STD ---
 #include <print>
 
+#include "common_structs.hpp"
+
 // --- System ---
 
 namespace {
-
-// clang-format off
-
-struct [[=rbe::fmt]] Empty { };
-
-struct [[=rbe::fmt]] B {
-  int m0 = 0;
-};
-struct [[=rbe::fmt]] X {
-  int m1 = 1;
-};
-struct [[=rbe::fmt]] Y {
-  int m2 = 2;
-};
-
-class [[=rbe::fmt]] Z : public X, public Y {
-  int m3 = 3;
-  int m4 = 4;
-};
-
-struct [[=rbe::fmt]] Inner {
-  int x = 10;
-  int y = 20;
-};
-
-struct [[=rbe::fmt]] Outer {
-  Inner inner {};
-  int z = 30;
-};
-
-struct [[=rbe::fmt]] Deep {
-  Outer outer {};
-  int w = 40;
-};
-
-struct [[=rbe::fmt]] WithVector {
-  std::vector<int> values {1, 2, 3};
-  int extra = 42;
-};
-
-struct [[=rbe::fmt]] WithArray {
-  std::array<int, 3> values {1, 2, 3};
-  int extra = 42;
-};
-
-struct [[=rbe::fmt]] WithSpan {
-  std::span<int> values {};
-  int extra = 42;
-};
-
-struct [[=rbe::fmt]] EmptyBase { };
-
-struct [[=rbe::fmt]] DerivedFromEmpty : public EmptyBase {
-  int m0 = 0;
-};
-
-struct [[=rbe::fmt]] Base {
-  int m0 = 0;
-  int m1 = 1;
-  int m2 = 2;
-};
-
-struct [[=rbe::fmt]] EmptyDerived : Base { };
-
-struct [[=rbe::fmt]] UnnamedMember {
-  int _ = 42;
-};
-
-struct [[=rbe::fmt]] Bits {
-  unsigned int a : 3;
-  unsigned int b : 5;
-  unsigned int c : 8;
-};
-
-// clang-format on
-
 
 TEST_SUITE_BEGIN("Universal formatter");
 

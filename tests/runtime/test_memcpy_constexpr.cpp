@@ -11,6 +11,7 @@
  */
 
 // --- Includes ---
+#include "common_structs.hpp"
 
 // --- Dependencies ---
 #include <rbe/detail/memcpy_constexpr.hpp>
@@ -28,24 +29,6 @@
 using rbe::detail::memcpy_constexpr;
 
 namespace {
-
-struct PaddedStruct {
-  int a;
-  double b;
-  char c;
-  bool operator==(PaddedStruct const&) const = default;
-};
-
-struct NonPaddedStruct {
-  int a;
-  int b;
-  double c;
-  bool operator==(NonPaddedStruct const&) const = default;
-};
-
-struct EmptyStruct {
-  bool operator==(EmptyStruct const&) const = default;
-};
 
 
 // --- Compile-time tests for memcpy_constexpr ---
