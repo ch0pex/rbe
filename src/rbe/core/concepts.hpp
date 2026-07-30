@@ -48,7 +48,7 @@ template<typename T>
 concept introspectable = std::meta::is_enumerable_type(^^T);
 
 /**
- * @brief Concept to determine if a given type is suitable to be transmited through
+ * @brief Concept to determine if a given type is suitable to be transmitted through
  * the wire using RBE.
  *
  * The type must be:
