@@ -13,6 +13,10 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/core/concepts.hpp>
+#include <rbe/core/endian.hpp>
+#include <rbe/core/memory_layout.hpp>
+#include <rbe/core/static_string.hpp>
 
 // --- Dependencies ---
 
@@ -25,10 +29,35 @@
 
 namespace rbe::dsrl {
 
-template<typename T>
+template<wirable T>
 class msg {
 public:
+  // --- Type traits ---
+
+  using value_type = T;
+  using size_type  = std::size_t;
+
+  static constexpr auto wire = get_wire_layout<T>();
+
+  // --- Constructors ---
+
+  constexpr explicit msg(std::span<std::byte const> const data) : data_(data) { }
+
+  template<static_string Name>
+  constexpr auto field() const {
+    return field<detail::nsdm_index(^^value_type, Name.get())>();
+  }
+
+  template<std::size_t Index>
+  constexpr auto field() const {
+    using member_type                   = [:type_of(detail::nsdm(^^value_type, Index)):];
+    static constexpr auto member_layout = wire.members[Index];
+    auto const* ptr                     = std::addressof(data_[member_layout.offset.bytes]);
+    return endian::load<member_type, member_layout.endianness>(ptr);
+  }
+
 private:
+  std::span<std::byte const> data_;
 };
 
 } // namespace rbe::dsrl

@@ -45,5 +45,13 @@ constexpr void memcpy_constexpr(std::byte* dst, T const& src) {
   memcpy_constexpr(std::span<std::byte>(dst, sizeof(T)), src);
 }
 
+template<typename T>
+  requires(std::is_trivially_copyable_v<T>)
+constexpr T load(std::span<std::byte const> const source) {
+  assert(source.size() >= sizeof(T));
+  std::array<std::byte, sizeof(T)> buffer {};
+  std::ranges::copy(source, std::ranges::begin(buffer));
+  return std::bit_cast<T>(buffer);
+}
 
 } // namespace rbe::detail

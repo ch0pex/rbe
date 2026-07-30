@@ -13,7 +13,9 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/dsrl/msg.hpp>
 #include <rbe/dsrl/tags.hpp>
+
 
 // --- Dependencies ---
 
@@ -21,13 +23,16 @@
 
 // --- STD ---
 #include <cstddef>
+#include <memory>
 #include <span>
+
+#include "rbe/core/serder.hpp"
 
 // --- System ---
 
 namespace rbe {
 
-/*
+/**
  * @brief Deserializes a buffer into an object eagerly.
  *
  * The function takes a span of bytes as input and deserializes it into an object of type T.
@@ -41,12 +46,12 @@ namespace rbe {
  * @param eager A tag indicating that the deserialization should be performed eagerly.
  * @return An object of type T constructed from the deserialized data.
  */
-template<typename T>
-auto deserialize(std::span<std::byte> input, dsrl::eager_t /**/) -> T {
-  //
+template<wirable T>
+constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
+  return serder<T>::deserialize(input);
 }
 
-/*
+/**
  * @brief Deserializes a buffer into an object lazily.
  *
  * The function takes a span of bytes as input and deserializes it into an object of type dsrl::msg<T>.
@@ -56,10 +61,11 @@ auto deserialize(std::span<std::byte> input, dsrl::eager_t /**/) -> T {
  * @tparam T The type of the object to deserialize. Must be introspectable.
  * @param input A span of bytes containing the serialized data.
  * @param lazy A tag indicating that the deserialization should be performed lazily.
+ * @return
  */
-template<typename T>
-auto deserialize(std::span<std::byte> input, dsrl::lazy_t /**/) pre(input.size_bytes() >= sizeof(T)) {
-  //
+template<wirable T>
+constexpr auto deserialize(std::span<std::byte const> const input, dsrl::lazy_t lazy [[maybe_unused]]) -> dsrl::msg<T> {
+  return dsrl::msg<T> {input};
 }
 
 /**
@@ -75,9 +81,18 @@ auto deserialize(std::span<std::byte> input, dsrl::lazy_t /**/) pre(input.size_b
  *
  * @note If the input buffer does not meet the alignment requirements of the type T, the behavior is undefined.
  */
-template<typename T>
-auto deserialize(std::span<std::byte> input, dsrl::in_place_t /**/) -> T& {
-  //
+template<trivially_wirable T>
+constexpr auto deserialize(
+    std::span<std::byte const> const input, //
+    dsrl::in_place_t in_place [[maybe_unused]]
+) -> T const& {
+  auto* ptr = std::start_lifetime_as<T>(input.data());
+  return *ptr;
 }
 
+template<trivially_wirable T>
+constexpr auto deserialize(std::span<std::byte> const input, dsrl::in_place_t in_place [[maybe_unused]]) -> T& {
+  auto* ptr = std::start_lifetime_as<T>(input.data());
+  return *ptr;
+}
 } // namespace rbe
