@@ -114,7 +114,9 @@ install_preset() {
     fi
 }
 
-conan config install "$SCRIPT_DIR/config"
+if [ "$1" == "--install-config" ]; then
+    conan config install "$SCRIPT_DIR/config"
+fi
 
 if [ "$1" == "all" ]; then
     echo "Executing batch installation for current OS..."
