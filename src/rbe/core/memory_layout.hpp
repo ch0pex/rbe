@@ -13,8 +13,8 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/concepts/wirable.hpp>
 #include <rbe/core/annotations.hpp>
-#include <rbe/core/concepts.hpp>
 #include <rbe/core/endian.hpp>
 #include <rbe/core/static_array.hpp>
 #include <rbe/detail/introspection.hpp>
@@ -34,24 +34,6 @@
 
 namespace rbe {
 
-using member_offset = std::meta::member_offset;
-
-struct member_layout {
-  member_offset offset {};
-  std::size_t size {};
-  endian::order endianness {std::endian::little};
-
-  constexpr bool operator==(member_layout const&) const = default;
-};
-
-//  TODO: add support for bit fields
-struct struct_layout {
-  std::size_t size {};
-  static_array<member_layout> members {};
-
-  constexpr bool operator==(struct_layout const& /**/) const = default;
-};
-
 namespace detail {
 
 consteval endian::order get_member_endianness(std::meta::info const member) {
@@ -67,6 +49,25 @@ consteval endian::order get_member_endianness(std::meta::info const member) {
 }
 
 } // namespace detail
+
+using member_offset = std::meta::member_offset;
+
+struct member_layout {
+  member_offset offset {};
+  std::size_t size {};
+  endian::order endianness {std::endian::little};
+
+  constexpr bool operator==(member_layout const&) const = default;
+};
+
+//  TODO: add support for bit fields
+//  TODO: add support for nested structs
+struct struct_layout {
+  std::size_t size {};
+  static_array<member_layout> members {};
+
+  constexpr bool operator==(struct_layout const& /**/) const = default;
+};
 
 // NOTE: at some point if compile times get really bad maybe we should consider caching the results
 // of these functions in static constexpr variables. Referencing to static constexpr however is
@@ -130,18 +131,5 @@ consteval auto get_wire_layout() -> struct_layout {
     .members = {std::from_range, member_layouts},
   };
 }
-
-
-/**
- * @brief Concept to check if a type is trivially wirable.
- *
- * A type is considered trivially serializable if its struct layout matches its wire layout.
- * Meaning that the in-memory representation of the type can be directly used for serialization without any additional
- * processing. Therefore, serialization and deserialization can be performed by simply memcpy'ing the data to and from a
- * buffer.
- *
- */
-template<typename T>
-concept trivially_wirable = wirable<T> and get_struct_layout<T>() == get_wire_layout<T>();
 
 } // namespace rbe

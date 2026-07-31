@@ -16,7 +16,6 @@
 #include <rbe/core/fmt.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/srl/serialize.hpp>
-#include "rbe/core/concepts.hpp"
 
 // --- External dependencies ---
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -35,19 +34,19 @@ TEST_CASE("Test packet hdr layout") {
     .size    = sizeof(PacketHeader),
     .members = rbe::static_array {
       rbe::member_layout {
-        .offset = {.bytes=offsetof(PacketHeader, length), .bits=0},
+        .offset = {.bytes = offsetof(PacketHeader, length), .bits = 0},
         .size   = 2,
       },
       rbe::member_layout {
-        .offset = {.bytes=offsetof(PacketHeader, count), .bits=0},
+        .offset = {.bytes = offsetof(PacketHeader, count), .bits = 0},
         .size   = 1,
       },
       rbe::member_layout {
-        .offset = {.bytes=offsetof(PacketHeader, unit), .bits=0},
+        .offset = {.bytes = offsetof(PacketHeader, unit), .bits = 0},
         .size   = 1,
       },
       rbe::member_layout {
-        .offset = {.bytes=offsetof(PacketHeader, sequence), .bits=0},
+        .offset = {.bytes = offsetof(PacketHeader, sequence), .bits = 0},
         .size   = 4,
       },
     }

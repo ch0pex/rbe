@@ -14,7 +14,7 @@
 
 #include "common_structs.hpp"
 
-#include <rbe/core/concepts.hpp>
+#include <rbe/concepts.hpp>
 
 #include <array>
 
@@ -33,7 +33,7 @@ struct TestCase {
 
 
 constexpr TestCase trivially_wirable_no_padding {
-  .structure = NonPaddedStruct {.a = 1, .b = 2, .c = 'a'},
+  .structure = NonPaddedStruct2 {.a = 1, .b = 2, .c = 'a'},
   .wire      = bytes(
       0x01, 0x00, 0x00, 0x00, // a
       0x02, 0x00, 0x00, 0x00, // b

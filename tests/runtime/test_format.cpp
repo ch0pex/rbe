@@ -11,10 +11,11 @@
  */
 
 // --- Includes ---
-#include <rbe/core/annotations.hpp>
-#include <rbe/core/fmt.hpp>
+#include "common_structs.hpp"
 
 // --- Dependencies ---
+#include <rbe/core/annotations.hpp>
+#include <rbe/core/fmt.hpp>
 
 // --- External dependencies ---
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -22,8 +23,6 @@
 
 // --- STD ---
 #include <print>
-
-#include "common_structs.hpp"
 
 // --- System ---
 

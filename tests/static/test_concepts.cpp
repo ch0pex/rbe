@@ -9,7 +9,7 @@
  */
 
 // --- Includes ---
-#include <rbe/core/concepts.hpp>
+#include <rbe/concepts.hpp>
 
 // --- Dependencies ---
 
@@ -60,7 +60,25 @@ struct AggregateDerived : Message {
   std::uint32_t numbers_derived;
 };
 
+struct NoAggregateCustomSerder {
+  NoAggregateCustomSerder() = default;
+
+private:
+  std::uint32_t number;
+  std::uint32_t number2;
+  std::int32_t private_member;
+};
+
 } // namespace
+
+template<>
+struct rbe::serder<NoAggregateCustomSerder> {
+  static constexpr std::size_t serialize(std::span<std::byte> const /**/, NoAggregateCustomSerder const& /**/) {
+    return 0;
+  }
+
+  static constexpr NoAggregateCustomSerder deserialize(std::span<std::byte const> const /**/) { return {}; }
+};
 
 static_assert(not rbe::wirable<EmptyMessage>);
 static_assert(rbe::wirable<Message>);
@@ -68,4 +86,5 @@ static_assert(rbe::wirable<MessageWithEnum>);
 static_assert(not rbe::wirable<NoAggregate>);
 static_assert(not rbe::wirable<AggregateWithPtr>);
 static_assert(not rbe::wirable<AggregateWithRef>);
-static_assert(not rbe::wirable<AggregateDerived>);
+static_assert(rbe::wirable<AggregateDerived>);
+static_assert(rbe::wirable<NoAggregateCustomSerder>);

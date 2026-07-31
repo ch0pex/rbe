@@ -13,7 +13,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/concepts.hpp>
+#include <rbe/concepts/wirable.hpp>
 #include <rbe/core/endian.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/static_string.hpp>

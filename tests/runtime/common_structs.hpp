@@ -149,8 +149,15 @@ struct PaddedStruct {
 struct NonPaddedStruct {
   int a;
   int b;
-  char c;
+  double c;
   bool operator==(NonPaddedStruct const&) const = default;
+};
+
+struct NonPaddedStruct2 {
+  int a;
+  int b;
+  char c;
+  bool operator==(NonPaddedStruct2 const&) const = default;
 };
 
 struct EmptyStruct {

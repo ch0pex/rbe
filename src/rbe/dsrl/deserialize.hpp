@@ -32,6 +32,7 @@
 
 namespace rbe {
 
+
 /**
  * @brief Deserializes a buffer into an object eagerly.
  *
@@ -48,7 +49,26 @@ namespace rbe {
  */
 template<wirable T>
 constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
+  using std::ranges::to;
+
+  static constexpr auto wire    = get_wire_layout<T>();
+  static constexpr auto members = detail::nsdm(^^T);
+
+  T value;
+  template for (constexpr auto [layout, member]: std::views::zip(wire.members, members) | to<static_array>()) {
+    value.[:member:] = deserialize<type_of(member)>(input.subspan<layout.offset.bytes, layout.size>());
+  }
+  return value;
+}
+
+template<custom_wire T>
+constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
   return serder<T>::deserialize(input);
+}
+
+template<trivially_wirable T>
+constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
+  return detail::load<T>(input);
 }
 
 /**
