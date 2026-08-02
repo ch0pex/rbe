@@ -10,81 +10,71 @@
 
 // --- Includes ---
 #include <rbe/concepts.hpp>
-
-// --- Dependencies ---
-
-// --- External dependencies ---
-
-// --- STD ---
-
-// --- System ---
+#include "common_structs.hpp"
 
 namespace {
 
-enum class test_flags : std::uint8_t { };
+template<auto Concept, auto TypeList>
+consteval auto test_concept() -> bool {
+  template for (constexpr auto type: TypeList) {
+    if constexpr (not template[:Concept:]<typename[:type:]>) {
+      return false;
+    }
+  }
+  return true;
+}
 
-struct EmptyMessage { };
+// clang-format off
 
-struct Message {
-  std::uint32_t number;
-  std::uint32_t number2;
+// --- Wire primitives ---
+constexpr std::array trivially_wirable_primitives = {
+  ^^char,      ^^unsigned char, //
+  ^^uint8_t,   ^^uint16_t,      ^^uint32_t, ^^uint64_t, //
+  ^^int8_t,    ^^int16_t,       ^^int32_t,  ^^int64_t, //
+  ^^test_flags // enum example
 };
 
-struct MessageWithEnum {
-  test_flags flags;
-  std::uint32_t number;
-  std::uint32_t number2;
+constexpr std::array custom_wirable = {^^NoAggregateCustomSerder};
+static_assert(test_concept<^^rbe::trivially_wirable_primitive, trivially_wirable_primitives>());
+static_assert(not test_concept<^^rbe::trivially_wirable_primitive, std::array{^^float, ^^double}>()); // not supported yet
+
+static_assert(test_concept<^^rbe::custom_wirable, std::array{^^NoAggregateCustomSerder}>());
+static_assert(not test_concept<^^rbe::custom_wirable, trivially_wirable_primitives>());
+static_assert(not test_concept<^^rbe::custom_wirable, std::array{^^std::vector<char>, ^^std::string,}>());
+
+static_assert(test_concept<^^rbe::wirable_primitive, trivially_wirable_primitives>());
+static_assert(test_concept<^^rbe::wirable_primitive, custom_wirable>());
+static_assert(not test_concept<^^rbe::wirable_primitive, std::array{^^std::string, ^^std::vector<int>}>());
+
+// --- Wirable
+constexpr auto wirable_structs = std::array{
+  // ^^PaddedStruct, ^^NonPaddedStruct, (doubles not supported yet)
+  ^^PacketHeader, ^^AddOrder, ^^ReduceSize,  ^^NoPack, ^^Packed, ^^MixedEndian, ^^Complex,
+  ^^NonPaddedStruct2, ^^CommonHeader, ^^MessageWithHeader, ^^NoAggregateCustomSerder,
+  ^^Message, ^^MessageWithEnum
 };
 
-struct NoAggregate {
-  std::uint32_t number;
-  std::uint32_t number2;
-
-private:
-  std::int32_t private_member;
+constexpr auto no_wirable_structs = std::array{
+  ^^PaddedStruct, ^^NonPaddedStruct, // (doubles not supported yet)
+  ^^NoAggregate, ^^AggregateWithPtr, ^^AggregateWithRef
 };
 
-struct AggregateWithPtr {
-  std::uint32_t number;
-  std::uint32_t number2;
-  std::uint32_t* number3_ptr;
+static_assert(test_concept<^^rbe::wirable, trivially_wirable_primitives>());
+static_assert(test_concept<^^rbe::wirable, wirable_structs>());
+static_assert(not test_concept<^^rbe::wirable, no_wirable_structs>());
+
+// --- Trivially wirable ---
+
+constexpr auto trivially_wirable_structs = std::array{
+  ^^ReduceSize,  ^^NoPack, ^^NonPaddedStruct2, ^^CommonHeader, ^^MessageWithHeader,
+  ^^Message, ^^MessageWithEnum
 };
 
-struct AggregateWithRef {
-  std::uint32_t number;
-  std::uint32_t number2;
-  std::uint32_t& number3_ptr;
-};
+static_assert(test_concept<^^rbe::trivially_wirable, trivially_wirable_primitives>());
+static_assert(test_concept<^^rbe::trivially_wirable, trivially_wirable_structs>());
+static_assert(not test_concept<^^rbe::trivially_wirable, custom_wirable>());
+static_assert(not test_concept<^^rbe::trivially_wirable, wirable_structs>());
 
-struct AggregateDerived : Message {
-  std::uint32_t numbers_derived;
-};
-
-struct NoAggregateCustomSerder {
-  NoAggregateCustomSerder() = default;
-
-private:
-  std::uint32_t number;
-  std::uint32_t number2;
-  std::int32_t private_member;
-};
+// clang-format on
 
 } // namespace
-
-template<>
-struct rbe::custom<NoAggregateCustomSerder> {
-  static constexpr std::size_t serialize(std::span<std::byte> const /**/, NoAggregateCustomSerder const& /**/) {
-    return 0;
-  }
-
-  static constexpr NoAggregateCustomSerder deserialize(std::span<std::byte const> const /**/) { return {}; }
-};
-
-static_assert(not rbe::wirable<EmptyMessage>);
-static_assert(rbe::wirable<Message>);
-static_assert(rbe::wirable<MessageWithEnum>);
-static_assert(not rbe::wirable<NoAggregate>);
-static_assert(not rbe::wirable<AggregateWithPtr>);
-static_assert(not rbe::wirable<AggregateWithRef>);
-static_assert(rbe::wirable<AggregateDerived>);
-static_assert(rbe::wirable<NoAggregateCustomSerder>);

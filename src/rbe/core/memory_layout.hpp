@@ -40,12 +40,10 @@ consteval endian::order get_member_endianness(std::meta::info const member) {
   if (has_annotation(member, little)) {
     return endian::order::little;
   }
-  else if (has_annotation(member, big)) {
+  if (has_annotation(member, big)) {
     return endian::order::big;
   }
-  else {
-    return endian::order::native;
-  }
+  return endian::order::native;
 }
 
 } // namespace detail
@@ -76,9 +74,9 @@ struct struct_layout {
 // - https://github.com/llvm/llvm-project/issues/82994
 // - https://github.com/llvm/llvm-project/issues/61425
 
-template<wirable T>
+template<wirable_class T>
 consteval auto get_struct_layout() -> struct_layout {
-  auto members = detail::nsdm(^^T);
+  auto const members = detail::nsdm(^^T);
 
   std::vector<member_layout> member_layouts;
   member_layouts.reserve(members.size());
@@ -92,7 +90,7 @@ consteval auto get_struct_layout() -> struct_layout {
   };
 }
 
-template<wirable T>
+template<wirable_class T>
   requires(not detail::has_annotation(^^T, pack))
 consteval auto get_wire_layout() -> struct_layout {
   auto members = detail::nsdm(^^T);
@@ -110,7 +108,7 @@ consteval auto get_wire_layout() -> struct_layout {
   };
 }
 
-template<wirable T>
+template<wirable_class T>
   requires(detail::has_annotation(^^T, pack))
 consteval auto get_wire_layout() -> struct_layout {
   auto members = detail::nsdm(^^T);

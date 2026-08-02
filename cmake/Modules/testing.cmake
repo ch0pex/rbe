@@ -44,6 +44,7 @@ function(create_test test_name test_src)
     #     )
     # endif ()
 
+    target_include_directories(${target_exe} PUBLIC ${CMAKE_SOURCE_DIR}/tests/common)
 endfunction()
 
 

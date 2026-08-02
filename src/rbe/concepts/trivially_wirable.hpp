@@ -14,8 +14,8 @@
 
 // --- Includes ---
 #include <rbe/core/memory_layout.hpp>
-#include "rbe/concepts/wirable_primitives.hpp"
 #include "rbe/concepts/wirable.hpp"
+#include "rbe/concepts/wirable_primitives.hpp"
 
 // --- Dependencies ---
 
@@ -32,12 +32,12 @@ namespace detail {
 template<typename T>
 consteval auto is_trivially_wirable_type() -> bool {
   static constexpr auto info = ^^T;
-  if (not is_class_type(info)) {
-    return is_integral_type(info) or is_enum_type(info);
+  if constexpr (wirable_class<T>) {
+    return is_trivially_copyable_type(info) //
+           and is_standard_layout_type(info) //
+           and get_struct_layout<T>() == get_wire_layout<T>(); //
   }
-  return is_trivially_copyable_type(info) //
-         and is_standard_layout_type(info) //
-         and get_struct_layout<T>() == get_wire_layout<T>(); //
+  return is_integral_type(info) or is_enum_type(info);
 }
 
 } // namespace detail
