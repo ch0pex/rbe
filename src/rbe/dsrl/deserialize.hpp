@@ -13,6 +13,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/concepts/wirable.hpp>
 #include <rbe/dsrl/msg.hpp>
 #include <rbe/dsrl/tags.hpp>
 
@@ -25,8 +26,6 @@
 #include <cstddef>
 #include <memory>
 #include <span>
-
-#include "rbe/core/serder.hpp"
 
 // --- System ---
 
@@ -42,7 +41,7 @@ namespace rbe {
  * needed. If the type T is trivially serializable, it will perform a direct memory copy. Otherwise, it will deserialize
  * each member of the struct.
  *
- * @tparam T The type of the object to deserialize. Must be introspectable.
+ * @tparam T The type of the object to deserialize. Must be wirable and not custom_wirable.
  * @param input A span of bytes containing the serialized data.
  * @param eager A tag indicating that the deserialization should be performed eagerly.
  * @return An object of type T constructed from the deserialized data.
@@ -61,9 +60,9 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
   return value;
 }
 
-template<custom_wire T>
+template<custom_wirable T>
 constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
-  return serder<T>::deserialize(input);
+  return custom<T>::deserialize(input);
 }
 
 template<trivially_wirable T>

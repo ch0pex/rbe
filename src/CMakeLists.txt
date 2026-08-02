@@ -18,7 +18,7 @@ target_sources(
         rbe/core/fmt.hpp
         rbe/core/literals.hpp
         rbe/core/memory_layout.hpp
-        rbe/core/serder.hpp
+        rbe/core/custom.hpp
         rbe/core/static_array.hpp
         rbe/core/static_string.hpp
 

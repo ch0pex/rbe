@@ -14,6 +14,8 @@
 
 // --- Includes ---
 #include <rbe/core/memory_layout.hpp>
+#include "rbe/concepts/wirable_primitives.hpp"
+#include "rbe/concepts/wirable.hpp"
 
 // --- Dependencies ---
 
@@ -25,6 +27,21 @@
 
 namespace rbe {
 
+namespace detail {
+
+template<typename T>
+consteval auto is_trivially_wirable_type() -> bool {
+  static constexpr auto info = ^^T;
+  if (not is_class_type(info)) {
+    return is_integral_type(info) or is_enum_type(info);
+  }
+  return is_trivially_copyable_type(info) //
+         and is_standard_layout_type(info) //
+         and get_struct_layout<T>() == get_wire_layout<T>(); //
+}
+
+} // namespace detail
+
 /**
  * @brief Concept to check if a type is trivially wirable.
  *
@@ -35,10 +52,10 @@ namespace rbe {
  *
  */
 template<typename T>
-concept trivially_wirable = //
-    std::is_trivially_copyable_v<T> //
-    and std::is_standard_layout_v<T> //
-    and wirable<T> //
-    and get_struct_layout<T>() == get_wire_layout<T>(); //
+concept trivially_wirable = wirable<T> and not custom_wirable<T> and detail::is_trivially_wirable_type<T>();
+
+template<typename T>
+concept trivially_wirable_class = std::is_class_v<T> and trivially_wirable<T>;
+
 
 } // namespace rbe

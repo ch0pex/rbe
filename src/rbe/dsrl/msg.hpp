@@ -30,6 +30,7 @@
 namespace rbe::dsrl {
 
 template<wirable T>
+  requires(not custom_wirable<T>)
 class msg {
 public:
   // --- Type traits ---

@@ -80,7 +80,7 @@ Unlike eager deserialization, lazy deserialization does not require default cons
 A type is **in-place deserializable** if the wire buffer can be reinterpreted directly as the C++ object with zero copy. Requires:
 
 - The type is trivially wirable
-- The type is trivially constructible and trivially destructible
+- The type is implicit lifetime
 
 This is the most restrictive mode and the fastest path: the buffer is bitcast to the target type with no allocation, no copy, and no transformation.
 

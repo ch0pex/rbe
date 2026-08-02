@@ -54,8 +54,14 @@ constexpr void test_lazy(std::span<std::byte const> input, T const& expected) {
 template<typename Test>
 constexpr void test_case(Test const& test_case) {
   test_eager(test_case.wire, test_case.structure);
-  test_inplace(test_case.wire, test_case.structure);
-  test_lazy(test_case.wire, test_case.structure);
+
+  if constexpr (rbe::trivially_wirable<decltype(test_case.structure)>) {
+    test_inplace(test_case.wire, test_case.structure);
+  }
+
+  if constexpr (not rbe::custom_wirable<decltype(test_case.structure)>) {
+    test_lazy(test_case.wire, test_case.structure);
+  }
 }
 
 TEST_SUITE_BEGIN("Deserialization");
@@ -63,6 +69,7 @@ TEST_SUITE_BEGIN("Deserialization");
 TEST_CASE("Deserialize trivial") {
   test_case(trivially_wirable_no_padding);
   test_case(trivially_wirable_with_paddings);
+  test_case(wirable_custom_serder);
 }
 
 TEST_SUITE_END();

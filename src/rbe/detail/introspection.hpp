@@ -89,5 +89,11 @@ consteval auto bases_of(std::meta::info info, std::meta::access_context ctx = de
   return std::meta::bases_of(info, ctx);
 }
 
+consteval auto static_member_functions_of(std::meta::info const info, std::meta::access_context ctx = default_context) {
+  static constexpr auto is_static_member_function = [](std::meta::info const member) -> bool {
+    return is_static_member(member) and is_function(member) and not is_special_member_function(member);
+  };
+  return members_of(info, ctx) | std::views::filter(is_static_member_function) | std::ranges::to<std::vector>();
+}
 
 } // namespace rbe::detail

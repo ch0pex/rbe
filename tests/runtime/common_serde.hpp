@@ -61,3 +61,8 @@ constexpr TestCase trivially_wirable_with_paddings {
       pad, pad, pad, pad // padding
   ),
 };
+
+constexpr TestCase wirable_custom_serder {
+  .structure = NoAggregateCustomSerder {bytes(0x00, 0x01, 0x02, 0x03)},
+  .wire      = bytes(0x00, 0x01, 0x02, 0x03),
+};

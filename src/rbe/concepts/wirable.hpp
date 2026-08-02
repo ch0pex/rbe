@@ -11,6 +11,8 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/concepts/wirable_primitives.hpp>
+#include <rbe/core/static_array.hpp>
 #include <rbe/detail/introspection.hpp>
 
 // --- Dependencies ---
@@ -18,40 +20,32 @@
 // --- External dependencies ---
 
 // --- STD ---
-#include <algorithm>
 #include <meta>
+
 
 // --- System ---
 
 namespace rbe {
 
-template<class T>
-struct serder;
-
-template<class T>
-concept custom_wire = requires(T t) {
-  { serder<T>::deserialize(std::span<std::byte const> {}) } -> std::same_as<T>;
-  { serder<T>::serialize(std::span<std::byte> {}, t) } -> std::same_as<std::size_t>;
-};
-
 namespace detail {
 
-consteval auto has_custom_serder(std::meta::info const type) -> bool {
-  if (not is_class_type(type)) {
-    return false;
+template<class T>
+consteval auto is_wirable_class_type() -> bool {
+  static constexpr auto info = ^^T;
+  if constexpr (wirable_primitive<T>) { // leaf case
+    return true;
   }
-  std::vector params {type};
-  return is_complete_type(substitute(^^serder, params));
-}
 
-consteval auto is_wirable_type(std::meta::info const info) -> bool {
-  return is_arithmetic_type(info) or is_enum_type(info) or has_custom_serder(info) // leaf cases
-         or ( //
-                is_aggregate_type(info) // Must be an aggregate
-                and is_class_type(info) // Not union, not array
-                and not is_empty_type(info) // Not supported empty classes
-                and std::ranges::all_of(nsdm(info), is_wirable_type, std::meta::type_of)
-            );
+  // check recursively that all it's members are wirable
+  if constexpr (is_aggregate_type(info) and is_class_type(info) and not is_empty_type(info)) {
+    template for (constexpr auto member: nsdm(info) | std::ranges::to<static_array>()) {
+      if (not is_wirable_class_type<typename[:type_of(member):]>())
+        return false;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 } // namespace detail
@@ -78,8 +72,12 @@ concept introspectable = std::meta::is_enumerable_type(^^T);
  *   - Nested wirable types in non-static member variables
  *   - Base classes
  *   - Array types
+ *
  */
 template<typename T>
-concept wirable = detail::is_wirable_type(^^T);
+concept wirable = wirable_primitive<T> or detail::is_wirable_class_type<T>();
+
+template<typename T>
+concept wirable_class = std::is_class_v<T> and wirable<T>;
 
 } // namespace rbe

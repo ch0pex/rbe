@@ -72,7 +72,7 @@ private:
 } // namespace
 
 template<>
-struct rbe::serder<NoAggregateCustomSerder> {
+struct rbe::custom<NoAggregateCustomSerder> {
   static constexpr std::size_t serialize(std::span<std::byte> const /**/, NoAggregateCustomSerder const& /**/) {
     return 0;
   }

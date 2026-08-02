@@ -13,6 +13,7 @@
 #pragma once
 
 #include <rbe/core/annotations.hpp>
+#include <rbe/core/custom.hpp>
 
 struct[[= rbe::fmt]] Empty { };
 
@@ -162,6 +163,34 @@ struct NonPaddedStruct2 {
 
 struct EmptyStruct {
   bool operator==(EmptyStruct const&) const = default;
+};
+
+class NoAggregateCustomSerder {
+public:
+  NoAggregateCustomSerder() = default;
+
+  explicit constexpr NoAggregateCustomSerder(std::span<std::byte const> const data)  {
+    std::ranges::copy(data, std::ranges::begin(bytes_));
+  }
+
+  [[nodiscard]] std::span<std::byte const> bytes() const { return bytes_; }
+
+  bool operator==(NoAggregateCustomSerder const& other) const {
+    return bytes_ == other.bytes_;
+  };
+private:
+  std::array<std::byte, 4> bytes_{};
+};
+
+template<>
+struct rbe::custom<NoAggregateCustomSerder> {
+  static constexpr std::size_t serialize(std::span<std::byte> const dst, NoAggregateCustomSerder const& msg) {
+    const auto data = msg.bytes();
+    std::ranges::copy(msg.bytes(), std::ranges::begin(dst));
+    return data.size_bytes();
+  }
+
+  static constexpr NoAggregateCustomSerder deserialize(std::span<std::byte const> const data) { return NoAggregateCustomSerder{data}; }
 };
 
 // clang-format on
