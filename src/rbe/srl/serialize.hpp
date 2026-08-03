@@ -5,80 +5,47 @@
 /**
  * @file serialize.hpp
  * @date 02/07/2026
- * @brief Short description
+ * @brief Serialization routines for writing wirable types to byte buffers.
  *
- * Longer description
+ * Provides overloads for trivially wirable types, custom-wirable types,
+ * integral primitives, and general wirable aggregates.
  */
 
 #pragma once
 
 // --- Includes ---
-#include <cstddef>
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/detail/memcpy_constexpr.hpp>
-
-#include "rbe/concepts/trivially_wirable.hpp"
-#include "rbe/concepts/wirable.hpp"
-#include "rbe/core/custom.hpp"
-#include "rbe/core/endian.hpp"
 
 // --- Dependencies ---
+#include <rbe/concepts/trivially_wirable.hpp>
+#include <rbe/concepts/wirable.hpp>
+#include <rbe/core/custom.hpp>
+#include <rbe/core/endian.hpp>
+#include <rbe/detail/memcpy_constexpr.hpp>
+#include <rbe/detail/normalize.hpp>
 
 // --- External dependencies ---
 
 // --- STD ---
+#include <cstddef>
 
 // --- System ---
 
-
 namespace rbe {
 
-namespace detail {
-
-template<endian::order Order>
-auto normalize_endiannes(std::integral auto const value) -> std::integral auto {
-  return endian::native_to<Order>(value);
-}
-
-template<endian::order Order>
-auto normalize_endianness(auto const& value) -> auto const& {
-  return value;
-}
-
-} // namespace detail
-
-constexpr auto serialize(std::span<std::byte> const out, trivially_wirable auto const& value) -> std::size_t {
-  detail::memcpy_constexpr(out, value);
-  return sizeof(value);
-}
-
-constexpr auto serialize(std::span<std::byte> const out, custom_wirable auto const& value) -> std::size_t {
-  return custom<std::remove_cvref_t<decltype(value)>>::serialize(out, value);
-}
-
-constexpr auto serialize(std::span<std::byte> const out, std::integral auto const& value) -> std::size_t {
-  endian::store<decltype(value), endian::order::native>(out.data(), value);
-  return sizeof(value);
-}
-
-template<typename T>
-concept serializable = requires(T const& value, std::span<std::byte> const out) {
-  { serialize(out, value) } -> std::same_as<std::size_t>;
-};
-
 /**
- * @brief Serializes a wirable type into a buffer.
+ * @brief Serializes a wirable aggregate into a buffer member-by-member.
  *
- * This function serializes the given value of type `T` into the provided buffer. The type `T` must be wirable
+ * Iterates over each non-static data member, normalizes its endianness
+ * according to the wire layout, and recursively serializes it into the
+ * corresponding offset within the output buffer.
  *
- * @tparam T The type of the value to serialize. Must be trivially serializable.
- * @param out A span of bytes where the serialized data will be stored. The size of the buffer must be at least
- * sizeof(T).
- * @param value The value to serialize.
- * @return The number of bytes written to the buffer, which is equal to sizeof(T).
+ * @tparam T The aggregate type to serialize. Must satisfy `wirable_class`.
+ * @param out Output buffer large enough to hold the serialized data.
+ * @param value The object to serialize.
+ * @return Number of bytes written to the buffer.
  */
-
-template<wirable T>
+template<wirable_class T>
 constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {
   using std::ranges::to;
 
@@ -96,5 +63,15 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
   return bytes_written;
 }
 
+/// Serializes a trivially wirable type by direct memory copy.
+constexpr auto serialize(std::span<std::byte> const out, trivially_wirable auto const& value) -> std::size_t {
+  detail::memcpy_constexpr(out, value);
+  return sizeof(value);
+}
+
+/// Serializes a custom-wirable type via its `custom<T>::serialize` specialization.
+constexpr auto serialize(std::span<std::byte> const out, custom_wirable auto const& value) -> std::size_t {
+  return custom<std::remove_cvref_t<decltype(value)>>::serialize(out, value);
+}
 
 } // namespace rbe
