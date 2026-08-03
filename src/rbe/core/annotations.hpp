@@ -44,9 +44,10 @@ consteval auto has_annotation(std::meta::info const info, auto const& value) {
     if (std::meta::constant_of(a) == expected) {
       return true;
     }
-    else if (detail::is_annotation_list(a)) {
-      for (std::meta::info a2: template_arguments_of(type_of(a))) {
-        if (std::meta::constant_of(a2) == expected) {
+
+    if (is_annotation_list(a)) {
+      for (auto const a2: template_arguments_of(type_of(a))) {
+        if (constant_of(a2) == expected) {
           return true;
         }
       }
