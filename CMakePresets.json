@@ -10,7 +10,8 @@
       "hidden": true,
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": true,
-        "BUILD_TESTING": true
+        "BUILD_TESTING": true,
+        "BUILD_EXAMPLES": true
       }
     },
     {

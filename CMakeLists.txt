@@ -8,3 +8,7 @@ if (BUILD_TESTING)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+if (BUILD_EXAMPLES)
+  add_subdirectory(example)
+endif()

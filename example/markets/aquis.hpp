@@ -21,17 +21,11 @@
 #pragma once
 
 #include <rbe/core/annotations.hpp>
-#include <rbe/core/custom.hpp> // for rbe::string<N> (see note below)
+#include <rbe/core/custom.hpp>
 #include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
-
-// NOTE: `rbe::string<N>` is documented in the design overview as a
-// library-provided fixed-length text type but is not implemented yet;
-// this file assumes it will land. Until it does, the messages that
-// reference it (Trader/Security/Tick-Table Definitions, Login) will
-// not compile.
 
 namespace aquis {
 
@@ -182,6 +176,17 @@ struct [[=rbe::pack_le]] OrderModify {
   std::uint32_t quantity;
   price_t       price;
   order_ref_t   order_ref;
+  timestamp_t   timestamp;
+};
+
+struct [[=rbe::pack_le]] QuoteAddReplace {
+  Header        header {.msg_type = message_type_t::quote_cancel, .length = 18};
+  trader_id_t   trader_id;
+  security_id_t security_id;
+  std::uint32_t bid_quantity;
+  price_t       bid_price;
+  std::uint32_t offer_quantity;
+  price_t       offer_price;
   timestamp_t   timestamp;
 };
 

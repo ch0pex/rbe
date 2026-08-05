@@ -27,17 +27,11 @@
 #pragma once
 
 #include <rbe/core/annotations.hpp>
-#include <rbe/core/custom.hpp> // for rbe::string<N> (see note below)
+#include <rbe/core/custom.hpp>
 #include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
-
-// NOTE: `rbe::string<N>` is documented in the design overview as a
-// library-provided fixed-length text type but is not implemented yet;
-// this file assumes it will land. Until it does, the messages that
-// reference it (all messages carrying a Security Symbol) will not
-// compile.
 
 namespace opra {
 

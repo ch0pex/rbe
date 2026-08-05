@@ -26,18 +26,12 @@
 #pragma once
 
 #include <rbe/core/annotations.hpp>
-#include <rbe/core/custom.hpp> // for rbe::string<N>, rbe::uint48_t (see note below)
+#include <rbe/core/custom.hpp>
 #include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
 #include "rbe/core/message_list.hpp"
-
-// NOTE: `rbe::string<N>` and `rbe::uint48_t` are documented in the
-// design overview as library-provided fixed-width primitives but are
-// not implemented yet; this file assumes they will land. Until they
-// do, the messages that reference them (all ITCH messages, since every
-// header carries a 6-byte timestamp) will not compile.
 
 namespace nasdaq {
 
@@ -54,7 +48,9 @@ using price4_t = std::uint32_t;
 using price8_t = std::uint64_t;
 
 /// Nanoseconds since midnight (Eastern Time). Wire-encoded in 6 bytes.
-using timestamp_t = rbe::uint48_t;
+/// TODO: support 48-bit unsigned integer type
+// using timestamp_t = rbe::uint48_t;
+using timestamp_t = std::uint64_t;
 
 using stock_locate_t    = std::uint16_t; ///< Dynamically assigned locate code (0 = not stock-dependent).
 using tracking_number_t = std::uint16_t; ///< Nasdaq internal tracking number.

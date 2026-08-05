@@ -23,17 +23,11 @@
 #pragma once
 
 #include <rbe/core/annotations.hpp>
-#include <rbe/core/custom.hpp> // for rbe::string<N> (see note below)
+#include <rbe/core/custom.hpp>
 #include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
-
-// NOTE: `rbe::string<N>` is documented in the design overview as a
-// library-provided fixed-length text type but is not implemented yet;
-// this file assumes it will land. Until it does, messages that reference
-// it (Login Request, Instrument Directory, Trade, MiFID II Trade, …) will
-// not compile.
 
 namespace lse {
 
@@ -477,13 +471,13 @@ struct [[=rbe::pack_le]] InstrumentDirectory {
   price_t             dynamic_circuit_breaker_tolerances;
   price_t             static_circuit_breaker_tolerances;
   segment_t           segment;
-  rbe::string<12>     reserved_field_2;
-  rbe::string<11>     reserved_field_3;
+  std::array<char,12>     reserved_field_2;
+  std::array<char,11>     reserved_field_3;
   currency_t          currency;
   std::uint8_t        partition_id;               ///< Byte.
-  rbe::string<4>      reserved_field_4;
+  std::array<char,4>      reserved_field_4;
   price4_t            average_daily_turnover;     ///< Not applicable to LSE.
-  rbe::string<8>      reserved_field_5;
+  std::array<char,8>      reserved_field_5;
   std::uint8_t        reserved_field_6;           ///< Bit field.
   price_t             reserved_field_7;
   price_t             reserved_field_8;
@@ -526,7 +520,7 @@ struct [[=rbe::pack_le]] InstrumentDirectoryEquities {
   clearing_type_t         clearing_type;
   price_t                 strike_price;
   security_exchange_t     security_exchange;      ///< Not applicable to LSE.
-  rbe::string<12>         reserved_field_7;
+  std::array<char,12>         reserved_field_7;
   std::uint8_t            reserved_field_8;
   std::uint64_t           reserved_field_9;
   size_t_                 reserved_field_10;
@@ -797,7 +791,7 @@ struct [[=rbe::pack_le]] MiFIDTrade {
   pt_flag_t           pt_cancellation_flag;       ///< "CANC" or blank.
   pt_flag_t           pt_amendment_flag;          ///< "AMND" or blank.
   std::uint8_t        reserved_field_2;
-  rbe::string<3>      reserved_field_3;
+  std::array<char,3>      reserved_field_3;
   mifid_decimal_t     reserved_field_4;
   pt_flag_t           reserved_field_5;
   trade_qualifier_t   trade_qualifier;

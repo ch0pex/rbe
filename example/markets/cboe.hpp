@@ -29,17 +29,11 @@
 #pragma once
 
 #include <rbe/core/annotations.hpp>
-#include <rbe/core/custom.hpp> // for rbe::string<N> (see note below)
+#include <rbe/core/custom.hpp> // for std::array<char,N> (see note below)
 #include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
-
-// NOTE: `rbe::string<N>` is documented in the design overview as a
-// library-provided fixed-length text type but is not implemented yet;
-// this file assumes it will land. Until it does, every message that
-// carries symbol, ISIN, currency, participant or execution-id fields
-// (i.e. most of PITCH and all of TOP) will not compile.
 
 namespace cboe {
 
@@ -88,9 +82,9 @@ using mic_t            = std::array<char, 4>; ///< Execution venue MIC, spec §4
 using participant_id_t = std::array<char, 4>; ///< Systematic Internaliser attribution, spec §4.3.3.
 using index_ticker_t   = std::array<char, 10>; ///< Index ticker code, spec §4.16.1.
 
-using execution_flags_t      = rbe::string<4>; ///< 4-char MMT flags on Order Executed messages, spec §4.4.1.
-using trade_flags_t          = rbe::string<5>; ///< 5-char MMT flags on non-Extended Trade messages, spec §4.9.3.
-using extended_trade_flags_t = rbe::string<14>; ///< 14-char MMT flags on Trade – Extended, spec §4.9.6.
+using execution_flags_t      = std::array<char, 4>; ///< 4-char MMT flags on Order Executed messages, spec §4.4.1.
+using trade_flags_t          = std::array<char, 5>; ///< 5-char MMT flags on non-Extended Trade messages, spec §4.9.3.
+using extended_trade_flags_t = std::array<char, 14>; ///< 14-char MMT flags on Trade – Extended, spec §4.9.6.
 
 // ─────────────────────────────────────────────────────────────────────
 // Enumerations
@@ -273,10 +267,10 @@ struct[[=rbe::pack_le]] Header {
 /// GRP / Spin Server login (spec §3.1, §5.1).
 struct [[=rbe::pack_le]] Login {
   Header          header {.length = 22, .msg_type = message_type_t::login};
-  rbe::string<4>  session_sub_id;
-  rbe::string<4>  username;
-  rbe::string<2>  filler;        ///< Space filled.
-  rbe::string<10> password;
+  std::array<char,4>  session_sub_id;
+  std::array<char,4>  username;
+  std::array<char,2>  filler;        ///< Space filled.
+  std::array<char,10> password;
 };
 
 /// Response to a Login (spec §3.2, §5.2).
@@ -537,7 +531,7 @@ struct [[=rbe::pack_le]] TradingStatus {
   time_offset_t         time_offset;
   symbol_t              symbol;
   trading_status_code_t status;
-  rbe::string<3>        reserved;
+  std::array<char,3>        reserved;
 };
 
 /// Disseminates opening / closing / high / low statistics prices — Cboe
@@ -623,21 +617,21 @@ namespace top {
 // ASCII text field aliases (spec §1.3)
 // ─────────────────────────────────────────────────────────────────────
 
-using timestamp_t    = rbe::string<8>; ///< 8-digit ms past midnight, Eastern Time.
-using seconds_t      = rbe::string<5>; ///< 5-digit seconds past midnight.
-using milliseconds_t = rbe::string<3>; ///< 3-digit ms past last Seconds message.
-using symbol_short_t = rbe::string<4>; ///< 4-char symbol.
-using symbol_long_t  = rbe::string<6>; ///< 6-char symbol.
-using symbol_wide_t  = rbe::string<8>; ///< 8-char symbol (ISRA / expanded).
+using timestamp_t    = std::array<char, 8>; ///< 8-digit ms past midnight, Eastern Time.
+using seconds_t      = std::array<char, 5>; ///< 5-digit seconds past midnight.
+using milliseconds_t = std::array<char, 3>; ///< 3-digit ms past last Seconds message.
+using symbol_short_t = std::array<char, 4>; ///< 4-char symbol.
+using symbol_long_t  = std::array<char, 6>; ///< 6-char symbol.
+using symbol_wide_t  = std::array<char, 8>; ///< 8-char symbol (ISRA / expanded).
 
-using price_short_t    = rbe::string<5>; ///< 3+2 short-form price.
-using price_long_t     = rbe::string<10>; ///< 6+4 long-form price.
-using price_extended_t = rbe::string<14>; ///< 8+6 extended-form price.
+using price_short_t    = std::array<char, 5>; ///< 3+2 short-form price.
+using price_long_t     = std::array<char, 10>; ///< 6+4 long-form price.
+using price_extended_t = std::array<char, 14>; ///< 8+6 extended-form price.
 
-using qty_short_t    = rbe::string<5>; ///< Short-form quantity.
-using qty_long_t     = rbe::string<6>; ///< Long/expanded/extended quantity.
-using volume_t       = rbe::string<9>; ///< Cumulative volume (short trade uses 7).
-using volume_short_t = rbe::string<7>;
+using qty_short_t    = std::array<char, 5>; ///< Short-form quantity.
+using qty_long_t     = std::array<char, 6>; ///< Long/expanded/extended quantity.
+using volume_t       = std::array<char, 9>; ///< Cumulative volume (short trade uses 7).
+using volume_short_t = std::array<char, 7>;
 
 // ─────────────────────────────────────────────────────────────────────
 // Enumerations
@@ -726,8 +720,8 @@ struct[[= rbe::pack_le]] Header {
 /// Client → server logon (spec §4.1).
 struct [[=rbe::pack_le]] Logon {
   Header          header {.msg_type = message_type_t::logon};
-  rbe::string<6>  username;
-  rbe::string<10> password;
+  std::array<char,6>  username;
+  std::array<char,10> password;
   boolean_t       spin_flag; ///< 'Y' → send a spin of current top of book.
   std::uint8_t    newline = '\n';
 };
