@@ -288,4 +288,16 @@ struct AggregateDerived : Message {
   std::uint32_t numbers_derived;
 };
 
+struct MessageWithCArray {
+  CommonHeader header;
+  std::uint16_t traderID;
+  std::array<char, 16> senderID;
+};
+
+struct MessageWithArray {
+  CommonHeader header;
+  std::uint16_t traderID;
+  std::array<char, 16> senderID;
+};
+
 // clang-format on

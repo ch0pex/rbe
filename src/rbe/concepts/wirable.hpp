@@ -21,6 +21,7 @@
 
 // --- STD ---
 #include <meta>
+#include <type_traits>
 
 
 // --- System ---
@@ -32,12 +33,12 @@ namespace detail {
 template<class T>
 consteval auto is_wirable_class_type() -> bool {
   static constexpr auto info = ^^T;
-  if constexpr (wirable_primitive<T>) { // leaf case
+  if constexpr (wirable_primitive<std::remove_all_extents_t<T>>) { // leaf case
     return true;
   }
 
   // check recursively that all it's members are wirable
-  if constexpr (is_aggregate_type(info) and is_class_type(info) and not is_empty_type(info)) {
+  if constexpr (is_class_type(info) and not is_empty_type(info)) {
     template for (constexpr auto member: nsdm(info) | std::ranges::to<static_array>()) {
       if (not is_wirable_class_type<typename[:type_of(member):]>())
         return false;
@@ -61,7 +62,7 @@ concept introspectable = std::meta::is_enumerable_type(^^T);
  *   - It is an arithmetic type (`std::is_arithmetic_v`)
  *   - It is an enumeration type (`std::is_enum_v`)
  *   - It has a custom serder (user-provided or RBE-provided specialization)
- *   - It is an aggregate class such that:
+ *   - It is a class such that:
  *       - It has at least one member variable
          - Member variables exist in only one class within the inheritance
  *         hierarchy (inheritance is allowed, but fields cannot be split

@@ -29,8 +29,7 @@
 namespace rbe {
 
 consteval auto is_trivially_wirable_primitive(std::meta::info const info) -> bool {
-  auto raw_info = remove_all_extents(info);
-  return is_integral_type(raw_info) or is_enum_type(raw_info);
+  return is_integral_type(info) or is_enum_type(info);
 }
 
 template<typename T>
