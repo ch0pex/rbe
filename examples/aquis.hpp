@@ -22,6 +22,7 @@
 
 #include <rbe/core/annotations.hpp>
 #include <rbe/core/custom.hpp> // for rbe::string<N> (see note below)
+#include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
@@ -389,7 +390,7 @@ struct [[=rbe::pack_le]] ReplayResponse {
 // Type-erased dispatch — use with rbe::any_msg<aquis::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = std::tuple<
+using messages = rbe::msg_list<
     Heartbeat, OrderAdd, OrderCancel, OrderModify, QuoteAddReplace, QuoteCancel, Trade, TradeReport, TradeReportModify,
     TradeReportCancel, TradeBust, SecurityStatistics, TraderDefinition, TickTableData, SecurityDefinition,
     SecurityStatus, AoDUpdate, SnapshotStart, BookStatus, BookEntry, Login, ReplayRequest, ReplayResponse>;

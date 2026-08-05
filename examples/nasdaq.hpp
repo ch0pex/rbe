@@ -27,9 +27,11 @@
 
 #include <rbe/core/annotations.hpp>
 #include <rbe/core/custom.hpp> // for rbe::string<N>, rbe::uint48_t (see note below)
+#include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
+#include "rbe/core/message_list.hpp"
 
 // NOTE: `rbe::string<N>` and `rbe::uint48_t` are documented in the
 // design overview as library-provided fixed-width primitives but are
@@ -581,7 +583,7 @@ struct [[=rbe::pack_be]] DLCR {
 // Type-erased dispatch — use with rbe::any_msg<nasdaq::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = std::tuple<
+using messages = rbe::msg_list<
     SystemEvent, StockDirectory, StockTradingAction, RegSHORestriction, MarketParticipantPosition, MWCBDeclineLevel,
     MWCBStatus, IPOQuotingPeriodUpdate, LULDAuctionCollar, OperationalHalt, AddOrder, AddOrderMPID, OrderExecuted,
     OrderExecutedWithPrice, OrderCancel, OrderDelete, OrderReplace, Trade, CrossTrade, BrokenTrade, NOII, RPII, DLCR>;

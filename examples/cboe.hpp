@@ -30,6 +30,7 @@
 
 #include <rbe/core/annotations.hpp>
 #include <rbe/core/custom.hpp> // for rbe::string<N> (see note below)
+#include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
@@ -1000,7 +1001,7 @@ struct [[=rbe::pack_le]] TradingStatus {
 // Type-erased dispatch — use with rbe::any_msg<cboe::top::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = std::tuple<
+using messages = rbe::msg_list<
     Logon, LogonAccepted, LogonRejected, ExpandedSpin, ExtendedSpin, SpinDone, ServerHeartbeat, ClientHeartbeat,
     Seconds, Milliseconds, ExtendedBidUpdate, ExpandedBidUpdate, LongBidUpdate, ShortBidUpdate, ExtendedAskUpdate,
     ExpandedAskUpdate, LongAskUpdate, ShortAskUpdate, ExpandedTwoSidedUpdate, LongTwoSidedUpdate, ShortTwoSidedUpdate,

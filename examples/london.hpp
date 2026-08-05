@@ -24,6 +24,7 @@
 
 #include <rbe/core/annotations.hpp>
 #include <rbe/core/custom.hpp> // for rbe::string<N> (see note below)
+#include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
@@ -863,7 +864,7 @@ struct [[=rbe::pack_le]] Analytics {
 // Type-erased dispatch — use with rbe::any_msg<lse::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = std::tuple<
+using messages = rbe::msg_list<
     LoginRequest, LoginResponse, ReplayRequest, ReplayResponse, RecoveryRequest, RecoveryResponse,
     ReplayAndRecoveryComplete, SystemEvent, InstrumentDirectory, InstrumentDirectoryEquities, InstrumentStatus,
     AddOrderMBO, AddOrderShortMBO, AddOrderMBP, AddOrderShortMBP, AddOrderIncremental, OrderModify, OrderDelete,

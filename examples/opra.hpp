@@ -28,6 +28,7 @@
 
 #include <rbe/core/annotations.hpp>
 #include <rbe/core/custom.hpp> // for rbe::string<N> (see note below)
+#include <rbe/core/message_list.hpp>
 
 #include <cstdint>
 #include <tuple>
@@ -568,7 +569,7 @@ struct[[= rbe::pack_be]] UnderlyingValueBidOffer {
 // Type-erased dispatch — use with rbe::any_msg<opra::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = std::tuple<
+using messages = rbe::msg_list<
     EquityIndexLastSale, OpenInterest, EquityIndexEodSummary, LongQuote, ShortQuote, Administrative, Control,
     SeriesMapping, UnderlyingValueLastSale, UnderlyingValueBidOffer>;
 
