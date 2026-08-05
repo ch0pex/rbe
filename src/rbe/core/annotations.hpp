@@ -62,15 +62,15 @@ consteval auto has_annotation(std::meta::info const info, auto const& value) {
 // annotation list
 
 template<auto... Args>
-inline constexpr detail::annotations_t<Args...>  ann {};
+inline constexpr detail::annotations_t<Args...>  derive {};
 
 
 // memory layout annotations
 inline constexpr struct {} little {};
 inline constexpr struct {} big {};
 inline constexpr struct {} pack {};
-inline constexpr auto pack_le = ann<pack, little>;
-inline constexpr auto pack_be = ann<pack, big>;
+inline constexpr auto pack_le = derive<pack, little>;
+inline constexpr auto pack_be = derive<pack, big>;
 
 
 // message metadata annotations
@@ -81,7 +81,7 @@ inline constexpr struct {} length {};
 // debugging annotations
 
 inline constexpr struct { } fmt {};
-inline constexpr auto debug = ann<fmt>;
+inline constexpr auto debug = derive<fmt>;
 
 // clng-format on
 
