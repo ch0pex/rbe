@@ -46,12 +46,12 @@ public:
 
   template<static_string Name>
   constexpr auto field() const {
-    return field<detail::nsdm_index(^^value_type, Name.get())>();
+    return field<rbe::detail::nsdm_index(^^value_type, Name.get())>();
   }
 
   template<std::size_t Index>
   constexpr auto field() const {
-    using member_type                   = [:type_of(detail::nsdm(^^value_type, Index)):];
+    using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
     static constexpr auto member_layout = wire.members[Index];
     auto const* ptr                     = std::addressof(data_[member_layout.offset.bytes]);
     return endian::load<member_type, member_layout.endianness>(ptr);

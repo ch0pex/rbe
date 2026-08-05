@@ -50,10 +50,12 @@ struct lazy_t : detail::base_tag { };
  * behavior is undefined.
  */
 struct in_place_t : detail::base_tag { };
+struct in_place_mut_t : detail::base_tag { };
 
 inline constexpr eager_t eager {};
 inline constexpr lazy_t lazy {};
 inline constexpr in_place_t in_place {};
+inline constexpr in_place_mut_t in_place_mut {};
 
 template<typename T>
 concept strategy = std::derived_from<T, detail::base_tag>;

@@ -14,12 +14,13 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/concepts/trivially_wirable.hpp>
 #include <rbe/concepts/wirable.hpp>
 #include <rbe/dsrl/msg.hpp>
 #include <rbe/dsrl/tags.hpp>
+#include <rbe/detail/fill_member.hpp>
 
 // --- Dependencies ---
-#include <rbe/detail/fill_member.hpp>
 
 // --- External dependencies ---
 
@@ -55,10 +56,10 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
   using std::ranges::to;
 
   static constexpr auto wire    = get_wire_layout<T>();
-  static constexpr auto members = detail::nsdm(^^T);
+  static constexpr auto members = detail::nsdm(^^T) | std::ranges::to<static_array>();
 
   T value;
-  template for (constexpr auto [layout, member]: std::views::zip(wire.members, members) | to<static_array>()) {
+  template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
     using member_type = [:type_of(member):];
     detail::fill_member<member_type, layout.endianness>(
         value.[:member:], input.subspan<layout.offset.bytes, layout.size>()
@@ -111,7 +112,7 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
  * @param eager Tag for eager deserialization strategy.
  * @return A value of type T with bytes swapped to native order if necessary.
  */
-template<trivially_wirable_primitive T, endian::order Ord>
+template<trivially_wirable_primitive T, endian::order Ord = endian::order::native>
 constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
   return endian::load<T, Ord>(input.data());
 }
@@ -149,13 +150,13 @@ constexpr auto deserialize(
  *
  * @tparam T The type to interpret. Must satisfy `trivially_wirable`.
  * @param input A mutable span of bytes containing the serialized data.
- * @param in_place Tag for in-place deserialization strategy.
+ * @param in_place_mut Tag for in-place mutable deserialization strategy.
  * @return A mutable reference to the object in the buffer.
  *
  * @note If the input buffer does not meet the alignment requirements of type T, behavior is undefined.
  */
 template<trivially_wirable T>
-constexpr auto deserialize(std::span<std::byte> const input, dsrl::in_place_t in_place [[maybe_unused]]) -> T& {
+constexpr auto deserialize(std::span<std::byte> const input, dsrl::in_place_mut_t in_place_mut [[maybe_unused]]) -> T& {
   auto* ptr = std::start_lifetime_as<T>(input.data());
   return *ptr;
 }

@@ -11,6 +11,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/detail/deserialize_fwd.hpp>
 #include <rbe/concepts/wirable.hpp>
 
 // --- Dependencies ---
@@ -18,7 +19,6 @@
 // --- External dependencies ---
 
 // --- STD ---
-#include <span>
 
 // --- System ---
 
@@ -34,7 +34,7 @@ namespace rbe::detail {
  */
 template<wirable T, endian::order Ord>
 auto fill_member(T& member, std::span<std::byte const> const input) -> void {
-  member = deserialize<type_of(member)>(input);
+  member = deserialize<T>(input, dsrl::eager);
 }
 
 /**
@@ -47,7 +47,7 @@ auto fill_member(T& member, std::span<std::byte const> const input) -> void {
  */
 template<trivially_wirable_primitive T, endian::order Ord>
 auto fill_member(T& member, std::span<std::byte const> const input) -> void {
-  member = deserialize<type_of(member), Ord>(input);
+  member = deserialize<T, Ord>(input, dsrl::eager);
 }
 
 } // namespace rbe::detail
