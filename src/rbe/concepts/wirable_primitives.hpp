@@ -21,14 +21,20 @@
 
 // --- STD ---
 #include <concepts>
+#include <meta>
 #include <span>
 
 // --- System ---
 
 namespace rbe {
 
+consteval auto is_trivially_wirable_primitive(std::meta::info const info) -> bool {
+  auto raw_info = remove_all_extents(info);
+  return is_integral_type(raw_info) or is_enum_type(raw_info);
+}
+
 template<typename T>
-concept trivially_wirable_primitive = std::is_integral_v<T> or std::is_enum_v<T>;
+concept trivially_wirable_primitive = is_trivially_wirable_primitive(^^T);
 
 template<typename T>
 concept custom_wirable = not trivially_wirable_primitive<T> and requires(T t) {

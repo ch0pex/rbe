@@ -67,11 +67,16 @@ static_assert(not test_concept<^^rbe::wirable, no_wirable_structs>());
 
 constexpr auto trivially_wirable_structs = std::array{
   ^^ReduceSize,  ^^NoPack, ^^NonPaddedStruct2, ^^CommonHeader, ^^MessageWithHeader,
-  ^^Message, ^^MessageWithEnum
+  ^^Message, ^^MessageWithEnum,  
+};
+
+constexpr auto non_trivially_wirable_structs = std::array{
+^^MessageWithHeaderPack, ^^MessageWithHeaderMemberBe, ^^CommonHeaderPackBe, ^^MessageWithHeaderPackBe
 };
 
 static_assert(test_concept<^^rbe::trivially_wirable, trivially_wirable_primitives>());
 static_assert(test_concept<^^rbe::trivially_wirable, trivially_wirable_structs>());
+static_assert(not test_concept<^^rbe::trivially_wirable, non_trivially_wirable_structs>());
 static_assert(not test_concept<^^rbe::trivially_wirable, custom_wirable>());
 static_assert(not test_concept<^^rbe::trivially_wirable, wirable_structs>());
 

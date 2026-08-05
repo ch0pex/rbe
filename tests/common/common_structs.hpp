@@ -179,6 +179,46 @@ struct MessageWithHeader {
   std::uint32_t orders;
 };
 
+struct [[=rbe::pack, =rbe::big]] CommonHeaderPackBe { 
+  std::uint32_t version;
+  std::uint16_t size;
+  std::uint16_t type;
+  std::uint64_t timestamp;
+};
+
+struct MessageWithHeaderPackBe {
+  CommonHeaderPackBe header;
+  std::uint32_t price;
+  std::uint32_t volume;
+  std::uint32_t orders;
+};
+
+struct [[=rbe::pack]] CommonHeaderPack { 
+  std::uint32_t version;
+  std::uint16_t size;
+  std::uint16_t type;
+  std::uint16_t symbol;
+};
+
+struct MessageWithHeaderPack {
+  CommonHeaderPack header;
+  std::uint32_t price;
+  std::uint32_t volume;
+  std::uint32_t orders;
+};
+
+struct CommonHeaderMemberBe { 
+  [[=rbe::big]] std::uint32_t version;
+  std::uint16_t size;
+};
+
+struct MessageWithHeaderMemberBe {
+  CommonHeaderMemberBe header;
+  std::uint32_t price;
+  std::uint32_t volume;
+  std::uint32_t orders;
+};
+
 
 class NoAggregateCustomSerder {
 public:

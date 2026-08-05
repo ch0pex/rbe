@@ -42,6 +42,20 @@ consteval auto is_trivially_wirable_type() -> bool {
 
 } // namespace detail
 
+consteval auto is_trivially_wirable(std::meta::info const info) -> bool {
+  return is_trivially_wirable_primitive(info) or
+         ( //
+             is_aggregate_type(info) //
+             and is_class_type(info) //
+             and not is_empty_type(info) //
+             and get_struct_layout(info) == get_wire_layout(info) //
+             and is_trivially_copyable_type(info) //
+             and is_standard_layout_type(info) //
+             and std::ranges::all_of(detail::nsdm(info), is_trivially_wirable, std::meta::type_of) //
+         );
+}
+
+
 /**
  * @brief Concept to check if a type is trivially wirable.
  *
@@ -52,7 +66,7 @@ consteval auto is_trivially_wirable_type() -> bool {
  *
  */
 template<typename T>
-concept trivially_wirable = wirable<T> and not custom_wirable<T> and detail::is_trivially_wirable_type<T>();
+concept trivially_wirable = wirable<T> and is_trivially_wirable(^^T);
 
 template<typename T>
 concept trivially_wirable_class = std::is_class_v<T> and trivially_wirable<T>;
