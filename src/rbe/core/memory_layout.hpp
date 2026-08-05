@@ -36,14 +36,30 @@ namespace rbe {
 
 namespace detail {
 
-consteval endian::order get_member_endianness(std::meta::info const member) {
-  if (has_annotation(member, little)) {
+consteval auto endiannes_from_annotation(std::meta::info const info) -> endian::order {
+  if (has_annotation(info, little)) {
     return endian::order::little;
   }
-  if (has_annotation(member, big)) {
+  if (has_annotation(info, big)) {
     return endian::order::big;
   }
-  return endian::order::native;
+  return not is_type(info) ? endiannes_from_annotation(type_of(info)) : endian::order::native;
+}
+
+consteval auto has_endianness_annotation(std::meta::info const info) -> bool {
+  if (has_annotation(info, little) or has_annotation(info, big))
+    return true;
+  return not is_type(info) ? has_endianness_annotation(type_of(info)) : false;
+}
+
+consteval auto has_pack_annotation(std::meta::info const info) -> bool {
+  if (has_annotation(info, pack))
+    return true;
+  return not is_type(info) ? has_annotation(type_of(info), pack) : false;
+}
+
+consteval auto get_member_endianness(std::meta::info const parent, std::meta::info const member) -> endian::order {
+  return has_endianness_annotation(member) ? endiannes_from_annotation(member) : endiannes_from_annotation(parent);
 }
 
 } // namespace detail
@@ -67,6 +83,19 @@ struct struct_layout {
   constexpr bool operator==(struct_layout const& /**/) const = default;
 };
 
+// recursively aggregates the size of the member variables
+consteval auto wire_size_of(std::meta::info const info) -> std::size_t {
+  if (not detail::has_pack_annotation(info)) {
+    return size_of(info);
+  }
+
+  std::size_t result = 0;
+  for (auto const member: detail::nsdm(info)) {
+    result += wire_size_of(type_of(member));
+  }
+  return result;
+}
+
 // NOTE: at some point if compile times get really bad maybe we should consider caching the results
 // of these functions in static constexpr variables. Referencing to static constexpr however is
 // buggy in clang so returning by value is the only safe option for now.
@@ -74,9 +103,8 @@ struct struct_layout {
 // - https://github.com/llvm/llvm-project/issues/82994
 // - https://github.com/llvm/llvm-project/issues/61425
 
-template<wirable_class T>
-consteval auto get_struct_layout() -> struct_layout {
-  auto const members = detail::nsdm(^^T);
+consteval auto get_struct_layout(std::meta::info const info) -> struct_layout {
+  auto const members = detail::nsdm(info);
 
   std::vector<member_layout> member_layouts;
   member_layouts.reserve(members.size());
@@ -85,33 +113,29 @@ consteval auto get_struct_layout() -> struct_layout {
     member_layouts.emplace_back(offset_of(member), size_of(type_of(member)), endian::order::native);
   }
   return {
-    .size    = sizeof(T),
+    .size    = size_of(info),
     .members = {std::from_range, member_layouts},
   };
 }
 
-template<wirable_class T>
-  requires(not detail::has_annotation(^^T, pack))
-consteval auto get_wire_layout() -> struct_layout {
-  auto members = detail::nsdm(^^T);
+consteval auto get_wire_layout_native(std::meta::info const info) -> struct_layout {
+  auto members = detail::nsdm(info);
 
   std::vector<member_layout> member_layouts;
   member_layouts.reserve(members.size());
 
-  for (auto const& member: members) {
-    member_layouts.emplace_back(offset_of(member), size_of(type_of(member)), detail::get_member_endianness(member));
+  for (auto const m: members) {
+    member_layouts.emplace_back(offset_of(m), wire_size_of(type_of(m)), detail::get_member_endianness(info, m));
   }
 
   return {
-    .size    = size_of(^^T),
+    .size    = wire_size_of(info),
     .members = {std::from_range, member_layouts},
   };
 }
 
-template<wirable_class T>
-  requires(detail::has_annotation(^^T, pack))
-consteval auto get_wire_layout() -> struct_layout {
-  auto members = detail::nsdm(^^T);
+consteval auto get_wire_layout_packed(std::meta::info const info) -> struct_layout {
+  auto members = detail::nsdm(info);
 
   std::vector<member_layout> member_layouts;
   member_layouts.reserve(members.size());
@@ -119,8 +143,8 @@ consteval auto get_wire_layout() -> struct_layout {
   // TODO: this implementation do not support bit fields
   member_offset current_offset {};
   for (auto const& member: members) {
-    auto const member_size = size_of(type_of(member));
-    member_layouts.emplace_back(current_offset, member_size, detail::get_member_endianness(member));
+    auto const member_size = wire_size_of(type_of(member));
+    member_layouts.emplace_back(current_offset, member_size, detail::get_member_endianness(info, member));
     current_offset.bytes += static_cast<std::ptrdiff_t>(member_size);
   }
 
@@ -128,6 +152,23 @@ consteval auto get_wire_layout() -> struct_layout {
     .size    = static_cast<std::size_t>(current_offset.bytes),
     .members = {std::from_range, member_layouts},
   };
+}
+
+consteval auto get_wire_layout(std::meta::info const info) -> struct_layout {
+  if (detail::has_annotation(info, pack)) {
+    return get_wire_layout_packed(info);
+  }
+  return get_wire_layout_native(info);
+}
+
+template<wirable_class T>
+consteval auto get_struct_layout() -> struct_layout {
+  return get_struct_layout(^^T);
+}
+
+template<wirable_class T>
+consteval auto get_wire_layout() -> struct_layout {
+  return get_wire_layout(^^T);
 }
 
 } // namespace rbe

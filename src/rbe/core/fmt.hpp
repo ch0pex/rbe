@@ -13,8 +13,8 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/concepts/wirable.hpp>
 #include <rbe/core/annotations.hpp>
-#include <rbe/core/memory_layout.hpp>
 #include <rbe/detail/introspection.hpp>
 
 // --- Dependencies ---
