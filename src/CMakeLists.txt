@@ -23,9 +23,16 @@ target_sources(
         rbe/core/static_string.hpp
 
         # detail
+        rbe/detail/fill_member.hpp
         rbe/detail/introspection.hpp
         rbe/detail/memcpy_constexpr.hpp
+        rbe/detail/normalize.hpp
         rbe/detail/passkey.hpp
+
+        # concepts
+        rbe/concepts/trivially_wirable.hpp
+        rbe/concepts/wirable.hpp
+        rbe/concepts/wirable_primitives.hpp
 
         rbe/dsrl/deserialize.hpp
         rbe/dsrl/msg.hpp
