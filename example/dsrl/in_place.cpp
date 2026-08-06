@@ -14,7 +14,6 @@
  */
 
 #include <rbe/core/annotations.hpp>
-#include <rbe/detail/fill_member.hpp>
 #include <rbe/dsrl/deserialize.hpp>
 #include <rbe/srl/serialize.hpp>
 

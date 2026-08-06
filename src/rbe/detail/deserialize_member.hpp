@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file fill_member.hpp
+ * @file deserialize_member.hpp
  * @date 03/08/2026
  * @brief Helper to populate struct members during deserialization
  */
@@ -13,6 +13,8 @@
 // --- Includes ---
 #include <rbe/concepts/wirable.hpp>
 #include <rbe/detail/deserialize_fwd.hpp>
+#include "rbe/concepts/wirable_primitives.hpp"
+#include "rbe/core/memory_layout.hpp"
 
 // --- Dependencies ---
 
@@ -49,5 +51,12 @@ template<trivially_wirable_primitive T, endian::order Ord>
 auto deserialize_member(std::span<std::byte const> const input) -> T {
   return deserialize<T, Ord>(input, dsrl::eager);
 }
+
+// template<std::meta::info Parent, std::meta::info Member>
+//   requires(is_trivially_wirable_primitive(Member))
+// auto deserialize_member(std::span<std::byte const> const input) -> [ : type_of(MemberInfo) : ] {
+//   using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
+//   static constexpr auto member_layout = wire.members[Index];
+// }
 
 } // namespace rbe::detail

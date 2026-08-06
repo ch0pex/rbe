@@ -16,7 +16,7 @@
 // --- Includes ---
 #include <rbe/concepts/trivially_wirable.hpp>
 #include <rbe/concepts/wirable.hpp>
-#include <rbe/detail/fill_member.hpp>
+#include <rbe/detail/deserialize_member.hpp>
 #include <rbe/dsrl/msg.hpp>
 #include <rbe/dsrl/tags.hpp>
 

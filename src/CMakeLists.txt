@@ -23,7 +23,7 @@ target_sources(
         rbe/core/static_string.hpp
 
         # detail
-        rbe/detail/fill_member.hpp
+        rbe/detail/deserialize_member.hpp
         rbe/detail/introspection.hpp
         rbe/detail/memcpy_constexpr.hpp
         rbe/detail/normalize.hpp

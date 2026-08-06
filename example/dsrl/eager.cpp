@@ -15,7 +15,6 @@
 #include <rbe/core/fmt.hpp>
 #include <rbe/dsrl/deserialize.hpp>
 #include <rbe/srl/serialize.hpp>
-#include <rbe/detail/fill_member.hpp>
 
 #include <cstdint>
 #include <print>
