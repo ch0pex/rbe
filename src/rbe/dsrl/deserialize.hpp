@@ -16,9 +16,9 @@
 // --- Includes ---
 #include <rbe/concepts/trivially_wirable.hpp>
 #include <rbe/concepts/wirable.hpp>
+#include <rbe/detail/fill_member.hpp>
 #include <rbe/dsrl/msg.hpp>
 #include <rbe/dsrl/tags.hpp>
-#include <rbe/detail/fill_member.hpp>
 
 // --- Dependencies ---
 
@@ -61,9 +61,9 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
   T value;
   template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
     using member_type = [:type_of(member):];
-    detail::fill_member<member_type, layout.endianness>(
-        value.[:member:], input.subspan<layout.offset.bytes, layout.size>()
-    );
+    value.[:member:]  = detail::deserialize_member<member_type, layout.endianness>(
+                         input.subspan<layout.offset.bytes, layout.size>()
+                     );
   }
   return value;
 }

@@ -17,6 +17,7 @@
 #include <rbe/core/endian.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/static_string.hpp>
+#include "rbe/detail/deserialize_fwd.hpp"
 
 // --- Dependencies ---
 
@@ -53,8 +54,10 @@ public:
   constexpr auto field() const {
     using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
     static constexpr auto member_layout = wire.members[Index];
-    auto const* ptr                     = std::addressof(data_[member_layout.offset.bytes]);
-    return endian::load<member_type, member_layout.endianness>(ptr);
+
+    return rbe::detail::deserialize_member<member_type, member_layout.endianness>(
+        data_.subspan<member_layout.offset.bytes, member_layout.size>()
+    );
   }
 
 private:

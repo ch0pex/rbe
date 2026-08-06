@@ -126,12 +126,14 @@ struct NoPack {
 struct [[=rbe::pack]] Packed {
   std::uint8_t a;
   std::uint32_t b;
+  bool operator==(Packed const&) const = default;
 };
 
 struct MixedEndian {
   [[=rbe::little]] std::uint32_t a;
   [[=rbe::big]] std::uint32_t b;
   std::uint32_t c;
+  bool operator==(MixedEndian const&) const = default;
 };
 
 struct [[=rbe::pack]] Complex {
@@ -170,6 +172,7 @@ struct CommonHeader {
   std::uint16_t size;
   std::uint16_t type;
   std::uint64_t timestamp;
+  bool operator==(CommonHeader const&) const = default;
 };
 
 struct MessageWithHeader {
@@ -177,6 +180,7 @@ struct MessageWithHeader {
   std::uint32_t price;
   std::uint32_t volume;
   std::uint32_t orders;
+  bool operator==(MessageWithHeader const&) const = default;
 };
 
 struct [[=rbe::pack, =rbe::big]] CommonHeaderPackBe { 
@@ -184,6 +188,7 @@ struct [[=rbe::pack, =rbe::big]] CommonHeaderPackBe {
   std::uint16_t size;
   std::uint16_t type;
   std::uint64_t timestamp;
+  bool operator==(CommonHeaderPackBe const&) const = default;
 };
 
 struct MessageWithHeaderPackBe {
@@ -191,6 +196,7 @@ struct MessageWithHeaderPackBe {
   std::uint32_t price;
   std::uint32_t volume;
   std::uint32_t orders;
+  bool operator==(MessageWithHeaderPackBe const&) const = default;
 };
 
 struct [[=rbe::pack]] CommonHeaderPack { 
@@ -198,6 +204,7 @@ struct [[=rbe::pack]] CommonHeaderPack {
   std::uint16_t size;
   std::uint16_t type;
   std::uint16_t symbol;
+  bool operator==(CommonHeaderPack const&) const = default;
 };
 
 struct MessageWithHeaderPack {
@@ -205,11 +212,13 @@ struct MessageWithHeaderPack {
   std::uint32_t price;
   std::uint32_t volume;
   std::uint32_t orders;
+  bool operator==(MessageWithHeaderPack const&) const = default;
 };
 
 struct CommonHeaderMemberBe { 
   [[=rbe::big]] std::uint32_t version;
   std::uint16_t size;
+  bool operator==(CommonHeaderMemberBe const&) const = default;
 };
 
 struct MessageWithHeaderMemberBe {
@@ -217,6 +226,7 @@ struct MessageWithHeaderMemberBe {
   std::uint32_t price;
   std::uint32_t volume;
   std::uint32_t orders;
+  bool operator==(MessageWithHeaderMemberBe const&) const = default;
 };
 
 
@@ -270,6 +280,9 @@ struct NoAggregate {
 
 private:
   std::int32_t private_member;
+
+public:
+  bool operator==(NoAggregate const&) const = default;
 };
 
 struct AggregateWithPtr {
@@ -292,12 +305,21 @@ struct MessageWithCArray {
   CommonHeader header;
   std::uint16_t traderID;
   std::array<char, 16> senderID;
+  bool operator==(MessageWithCArray const&) const = default;
 };
 
 struct MessageWithArray {
   CommonHeader header;
   std::uint16_t traderID;
   std::array<char, 16> senderID;
+  bool operator==(MessageWithArray const&) const = default;
+};
+
+struct [[=rbe::big, =rbe::pack]] MessageWithArrayBe {
+  CommonHeader header;
+  std::uint16_t traderID;
+  std::array<std::uint32_t, 16> senderID;
+  bool operator==(MessageWithArrayBe const&) const = default;
 };
 
 // clang-format on
