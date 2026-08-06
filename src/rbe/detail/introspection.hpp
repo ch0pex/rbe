@@ -13,6 +13,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/detail/annotation_list.hpp>
 
 // --- Dependencies ---
 
@@ -94,6 +95,28 @@ consteval auto static_member_functions_of(std::meta::info const info, std::meta:
     return is_static_member(member) and is_function(member) and not is_special_member_function(member);
   };
   return members_of(info, ctx) | std::views::filter(is_static_member_function) | std::ranges::to<std::vector>();
+}
+
+consteval bool is_annotation_list(std::meta::info const info) {
+  return has_template_arguments(type_of(info)) and template_of(type_of(info)) == ^^annotations_t;
+}
+
+consteval auto has_annotation(std::meta::info const info, auto const& value) {
+  auto expected = std::meta::reflect_constant(value);
+  for (std::meta::info a: annotations_of(info)) {
+    if (std::meta::constant_of(a) == expected) {
+      return true;
+    }
+
+    if (is_annotation_list(a)) {
+      for (auto const a2: template_arguments_of(type_of(a))) {
+        if (constant_of(a2) == expected) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 } // namespace rbe::detail
