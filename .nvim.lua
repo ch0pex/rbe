@@ -34,27 +34,14 @@ local function insert_file_template(args)
 		table.insert(template, "")
 		table.insert(template, "// --- Includes ---")
 		table.insert(template, "")
-		table.insert(template, "// --- Dependencies ---")
-		table.insert(template, "")
-		table.insert(template, "// --- External dependencies ---")
-		table.insert(template, "")
 		table.insert(template, "// --- STD ---")
 		table.insert(template, "")
-		table.insert(template, "// --- System ---")
-		table.insert(template, "")
-
 	-- Specific structure for source files (.cpp)
 	elseif extension == "cpp" then
 		-- Include the associated header first
 		table.insert(template, "// --- Includes ---")
 		table.insert(template, "")
-		table.insert(template, "// --- Dependencies ---")
-		table.insert(template, "")
-		table.insert(template, "// --- External dependencies ---")
-		table.insert(template, "")
 		table.insert(template, "// --- STD ---")
-		table.insert(template, "")
-		table.insert(template, "// --- System ---")
 		table.insert(template, "")
 	end
 
