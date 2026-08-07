@@ -35,22 +35,24 @@ inline constexpr detail::annotations_t<Args...>  derive {};
 
 
 // --- Memory layout annotations ---
-inline constexpr struct {} little {};
-inline constexpr struct {} big {};
-inline constexpr struct {} pack {};
-inline constexpr auto pack_le = derive<pack, little>;
-inline constexpr auto pack_be = derive<pack, big>;
+inline constexpr struct {} little {};  /// < little-endian byte order semantics
+inline constexpr struct {} big {};     /// < big-endian byte order semantics
+inline constexpr struct {} pack {};    /// < pragma pack ABI semantics
+inline constexpr struct {} no_pack {}; /// < C++ ABI semantics
+
+inline constexpr auto pack_le = derive<pack, little>; /// < pack with little-endian semantics
+inline constexpr auto pack_be = derive<pack, big>;    /// < pack with big-endian semantics
 
 
 // --- Message metadata annotations ---
-inline constexpr struct {} id {};
-inline constexpr struct {} length {};
+inline constexpr struct {} id {};     /// < message id
+inline constexpr struct {} length {}; /// < message length
 
 
 // --- Debugging annotations ---
 
-inline constexpr struct { } fmt {};
-inline constexpr auto debug = derive<fmt>;
+inline constexpr struct { } fmt {};         /// < format message for debugging purposes
+inline constexpr auto debug = derive<fmt>;  /// < debug annotation
 
 // clng-format on
 
