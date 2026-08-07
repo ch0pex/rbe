@@ -44,7 +44,7 @@ consteval auto nsdm( //
   }
 
   // Reflecting overload sets is not supported yet, as a work arround to throw
-  static constexpr auto nsdm_by_id = []() { };
+  static constexpr auto nsdm_by_id = [] { };
   throw std::meta::exception("invalid member identifier, no such nonstatic data member", ^^nsdm_by_id);
 }
 
@@ -53,12 +53,11 @@ consteval auto nsdm(
     std::size_t const index, //
     std::meta::access_context ctx = default_context //
 ) {
-  auto members = nsdm(info, ctx);
-  if (index < members.size()) {
+  if (auto const members = nsdm(info, ctx); index < members.size()) {
     return members[index];
   }
 
-  static constexpr auto nsdm_by_index = []() { };
+  static constexpr auto nsdm_by_index = [] { };
   throw std::meta::exception("invalid member index", ^^nsdm_by_index);
 }
 
