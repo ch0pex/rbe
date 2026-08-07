@@ -13,17 +13,12 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/concepts/wirable.hpp>
+#include <rbe/concepts/wirable_primitives.hpp>
 #include <rbe/core/memory_layout.hpp>
-#include "rbe/concepts/wirable.hpp"
-#include "rbe/concepts/wirable_primitives.hpp"
-
-// --- Dependencies ---
-
-// --- External dependencies ---
 
 // --- STD ---
-
-// --- System ---
+#include <ranges>
 
 namespace rbe {
 
@@ -70,5 +65,7 @@ concept trivially_wirable = wirable<T> and not custom_wirable<T> and is_triviall
 template<typename T>
 concept trivially_wirable_class = std::is_class_v<T> and trivially_wirable<T>;
 
+template<typename T>
+concept trivially_wirable_range = trivially_wirable<T> and std::ranges::contiguous_range<T>;
 
 } // namespace rbe

@@ -25,6 +25,7 @@
 
 // --- STD ---
 #include "common_structs.hpp"
+#include "rbe/detail/member_layout.hpp"
 
 // --- System ---
 
@@ -543,6 +544,28 @@ TEST_CASE("Test MessageWithEnum layout") {
     }
   };
 
+  CHECK(layout == layout_expected);
+}
+
+TEST_CASE("Test struct layout - Nested class") {
+  static constexpr auto layout                        = rbe::get_struct_layout(^^MessageWithArray);
+  static constexpr rbe::struct_layout layout_expected = {
+    .size    = sizeof(MessageWithArray),
+    .members = rbe::static_array {
+      rbe::member_layout {
+        .offset = {.bytes = 0, .bits = 0},
+        .size   = sizeof(CommonHeader),
+      },
+      rbe::member_layout {
+        .offset = {.bytes = offsetof(MessageWithArray, traderID), .bits = 0},
+        .size   = sizeof(std::uint16_t),
+      },
+      rbe::member_layout {
+        .offset = {.bytes = offsetof(MessageWithArray, senderID), .bits = 0},
+        .size   = sizeof(MessageWithArray::senderID),
+      },
+    },
+  };
   CHECK(layout == layout_expected);
 }
 

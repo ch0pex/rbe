@@ -83,6 +83,7 @@ struct struct_layout {
   constexpr bool operator==(struct_layout const& /**/) const = default;
 };
 
+
 // recursively aggregates the size of the member variables
 consteval auto wire_size_of(std::meta::info const info) -> std::size_t {
   if (not detail::has_pack_annotation(info)) {
@@ -107,10 +108,15 @@ consteval auto get_struct_layout(std::meta::info const info) -> struct_layout {
   auto const members = detail::nsdm(info);
 
   std::vector<member_layout> member_layouts;
-  member_layouts.reserve(members.size());
 
   for (auto const& member: members) {
-    member_layouts.emplace_back(offset_of(member), size_of(type_of(member)), endian::order::native);
+    member_layouts.emplace_back(
+        member_layout {
+          .offset     = offset_of(member),
+          .size       = size_of(type_of(member)),
+          .endianness = endian::order::native,
+        }
+    );
   }
   return {
     .size    = size_of(info),
@@ -118,14 +124,17 @@ consteval auto get_struct_layout(std::meta::info const info) -> struct_layout {
   };
 }
 
-consteval auto get_wire_layout_native(std::meta::info const info) -> struct_layout {
-  auto members = detail::nsdm(info);
-
+consteval auto get_wire_layout_padded(std::meta::info const info) -> struct_layout {
   std::vector<member_layout> member_layouts;
-  member_layouts.reserve(members.size());
 
-  for (auto const m: members) {
-    member_layouts.emplace_back(offset_of(m), wire_size_of(type_of(m)), detail::get_member_endianness(info, m));
+  for (auto const m: detail::nsdm(info)) {
+    member_layouts.emplace_back(
+        member_layout {
+          .offset     = offset_of(m),
+          .size       = wire_size_of(type_of(m)),
+          .endianness = detail::get_member_endianness(info, m),
+        }
+    );
   }
 
   return {
@@ -144,7 +153,13 @@ consteval auto get_wire_layout_packed(std::meta::info const info) -> struct_layo
   member_offset current_offset {};
   for (auto const& member: members) {
     auto const member_size = wire_size_of(type_of(member));
-    member_layouts.emplace_back(current_offset, member_size, detail::get_member_endianness(info, member));
+    member_layouts.emplace_back(
+        member_layout {
+          .offset     = current_offset,
+          .size       = member_size,
+          .endianness = detail::get_member_endianness(info, member),
+        }
+    );
     current_offset.bytes += static_cast<std::ptrdiff_t>(member_size);
   }
 
@@ -158,7 +173,7 @@ consteval auto get_wire_layout(std::meta::info const info) -> struct_layout {
   if (detail::has_annotation(info, pack)) {
     return get_wire_layout_packed(info);
   }
-  return get_wire_layout_native(info);
+  return get_wire_layout_padded(info);
 }
 
 template<wirable_class T>

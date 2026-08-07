@@ -81,4 +81,7 @@ concept wirable = wirable_primitive<T> or detail::is_wirable_class_type<T>();
 template<typename T>
 concept wirable_class = std::is_class_v<T> and wirable<T>;
 
+template<typename T>
+concept wirable_range = wirable<T> and std::ranges::range<T>;
+
 } // namespace rbe

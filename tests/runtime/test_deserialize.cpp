@@ -30,6 +30,7 @@
 
 namespace {
 
+
 template<rbe::wirable T>
 constexpr void test_eager(std::span<std::byte const> input, T const& expected) {
   T output = rbe::deserialize<T>(input, rbe::dsrl::eager);
@@ -66,24 +67,25 @@ constexpr void test_case(Test const& test_case) {
 
 TEST_SUITE_BEGIN("Deserialization");
 
-TEST_CASE("Deserialize trivially no padding") { test_case(trivially_wirable_no_padding); }
-TEST_CASE("Deserialize trivially with paddings") { test_case(trivially_wirable_with_paddings); }
-TEST_CASE("Deserialize custom serder") { test_case(wirable_custom_serder); }
-TEST_CASE("Deserialize packed") { test_case(packed_test); }
-TEST_CASE("Deserialize mixed endian") { test_case(mixed_endian_test); }
-TEST_CASE("Deserialize message with header") { test_case(message_with_header_test); }
-TEST_CASE("Deserialize header pack big endian") { test_case(common_header_pack_be_test); }
-TEST_CASE("Deserialize msg-hdr pack be") { test_case(message_with_header_pack_be_test); }
-TEST_CASE("Deserialize hdr pack") { test_case(common_header_pack_test); }
-TEST_CASE("Deserialize msg hdr pack") { test_case(message_with_header_pack_test); }
-TEST_CASE("Deserialize header nsdm be") { test_case(common_header_member_be_test); }
-TEST_CASE("Deserialize msg - header nsdm be") { test_case(message_with_header_member_be_test); }
-TEST_CASE("Deserialize msg c array") { test_case(message_with_c_array_test); }
-TEST_CASE("Deserialize msg c++ array") { test_case(message_with_array_test); }
-TEST_CASE("Deserialize msg c array be") { test_case(message_with_array_be_test); }
-TEST_CASE("Deserialize") {
-  // test_case(no_aggregate_test);
-}
+#define DSRL_TEST_CASE(test_case_struct)                                                                               \
+  TEST_CASE(#test_case_struct) { test_case(test_case_struct); }
+
+DSRL_TEST_CASE(trivially_wirable_no_padding);
+DSRL_TEST_CASE(trivially_wirable_with_paddings);
+DSRL_TEST_CASE(wirable_custom_serder);
+DSRL_TEST_CASE(packed_test);
+DSRL_TEST_CASE(mixed_endian_test);
+DSRL_TEST_CASE(message_with_header_test);
+DSRL_TEST_CASE(common_header_pack_be_test);
+DSRL_TEST_CASE(message_with_header_pack_be_test);
+DSRL_TEST_CASE(common_header_pack_test);
+DSRL_TEST_CASE(message_with_header_pack_test);
+DSRL_TEST_CASE(common_header_member_be_test);
+DSRL_TEST_CASE(message_with_header_member_be_test);
+DSRL_TEST_CASE(message_with_c_array_test);
+DSRL_TEST_CASE(message_with_array_test);
+DSRL_TEST_CASE(message_with_array_be_test);
+// DSRL_TEST_CASE(no_aggregate_test);
 
 TEST_SUITE_END();
 

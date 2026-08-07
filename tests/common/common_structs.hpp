@@ -315,10 +315,10 @@ struct MessageWithArray {
   bool operator==(MessageWithArray const&) const = default;
 };
 
-struct [[=rbe::big, =rbe::pack]] MessageWithArrayBe {
+struct [[=rbe::pack]] MessageWithArrayBe {
   CommonHeader header;
   std::uint16_t traderID;
-  std::array<std::uint32_t, 16> senderID;
+  [[=rbe::big]] std::array<std::uint32_t, 16> senderID;
   bool operator==(MessageWithArrayBe const&) const = default;
 };
 

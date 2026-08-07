@@ -12,17 +12,11 @@
 
 // --- Includes ---
 #include <rbe/concepts/wirable.hpp>
+#include <rbe/concepts/wirable_primitives.hpp>
+#include <rbe/core/memory_layout.hpp>
 #include <rbe/detail/deserialize_fwd.hpp>
-#include "rbe/concepts/wirable_primitives.hpp"
-#include "rbe/core/memory_layout.hpp"
-
-// --- Dependencies ---
-
-// --- External dependencies ---
 
 // --- STD ---
-
-// --- System ---
 
 namespace rbe::detail {
 
@@ -52,11 +46,21 @@ auto deserialize_member(std::span<std::byte const> const input) -> T {
   return deserialize<T, Ord>(input, dsrl::eager);
 }
 
-// template<std::meta::info Parent, std::meta::info Member>
-//   requires(is_trivially_wirable_primitive(Member))
-// auto deserialize_member(std::span<std::byte const> const input) -> [ : type_of(MemberInfo) : ] {
-//   using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
-//   static constexpr auto member_layout = wire.members[Index];
-// }
+template<trivially_wirable_range T, endian::order Ord>
+  requires(Ord == endian::order::native or sizeof(std::ranges::range_value_t<T>) == 1)
+auto deserialize_member(std::span<std::byte const> input) -> T {
+  return load<T>(input);
+}
+
+template<wirable_range T, endian::order Ord>
+auto deserialize_member(std::span<std::byte const> input) -> T {
+  T array;
+  using element_type = std::ranges::range_value_t<T>;
+  for (auto& e: array) {
+    e     = deserialize<element_type, Ord>(input, dsrl::eager);
+    input = input.subspan(wire_size_of(^^element_type));
+  }
+  return array;
+}
 
 } // namespace rbe::detail
