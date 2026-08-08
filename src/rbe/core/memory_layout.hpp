@@ -75,7 +75,6 @@ struct member_layout {
 };
 
 //  TODO: add support for bit fields
-//  TODO: add support for nested structs
 struct struct_layout {
   std::size_t size {};
   static_array<member_layout> members {};
@@ -86,7 +85,7 @@ struct struct_layout {
 
 // recursively aggregates the size of the member variables
 consteval auto wire_size_of(std::meta::info const info) -> std::size_t {
-  if (not detail::has_pack_annotation(info)) {
+  if (not detail::has_pack_annotation(info) or is_trivially_wirable_primitive(info)) {
     return size_of(info);
   }
 
@@ -174,6 +173,11 @@ consteval auto get_wire_layout(std::meta::info const info) -> struct_layout {
     return get_wire_layout_packed(info);
   }
   return get_wire_layout_padded(info);
+}
+
+template<wirable T>
+consteval auto wire_size_of() -> std::size_t {
+  return wire_size_of(^^T);
 }
 
 template<wirable_class T>

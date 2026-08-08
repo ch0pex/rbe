@@ -309,7 +309,6 @@ constexpr TestCase message_with_array_test {
   ),
 };
 
-// MessageWithArrayBe structure test case - EXPECTED TO FAIL (arrays with big-endian not yet supported)
 constexpr TestCase message_with_array_be_test {
   .structure =
       MessageWithArrayBe {
