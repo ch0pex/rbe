@@ -14,8 +14,7 @@
 
 // --- Dependencies ---
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/srl/serialize.hpp>
-//
+
 #include <rbe/core/fmt.hpp>
 #include "rbe/concepts/trivially_wirable.hpp"
 
@@ -25,7 +24,6 @@
 
 // --- STD ---
 #include "common_structs.hpp"
-#include "rbe/detail/member_layout.hpp"
 
 // --- System ---
 
@@ -567,6 +565,49 @@ TEST_CASE("Test struct layout - Nested class") {
     },
   };
   CHECK(layout == layout_expected);
+}
+
+TEST_CASE("Test struct with big endian array") {
+  static constexpr auto wire_layout                   = rbe::get_wire_layout(^^MessageWithArrayBe);
+  static constexpr auto layout                        = rbe::get_struct_layout(^^MessageWithArrayBe);
+  static constexpr rbe::struct_layout layout_expected = {
+    .size    = sizeof(MessageWithArrayBe),
+    .members = rbe::static_array {
+      rbe::member_layout {
+        .offset = {.bytes = 0, .bits = 0},
+        .size   = sizeof(CommonHeader),
+      },
+      rbe::member_layout {
+        .offset = {.bytes = offsetof(MessageWithArrayBe, traderID), .bits = 0},
+        .size   = sizeof(std::uint16_t),
+      },
+      rbe::member_layout {
+        .offset     = {.bytes = offsetof(MessageWithArrayBe, senderID), .bits = 0},
+        .size       = sizeof(MessageWithArrayBe::senderID),
+        .endianness = rbe::endian::order::little,
+      },
+    },
+  };
+  static constexpr rbe::struct_layout wire_layout_expected = {
+    .size    = sizeof(CommonHeader) + sizeof(std::uint16_t) + sizeof(MessageWithArrayBe::senderID),
+    .members = rbe::static_array {
+      rbe::member_layout {
+        .offset = {.bytes = 0, .bits = 0},
+        .size   = sizeof(CommonHeader),
+      },
+      rbe::member_layout {
+        .offset = {.bytes = 16, .bits = 0},
+        .size   = sizeof(std::uint16_t),
+      },
+      rbe::member_layout {
+        .offset     = {.bytes = 18, .bits = 0},
+        .size       = sizeof(MessageWithArrayBe::senderID),
+        .endianness = rbe::endian::order::big,
+      },
+    },
+  };
+  CHECK(layout == layout_expected);
+  CHECK(wire_layout == wire_layout_expected);
 }
 
 

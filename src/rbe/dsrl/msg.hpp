@@ -16,7 +16,6 @@
 #include <rbe/concepts/wirable.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/static_string.hpp>
-#include <rbe/detail/member_layout.hpp>
 
 // --- Dependencies ---
 
