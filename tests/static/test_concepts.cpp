@@ -11,6 +11,7 @@
 // --- Includes ---
 #include <rbe/concepts.hpp>
 #include "common_structs.hpp"
+#include "rbe/concepts/agnostic.hpp"
 
 namespace {
 
@@ -79,6 +80,10 @@ static_assert(test_concept<^^rbe::trivially_wirable, trivially_wirable_structs>(
 static_assert(not test_concept<^^rbe::trivially_wirable, non_trivially_wirable_structs>());
 static_assert(not test_concept<^^rbe::trivially_wirable, custom_wirable>());
 static_assert(not test_concept<^^rbe::trivially_wirable, wirable_structs>());
+
+static_assert(test_concept<^^rbe::well_annotated, trivially_wirable_primitives>());
+static_assert(test_concept<^^rbe::well_annotated, non_trivially_wirable_structs>());
+static_assert(test_concept<^^rbe::well_annotated, wirable_structs>());
 
 // clang-format on
 

@@ -15,21 +15,15 @@
 
 // --- Includes ---
 #include <rbe/core/memory_layout.hpp>
-
-// --- Dependencies ---
 #include <rbe/concepts/trivially_wirable.hpp>
 #include <rbe/concepts/wirable.hpp>
 #include <rbe/core/custom.hpp>
-#include <rbe/core/endian.hpp>
 #include <rbe/detail/memcpy_constexpr.hpp>
 #include <rbe/detail/normalize.hpp>
-
-// --- External dependencies ---
+#include <rbe/concepts/agnostic.hpp>
 
 // --- STD ---
 #include <cstddef>
-
-// --- System ---
 
 namespace rbe {
 
@@ -66,7 +60,7 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
 
   std::size_t bytes_written = 0;
   template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
-    bytes_written = serialize(
+    bytes_written += serialize(
         out.subspan<layout.offset.bytes, layout.size>(),
         detail::normalize_endianness<layout.endianness>(value.[:member:])
     );
@@ -75,5 +69,42 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
   return bytes_written;
 }
 
+struct[[ = pack, = big ]] Leaf {
+  int number; // big
+  char id; // big
+};
+
+struct[[= little]] Parent {
+  [[= little]] int number; // little
+  Leaf leaf; // big
+  char id; // big
+};
+
+struct[[= big]] BigParent {
+  int number; // big
+  char id; // big (no matters)
+  Parent parent; // little
+  [[= little]] std::array<std::uint32_t, 50> numbers;
+};
+
+namespace case2 {
+struct Leaf {
+  int number; // big
+  char id; // big
+};
+
+struct Parent {
+  [[= little]] int number; // little
+  Leaf leaf; // big
+  char id; // big
+};
+
+struct[[= big]] BigParent {
+  int number; // big
+  char id; // big (no matters)
+  Parent parent; // big
+  [[= little]] std::array<std::uint32_t, 50> numbers;
+};
+} // namespace case2
 
 } // namespace rbe

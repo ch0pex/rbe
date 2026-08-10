@@ -26,6 +26,8 @@
 #include <ostream>
 #include <string>
 
+#include "rbe/detail/annotations_utils.hpp"
+
 // --- System ---
 
 inline std::size_t& fmt_depth() {

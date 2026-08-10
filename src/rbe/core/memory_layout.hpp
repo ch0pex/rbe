@@ -17,6 +17,7 @@
 #include <rbe/core/annotations.hpp>
 #include <rbe/core/endian.hpp>
 #include <rbe/core/static_array.hpp>
+#include <rbe/detail/annotations_correctness.hpp>
 #include <rbe/detail/introspection.hpp>
 
 // --- Dependencies ---
@@ -24,10 +25,8 @@
 // --- External dependencies ---
 
 // --- STD ---
-#include <algorithm>
 #include <cstddef>
 #include <ranges>
-#include <span>
 
 // --- System ---
 

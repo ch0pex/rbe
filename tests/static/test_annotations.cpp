@@ -12,6 +12,7 @@
 
 // --- Includes ---
 #include <rbe/core/annotations.hpp>
+#include <rbe/detail/annotations_correctness.hpp>
 
 // --- Dependencies ---
 
@@ -31,8 +32,9 @@ struct[[=rbe::id]]     TestId{};
 struct[[=rbe::length]] TestLength{};
 struct[[=rbe::debug]]  TestDebug{};
 
-inline constexpr struct {} annotation_a {};
+inline constexpr struct : rbe::detail::base_annotation {} annotation_a {};
 inline constexpr struct {} annotation_b {};
+inline constexpr struct : rbe::detail::base_annotation {} annotation_c {};
 struct [[=annotation_a]] AnnotatedStructA {
   int x;
   double y;
@@ -43,27 +45,81 @@ struct[[=annotation_a, =annotation_b]] AnnotatedStructB {
   double y;
 };
 
+struct[[=annotation_a, =annotation_c]] AnnotatedStructC {
+  int x;
+  double y;
+};
+
+struct[[=annotation_a, =annotation_c]] AnnotatedStructD {
+  [[=annotation_a]] int x;
+  double y;
+};
+
+struct[[=rbe::derive<annotation_a, annotation_c>]] AnnotatedStructWithList {
+  [[=annotation_a]] int x;
+  double y;
+};
+
 [[=annotation_a]] struct WrongAnnotatedStruct {
   int x;
   double y;
 };
 
+
+
 //clang-format on
 
-static_assert(rbe::detail::is_annotation_list(^^rbe::debug));
+// --- is_rbe_annotation ---
+static_assert(std::ranges::all_of(rbe::detail::all_annotations, rbe::detail::is_rbe_annotation));
+static_assert(rbe::detail::is_rbe_annotation(^^annotation_a));
+static_assert(not rbe::detail::is_rbe_annotation(^^annotation_b));
+static_assert(not rbe::detail::is_rbe_annotation(^^int));
 
+// --- is_annotation_list ---
+static_assert(rbe::detail::is_annotation_list(^^ rbe::debug));
+static_assert(not rbe::detail::is_annotation_list(^^rbe::id));
+static_assert(not rbe::detail::is_annotation_list(^^rbe::bits));
+
+// --- has_annotation ---
 static_assert(rbe::detail::has_annotation(^^TestLittle, rbe::little));
 static_assert(rbe::detail::has_annotation(^^TestBig, rbe::big));
 static_assert(rbe::detail::has_annotation(^^TestPack, rbe::pack));
 static_assert(rbe::detail::has_annotation(^^TestId, rbe::id));
-static_assert(rbe::detail::has_annotation(^^TestLength, rbe::length));
 static_assert(rbe::detail::has_annotation(^^TestDebug, rbe::debug));
+static_assert(rbe::detail::has_annotation(^^TestLength, rbe::length));
 static_assert(rbe::detail::has_annotation(^^TestDebug, rbe::fmt));
-
 static_assert(rbe::detail::has_annotation(^^AnnotatedStructA, annotation_a));
-static_assert(not rbe::detail::has_annotation(^^AnnotatedStructA, annotation_b));
 static_assert(rbe::detail::has_annotation(^^AnnotatedStructB, annotation_a));
-static_assert(rbe::detail::has_annotation(^^AnnotatedStructB, annotation_b));
 static_assert(not rbe::detail::has_annotation(^^WrongAnnotatedStruct, annotation_a));
+
+// --- views::rbe_annotations ---
+inline constexpr std::array rbe_annotations = rbe::detail::types_list(^^annotation_a, ^^annotation_c);
+inline constexpr std::array not_all_rbe_annotations = rbe::detail::types_list(^^annotation_a, ^^annotation_b, ^^annotation_c);
+static_assert(std::ranges::equal(rbe::detail::views::rbe_annotations(rbe_annotations), rbe_annotations));
+static_assert(std::ranges::equal(rbe::detail::views::rbe_annotations(not_all_rbe_annotations), rbe_annotations));
+
+// --- annotations_types_of ---
+static_assert(rbe::detail::annotation_types_of(^^AnnotatedStructA).size() == 1);
+static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^AnnotatedStructA), rbe::detail::types_list(^^annotation_a)));
+static_assert(rbe::detail::annotation_types_of(^^AnnotatedStructB).size() == 1);
+static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^AnnotatedStructB), rbe::detail::types_list(^^annotation_a))); // Annotation B is ignored, not an rbe annotation
+static_assert(rbe::detail::annotation_types_of(^^AnnotatedStructC).size() == 2);
+static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^AnnotatedStructC), rbe::detail::types_list(^^annotation_a, ^^annotation_c))); // Annotation B is ignored, not an rbe annotation
+static_assert(rbe::detail::annotation_types_of(^^WrongAnnotatedStruct).size() == 0);
+static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^WrongAnnotatedStruct), std::vector<std::meta::info>{}));
+
+// --- deep_annotations_types_of ---
+static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructA).size() == 1);
+static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructA), rbe::detail::types_list(^^annotation_a)));
+static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructB).size() == 1);
+static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructB), rbe::detail::types_list(^^annotation_a))); // Annotation B is ignored, not an rbe annotation
+static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructC).size() == 2);
+static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructC), rbe::detail::types_list(^^annotation_a, ^^annotation_c))); // Annotation B is ignored, not an rbe annotation
+static_assert(rbe::detail::deep_annotation_types_of(^^WrongAnnotatedStruct).size() == 0);
+static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^WrongAnnotatedStruct), std::vector<std::meta::info>{}));
+static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD).size() == 3);
+static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD), rbe::detail::types_list(^^annotation_a, ^^annotation_c, ^^annotation_a)));
+static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD), rbe::detail::deep_annotation_types_of(^^AnnotatedStructWithList)));
+
 
 } // namespace

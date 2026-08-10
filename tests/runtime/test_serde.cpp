@@ -15,6 +15,7 @@
 #include "common_structs.hpp"
 
 // --- Dependencies ---
+#include <ranges>
 #include <rbe/dsrl.hpp>
 #include <rbe/srl.hpp>
 
@@ -23,6 +24,13 @@
 #include <doctest/doctest.h>
 
 namespace {
+
+template<typename T>
+auto testing_buffer() -> std::array<std::byte, rbe::wire_size_of<T>()> {
+  std::array<std::byte, rbe::wire_size_of<T>()> result {};
+  std::ranges::fill(result, std::byte {0xCC});
+  return result;
+}
 
 namespace dsrl {
 
@@ -49,6 +57,7 @@ constexpr void test_lazy(std::span<std::byte const> input, T const& expected) {
 
 template<typename Test>
 constexpr void test_case(Test const& test_case) {
+  REQUIRE(test_case.wire.size() == rbe::wire_size_of<typename Test::structure_type>());
   test_eager(test_case.wire, test_case.structure);
 
   if constexpr (rbe::trivially_wirable<typename Test::structure_type>) {
@@ -66,12 +75,12 @@ namespace srl {
 
 template<typename Test>
 constexpr void test_case(Test const& test_case) {
-  std::array<std::byte, rbe::wire_size_of<typename Test::structure_type>()> buffer {};
+  auto buffer = testing_buffer<typename Test::structure_type>();
+  REQUIRE(test_case.wire.size() == rbe::wire_size_of<typename Test::structure_type>());
 
   auto bytes_written = rbe::serialize(buffer, test_case.structure);
-
   CHECK(bytes_written == test_case.wire.size());
-  CHECK(std::ranges::equal(buffer, test_case.wire));
+  CHECK(std::ranges::equal(buffer, test_case.wire, ignore_padding));
 }
 
 } // namespace srl
@@ -81,7 +90,7 @@ namespace round_trip {
 
 template<rbe::wirable T>
 constexpr auto test_eager(T const& value) -> void {
-  std::array<std::byte, rbe::wire_size_of(^^T)> buffer {};
+  auto buffer = testing_buffer<T>();
 
   auto bytes_written = rbe::serialize(buffer, value);
   T output           = rbe::deserialize<T>(buffer, rbe::dsrl::eager);
@@ -92,7 +101,7 @@ constexpr auto test_eager(T const& value) -> void {
 
 template<rbe::trivially_wirable T>
 constexpr auto test_inplace(T const& value) -> void {
-  std::array<std::byte, rbe::wire_size_of(^^T)> buffer {};
+  auto buffer = testing_buffer<T>();
 
   auto bytes_written = rbe::serialize(buffer, value);
   T const& output    = rbe::deserialize<T>(buffer, rbe::dsrl::in_place);
@@ -103,7 +112,7 @@ constexpr auto test_inplace(T const& value) -> void {
 
 template<rbe::wirable T>
 constexpr auto test_lazy(T const& value) -> void {
-  std::array<std::byte, rbe::wire_size_of(^^T)> buffer {};
+  auto buffer = testing_buffer<T>();
 
   auto bytes_written = rbe::serialize(buffer, value);
   auto output        = rbe::deserialize<T>(buffer, rbe::dsrl::lazy);
@@ -130,9 +139,9 @@ constexpr void test_case(T const& value) {
 } // namespace round_trip
 
 #define SERDE_TEST_CASE(test_case_struct)                                                                              \
-  TEST_CASE(#test_case_struct) { dsrl::test_case(test_case_struct); }                                                  \
-  TEST_CASE(#test_case_struct) { srl::test_case(test_case_struct); }                                                   \
-  TEST_CASE(#test_case_struct) { round_trip::test_case(test_case_struct.structure); }
+  TEST_CASE(#test_case_struct " [dsrl]") { dsrl::test_case(test_case_struct); }                                        \
+  TEST_CASE(#test_case_struct " [srl]") { srl::test_case(test_case_struct); }                                          \
+  TEST_CASE(#test_case_struct " [round_trip]") { round_trip::test_case(test_case_struct.structure); }
 
 // Golden source testing for serialization, deserialization, and round-trip cycles
 TEST_SUITE("Serialization - Deserialization - Round Trip") {

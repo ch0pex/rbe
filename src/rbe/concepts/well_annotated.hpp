@@ -3,28 +3,24 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file annotations_list.hpp
- * @date 06/08/2026
+ * @file agnostic.hpp
+ * @date 10/08/2026
  * @brief Short description
  *
  * Longer description
  */
 
 #pragma once
+#include "rbe/detail/annotations_correctness.hpp"
 
 // --- Includes ---
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 
-// --- System ---
 
-namespace rbe::detail {
+namespace rbe {
 
-template<auto... Args>
-struct annotations_t { };
+template<typename T>
+concept well_annotated = detail::is_well_annotated(^^T);
 
-} // namespace rbe::detail
+} // namespace rbe

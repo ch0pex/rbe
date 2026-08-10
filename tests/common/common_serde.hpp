@@ -32,14 +32,16 @@ struct TestCase {
   std::array<std::byte, N> wire;
 };
 
+inline constexpr auto ignore_padding = [](std::byte const lhs, std::byte const rhs) {
+  return lhs == rhs or lhs == pad or rhs == pad;
+};
 
 constexpr TestCase trivially_wirable_no_padding {
   .structure = NonPaddedStruct2 {.a = 1, .b = 2, .c = 'a'},
   .wire      = bytes(
       0x01, 0x00, 0x00, 0x00, // a
       0x02, 0x00, 0x00, 0x00, // b
-      0x61, 0x00, 0x00, 0x00, // c
-      0x00, 0x00, 0x00, 0x00 // padding
+      0x61, 0x00, 0x00, 0x00 // c
   ),
 };
 
@@ -162,7 +164,8 @@ constexpr TestCase message_with_header_pack_be_test {
       0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, // timestamp (big-endian)
       0x39, 0x30, 0x00, 0x00, // price
       0x85, 0x1A, 0x00, 0x00, // volume
-      0x02, 0x00, 0x00, 0x00 // orders
+      0x02, 0x00, 0x00, 0x00, // orders
+      pad, pad, pad, pad // padding
   ),
 };
 
@@ -218,7 +221,8 @@ constexpr TestCase common_header_member_be_test {
       },
   .wire = bytes(
       0xDE, 0xAD, 0xBE, 0xEF, // version (big-endian)
-      0x00, 0x02 // size (little-endian)
+      0x00, 0x02, // size (little-endian)
+      pad, pad // padding
   ),
 };
 
