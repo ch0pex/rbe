@@ -7,6 +7,7 @@ add_example(eager_deserialization dsrl/eager.cpp)
 add_example(lazy_deserialization dsrl/lazy.cpp)
 add_example(in_place dsrl/in_place.cpp)
 add_example(markets markets.cpp)
+add_example(annotations annotations.cpp)
 # add_example(custom custom.cpp)
 # add_example(round_trip round_trip.cpp)
 
