@@ -10,7 +10,6 @@
  *
  * Longer description
  */
-#pragma once
 
 #include <rbe/core/annotations.hpp>
 
@@ -93,7 +92,7 @@ struct[[= rbe::big]] ParentNode {
 
   // struct [[=rbe::pack, =rbe::big]] MiddleNode {
   //    Leaf leaf;             // Implicit big, derived pack (leaf don't have any explicit requirement related to
-  //    aligment) std::uint32_t valor2;  // Implicit big
+  //    alignment std::uint32_t valor2;  // Implicit big
   // };
 
   MiddleNode node; // Implicit big, explicit pack
