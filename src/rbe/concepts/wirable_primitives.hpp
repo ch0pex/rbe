@@ -40,7 +40,7 @@ consteval auto is_custom_wirable(std::meta::info const info) -> bool { // clang-
   return is_complete_type(substitute(^^custom, {info})); // clang-format on
 }
 
-consteval auto is_wirable_primitve(std::meta::info const info) -> bool {
+consteval auto is_wirable_primitive(std::meta::info const info) -> bool {
   return is_trivially_wirable_primitive(info) or is_custom_wirable(info);
 }
 

@@ -30,22 +30,15 @@ namespace rbe {
 
 namespace detail {
 
-template<class T>
-consteval auto is_wirable_class_type() -> bool {
-  static constexpr auto info = ^^T;
-  if constexpr (wirable_primitive<std::remove_all_extents_t<T>>) { // leaf case
+consteval auto is_wirable_class_type(std::meta::info type) -> bool {
+  type = normalize_type(type);
+  if (is_wirable_primitive(remove_all_extents(type))) { // leaf case
     return true;
   }
 
-  // check recursively that all it's members are wirable
-  if constexpr (is_class_type(info) and not is_empty_type(info)) {
-    template for (constexpr auto member: nsdm(info) | std::ranges::to<static_array>()) {
-      if (not is_wirable_class_type<typename[:type_of(member):]>())
-        return false;
-    }
-    return true;
+  if (is_class_type(type) and not is_empty_type(type)) {
+    return std::ranges::all_of(nsdm(type), is_wirable_class_type, std::meta::type_of);
   }
-
   return false;
 }
 
@@ -76,7 +69,7 @@ concept introspectable = std::meta::is_enumerable_type(^^T);
  *
  */
 template<typename T>
-concept wirable = wirable_primitive<T> or detail::is_wirable_class_type<T>();
+concept wirable = wirable_primitive<T> or detail::is_wirable_class_type(^^T);
 
 template<typename T>
 concept wirable_class = std::is_class_v<T> and wirable<T>;
