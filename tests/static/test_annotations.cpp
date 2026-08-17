@@ -14,6 +14,7 @@
 #include <rbe/core/annotations.hpp>
 #include <rbe/detail/annotations_correctness.hpp>
 
+#include "common_structs.hpp"
 #include "rbe/concepts/well_annotated.hpp"
 
 // --- Dependencies ---
@@ -27,55 +28,6 @@
 namespace {
 
 // clang-format off
-struct[[=rbe::little]] TestLittle{};
-struct[[=rbe::big]]    TestBig{};
-struct[[=rbe::pack]]   TestPack{};
-struct[[=rbe::id]]     TestId{};
-struct[[=rbe::length]] TestLength{};
-struct[[=rbe::debug]]  TestDebug{};
-
-inline constexpr struct : rbe::detail::base_annotation {} annotation_a {};
-inline constexpr struct {} annotation_b {};
-inline constexpr struct : rbe::detail::base_annotation {} annotation_c {};
-struct [[=annotation_a]] AnnotatedStructA {
-  int x;
-  double y;
-};
-
-struct[[=annotation_a, =annotation_b]] AnnotatedStructB {
-  int x;
-  double y;
-};
-
-struct[[=annotation_a, =annotation_c]] AnnotatedStructC {
-  int x;
-  double y;
-};
-
-struct[[=annotation_a, =annotation_c]] AnnotatedStructD {
-  [[=annotation_a]] int x;
-  double y;
-};
-
-struct[[=rbe::derive<annotation_a, annotation_c>]] AnnotatedStructWithList {
-  [[=annotation_a]] int x;
-  double y;
-};
-
-[[=annotation_a]] struct WrongAnnotatedStruct {
-  int x;
-  double y;
-};
-
-struct [[=rbe::big]] Child {
-
-};
-
-struct Parent {
-  [[=rbe::pack]] Child child;
-};
-
-//clang-format on
 
 // --- is_rbe_annotation ---
 static_assert(std::ranges::all_of(rbe::detail::annotations::all, rbe::detail::is_rbe_annotation));
@@ -132,10 +84,6 @@ static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^Annotat
 static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD), rbe::detail::deep_annotation_types_of(^^AnnotatedStructWithList)));
 
 // --- well_annotated ---
-
-struct[[=rbe::pack, =rbe::pack]] DuplicatedAnnotations { };
-struct[[=rbe::little, =rbe::big]] ConflictingAnnotations { };
-struct BadParent { [[=rbe::little]] Child child; };
 
 static_assert(rbe::well_annotated<Child>);
 static_assert(rbe::well_annotated<Parent>);

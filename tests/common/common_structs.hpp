@@ -322,4 +322,60 @@ struct [[=rbe::pack]] MessageWithArrayBe {
   bool operator==(MessageWithArrayBe const&) const = default;
 };
 
+
+//
+struct[[=rbe::little]] TestLittle{};
+struct[[=rbe::big]]    TestBig{};
+struct[[=rbe::pack]]   TestPack{};
+struct[[=rbe::id]]     TestId{};
+struct[[=rbe::length]] TestLength{};
+struct[[=rbe::debug]]  TestDebug{};
+
+inline constexpr struct : rbe::detail::base_annotation {} annotation_a {};
+inline constexpr struct {} annotation_b {};
+inline constexpr struct : rbe::detail::base_annotation {} annotation_c {};
+struct [[=annotation_a]] AnnotatedStructA {
+  int x;
+  double y;
+};
+
+struct[[=annotation_a, =annotation_b]] AnnotatedStructB {
+  int x;
+  double y;
+};
+
+struct[[=annotation_a, =annotation_c]] AnnotatedStructC {
+  int x;
+  double y;
+};
+
+struct[[=annotation_a, =annotation_c]] AnnotatedStructD {
+  [[=annotation_a]] int x;
+  double y;
+};
+
+struct[[=rbe::derive<annotation_a, annotation_c>]] AnnotatedStructWithList {
+  [[=annotation_a]] int x;
+  double y;
+};
+
+[[=annotation_a]] struct WrongAnnotatedStruct {
+  int x;
+  double y;
+};
+
+struct [[=rbe::big]] Child {
+
+};
+
+struct Parent {
+  [[=rbe::pack]] Child child;
+};
+
+struct[[=rbe::pack, =rbe::pack]] DuplicatedAnnotations {
+  int a, b;
+};
+struct[[=rbe::little, =rbe::big]] ConflictingAnnotations { };
+struct BadParent { [[=rbe::little]] Child child; };
+
 // clang-format on
