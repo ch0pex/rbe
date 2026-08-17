@@ -14,13 +14,12 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/memory_layout.hpp>
 #include <rbe/concepts/trivially_wirable.hpp>
 #include <rbe/concepts/wirable.hpp>
 #include <rbe/core/custom.hpp>
+#include <rbe/core/memory_layout.hpp>
 #include <rbe/detail/memcpy_constexpr.hpp>
 #include <rbe/detail/normalize.hpp>
-#include <rbe/concepts/agnostic.hpp>
 
 // --- STD ---
 #include <cstddef>
@@ -68,43 +67,5 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
 
   return bytes_written;
 }
-
-struct[[ = pack, = big ]] Leaf {
-  int number; // big
-  char id; // big
-};
-
-struct[[= little]] Parent {
-  [[= little]] int number; // little
-  Leaf leaf; // big
-  char id; // big
-};
-
-struct[[= big]] BigParent {
-  int number; // big
-  char id; // big (no matters)
-  Parent parent; // little
-  [[= little]] std::array<std::uint32_t, 50> numbers;
-};
-
-namespace case2 {
-struct Leaf {
-  int number; // big
-  char id; // big
-};
-
-struct Parent {
-  [[= little]] int number; // little
-  Leaf leaf; // big
-  char id; // big
-};
-
-struct[[= big]] BigParent {
-  int number; // big
-  char id; // big (no matters)
-  Parent parent; // big
-  [[= little]] std::array<std::uint32_t, 50> numbers;
-};
-} // namespace case2
 
 } // namespace rbe

@@ -14,6 +14,8 @@
 #include <rbe/core/annotations.hpp>
 #include <rbe/detail/annotations_correctness.hpp>
 
+#include "rbe/concepts/well_annotated.hpp"
+
 // --- Dependencies ---
 
 // --- External dependencies ---
@@ -65,12 +67,18 @@ struct[[=rbe::derive<annotation_a, annotation_c>]] AnnotatedStructWithList {
   double y;
 };
 
+struct [[=rbe::big]] Child {
 
+};
+
+struct Parent {
+  [[=rbe::pack]] Child child;
+};
 
 //clang-format on
 
 // --- is_rbe_annotation ---
-static_assert(std::ranges::all_of(rbe::detail::all_annotations, rbe::detail::is_rbe_annotation));
+static_assert(std::ranges::all_of(rbe::detail::annotations::all, rbe::detail::is_rbe_annotation));
 static_assert(rbe::detail::is_rbe_annotation(^^annotation_a));
 static_assert(not rbe::detail::is_rbe_annotation(^^annotation_b));
 static_assert(not rbe::detail::is_rbe_annotation(^^int));
@@ -107,6 +115,8 @@ static_assert(rbe::detail::annotation_types_of(^^AnnotatedStructC).size() == 2);
 static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^AnnotatedStructC), rbe::detail::types_list(^^annotation_a, ^^annotation_c))); // Annotation B is ignored, not an rbe annotation
 static_assert(rbe::detail::annotation_types_of(^^WrongAnnotatedStruct).size() == 0);
 static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^WrongAnnotatedStruct), std::vector<std::meta::info>{}));
+static_assert(rbe::detail::annotation_types_of(^^Parent::child).size() == 2);
+static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^Parent::child), rbe::detail::types_list(^^rbe::pack, ^^rbe::big)));
 
 // --- deep_annotations_types_of ---
 static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructA).size() == 1);
@@ -121,5 +131,16 @@ static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD).size() =
 static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD), rbe::detail::types_list(^^annotation_a, ^^annotation_c, ^^annotation_a)));
 static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD), rbe::detail::deep_annotation_types_of(^^AnnotatedStructWithList)));
 
+// --- well_annotated ---
+
+struct[[=rbe::pack, =rbe::pack]] DuplicatedAnnotations { };
+struct[[=rbe::little, =rbe::big]] ConflictingAnnotations { };
+struct BadParent { [[=rbe::little]] Child child; };
+
+static_assert(rbe::well_annotated<Child>);
+static_assert(rbe::well_annotated<Parent>);
+static_assert(not rbe::well_annotated<DuplicatedAnnotations>);
+static_assert(not rbe::well_annotated<ConflictingAnnotations>);
+static_assert(not rbe::well_annotated<BadParent>);
 
 } // namespace

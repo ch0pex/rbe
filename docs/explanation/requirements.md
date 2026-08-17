@@ -116,6 +116,7 @@ The library must support three deserialization modes:
 ### Terminology: Annotation Dimensions
 
 Annotations in the RBE library are organized into orthogonal **dimensions**. Each dimension represents an independent aspect of type behavior:
+
 - **Endianness Dimension**: Controls byte ordering (`=rbe::big`, `=rbe::little`, `=rbe::native`)
 - **Packing Dimension**: Controls memory layout (`=rbe::pack`)
 - **Future Dimensions**: Additional orthogonal annotation categories may be added without conflicting with existing ones
@@ -126,7 +127,7 @@ Annotations from different dimensions can coexist on the same struct or member (
 
 - **REQ-058**: Annotations declared at struct level must apply to all member variables by default
 - **REQ-059**: Members must inherit parent type annotations (endianness, packing) unless explicitly overridden
-- **REQ-060**: Member-level annotations must have higher precedence than struct-level annotations and completely replace them
+- **REQ-060**: Member-level annotations must have higher precedence than inherited from parent structure annotations and completely replace them
 - **REQ-061**: Multiple annotation dimensions must be supported simultaneously (e.g. packing and endianness)
 
 ### Endianness and Packing
@@ -146,16 +147,22 @@ Annotations from different dimensions can coexist on the same struct or member (
 
 ### Conflict Detection
 
-- **REQ-071**: System must detect and reject conflicting annotations from the same dimension at compile-time
-- **REQ-072**: Double annotations in the same dimension must generate a compilation error
-- **REQ-073**: Conflict detection must apply at both struct and member levels
-- **REQ-074**: Error messages must clearly identify conflicts and suggest resolution
-- **REQ-075**: Member annotations conflicting with struct annotations MUST generate a compilation error (strict safety enforced)
+Two annotations from the same dimension cannot coexist within the same annotation group. Which annotations form the group depends on the context:
+
+- For a **type definition**, the group is the set of annotations on the type itself (e.g. `[[=rbe::big, =rbe::pack]]`).
+- For a **struct member**, the group is the union of the non-static data member's explicit annotations and the annotations from the member's type.
+
+Example: if `Header` is annotated `big` on its type, then `[[=rbe::little]] Header hdr;` inside `Msg2` forms the group `{little, big}` on the endianness dimension, which is a conflict.
+
+- **REQ-071**: System must detect and reject duplicate or conflicting annotations within the same dimension at compile-time, generating a clear compilation error
+- **REQ-072**: Conflict detection must apply at both type-definition and member levels
+- **REQ-073**: Error messages must clearly identify conflicts and suggest resolution
+- **REQ-074**: Member annotations conflicting with inherited type annotations MUST generate a compilation error (strict safety enforced)
 
 ### Implicit Annotations
 
-- **REQ-076**: The library MUST support implicit annotations for member convenience
-- **REQ-077**: Members without explicit annotations should get reasonable defaults (native endianness and standard alignment)
-- **REQ-078**: Implicit endianness IS ALLOWED (members without explicit endianness annotation use platform native endianness)
-- **REQ-079**: Configuration mechanism MUST exist to enforce explicit endianness mode for safety-critical contexts where platform independence is required
-- **REQ-080**: Implicit behavior must be well-documented and its dangers for network communication clearly warned
+- **REQ-075**: The library MUST support implicit annotations for member convenience
+- **REQ-076**: Members without explicit annotations should get reasonable defaults (native endianness and standard alignment)
+- **REQ-077**: Implicit endianness IS ALLOWED (members without explicit endianness annotation use platform native endianness)
+- **REQ-078**: Configuration mechanism MUST exist to enforce explicit endianness mode for safety-critical contexts where platform independence is required
+- **REQ-079**: Implicit behavior must be well-documented and its dangers for network communication clearly warned
