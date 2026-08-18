@@ -64,7 +64,7 @@ class MonoGameRecipe(ConanFile):
         tc = CMakeToolchain(self)
         tc.variables["BUILD_TESTING"] = self.options.build_testing
         tc.variables["BUILD_EXAMPLES"] = self.options.build_examples
-        tc.user_presets_path = ""
+        tc.user_presets_path = "build/ConanPresets.json"
         tc.generate()
 
     def build(self):

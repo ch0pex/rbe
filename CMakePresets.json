@@ -4,6 +4,9 @@
     "major": 3,
     "minor": 30
   },
+  "include": [
+    "build/ConanPresets.json"
+  ],
   "configurePresets": [
     {
       "name": "base",

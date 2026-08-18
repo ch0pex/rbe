@@ -1,5 +1,4 @@
 #!/bin/bash
-
 if [ -z "$1" ]; then
     echo "Fatal Error: Missing preset name."
     echo "Usage: ././conan/install.sh <PresetName> | all"
