@@ -34,11 +34,14 @@ target_sources(
         rbe/concepts/wirable.hpp
         rbe/concepts/wirable_primitives.hpp
 
+        # deserialize
         rbe/dsrl/deserialize.hpp
         rbe/dsrl/msg.hpp
         rbe/dsrl/tags.hpp
 
+        # serialize
         rbe/srl/serialize.hpp
 )
 
 add_library(rbe::rbe ALIAS rbe)
+target_compile_options(rbe INTERFACE -freflection -Wno-attributes)

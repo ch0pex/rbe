@@ -48,11 +48,8 @@ function(create_test test_name test_src)
 endfunction()
 
 
-# Common testing setup
-if (BUILD_TESTING)
-    find_package(doctest CONFIG REQUIRED)
-    enable_testing()
-    find_program(MEMORYCHECK_COMMAND valgrind)
-    set(MEMORYCHECK_COMMAND_OPTIONS "--leak-check=full --error-exitcode=1 --suppressions=${CMAKE_SOURCE_DIR}/cmake/supp/valgrind.supp")
-    include(CTest)
-endif ()
+find_package(doctest CONFIG REQUIRED)
+enable_testing()
+find_program(MEMORYCHECK_COMMAND valgrind)
+set(MEMORYCHECK_COMMAND_OPTIONS "--leak-check=full --error-exitcode=1 --suppressions=${CMAKE_SOURCE_DIR}/cmake/supp/valgrind.supp")
+include(CTest)
