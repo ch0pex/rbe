@@ -622,6 +622,7 @@ static_assert(rbe::get_wire_layout<MessageWithHeaderPack>() != rbe::get_struct_l
 static_assert(rbe::get_wire_layout<MessageWithHeaderMemberBe>() == rbe::get_struct_layout<MessageWithHeaderMemberBe>());
 
 static_assert(rbe::trivially_wirable<MessageWithArray>);
+static_assert(rbe::trivially_wirable<MessageWithArray>);
 static_assert(rbe::trivially_wirable<MessageWithCArray>);
 
 

@@ -39,9 +39,11 @@ struct bits : detail::base_annotation {
 /**
  * @brief Endianness annotations
  */
-inline constexpr struct : detail::base_annotation {} native;     /// < native-endian byt order semantics
+inline constexpr struct : detail::base_annotation {} native {};  /// < native-endian byt order semantics
 inline constexpr struct : detail::base_annotation {} little {};  /// < little-endian byte order semantics
 inline constexpr struct : detail::base_annotation {} big {};     /// < big-endian byte order semantics
+
+
 
 /**
  * @brief Memory alignment annotations
