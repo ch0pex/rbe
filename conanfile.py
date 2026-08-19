@@ -1,4 +1,5 @@
 import os
+import re
 
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
@@ -14,7 +15,6 @@ class MonoGameRecipe(ConanFile):
     name = "rbe"
     homepage = "https://github.com/ch0pex/rbe"
     description = "Reflexion Based Encoding is a C++ library that provides a simple and efficient way to serialize and deserialize objects using reflection."
-    version = "0.0.1"
     package_type = "header-library"
     settings = "os", "compiler", "build_type", "arch"
 
@@ -37,6 +37,13 @@ class MonoGameRecipe(ConanFile):
             "clang": None,
             "msvc": None,
         }
+    
+    def set_version(self):
+        content = load(self, os.path.join(self.recipe_folder, "src/CMakeLists.txt"))
+        version = re.search(
+            r"project\([^\)]+VERSION (\d+\.\d+\.\d+)[^\)]*\)", content
+        ).group(1)
+        self.version = version.strip()
 
     def layout(self):
         cmake_layout(self)
