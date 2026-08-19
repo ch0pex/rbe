@@ -1,5 +1,10 @@
-add_library(rbe INTERFACE
-        rbe/dsrl/msg.hpp)
+cmake_minimum_required(VERSION 3.31)
+
+project(rbe VERSION 0.0.1 LANGUAGES CXX)
+
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+add_library(rbe INTERFACE rbe/dsrl/msg.hpp)
 
 target_sources(
         rbe

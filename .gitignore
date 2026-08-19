@@ -68,3 +68,7 @@ vcpkg_installed/
 Testing/
 .cache/
 conan/test_package/CMakeUserPresets.json
+
+# Cmake
+CMakeUserPresets.json
+#

@@ -1,9 +1,9 @@
 function(create_test test_name test_src)
-    if (NOT TARGET ${PROJECT_NAME}-tests)
-        add_custom_target(${PROJECT_NAME}-tests)
+    if (NOT TARGET rbe-tests)
+        add_custom_target(rbe-tests)
     endif ()
 
-    set(target_exe "test_${PROJECT_NAME}_${test_name}")
+    set(target_exe "test_rbe_${test_name}")
 
     set(options "")
     set(oneValueArgs RESOURCE_LOCK)
@@ -15,7 +15,7 @@ function(create_test test_name test_src)
 
     add_test(NAME ${target_exe} COMMAND ${target_exe})
 
-    add_dependencies(${PROJECT_NAME}-tests ${target_exe})
+    add_dependencies(rbe-tests ${target_exe})
 
     if (CMAKE_RUNTIME_OUTPUT_DIRECTORY)
         set_tests_properties(${target_exe} PROPERTIES
@@ -23,7 +23,7 @@ function(create_test test_name test_src)
         )
     endif ()
 
-    set(final_labels "${PROJECT_NAME}")
+    set(final_labels "rbe")
     if (ARG_LABELS)
         list(APPEND final_labels ${ARG_LABELS})
     endif ()

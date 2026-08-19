@@ -21,6 +21,7 @@ class RbeTestPackageConan(ConanFile):
         cmake.build()
 
     def test(self):
-        if can_run(self):
-            exe = os.path.join(self.cpp.build.bindir, "test_package")
-            self.run(exe, env="conanrun")
+        if not can_run(self):
+            return
+        exe = os.path.join(self.cpp.build.bindir, "test_package")
+        self.run(exe, env="conanrun")
