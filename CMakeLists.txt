@@ -13,8 +13,3 @@ enable_testing()
 add_subdirectory(tests)
 add_subdirectory(example)
 
-
-
-# Install the library target
-install(TARGETS rbe DESTINATION lib)
-install(DIRECTORY src/ DESTINATION include FILES_MATCHING PATTERN "*.hpp")
