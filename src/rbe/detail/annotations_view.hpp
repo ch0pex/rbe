@@ -13,9 +13,9 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/detail/annotation_base.hpp>
 #include <rbe/detail/introspection.hpp>
 
-#include "annotation_base.hpp"
 
 namespace rbe::detail::views {
 
