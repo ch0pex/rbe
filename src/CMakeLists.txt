@@ -44,4 +44,7 @@ target_sources(
 )
 
 add_library(rbe::rbe ALIAS rbe)
-target_compile_options(rbe INTERFACE -freflection -Wno-attributes)
+target_compile_features(rbe INTERFACE cxx_std_26)
+
+include(enable_reflection)
+rbe_enable_reflection(rbe INTERFACE)
