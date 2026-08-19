@@ -5,22 +5,12 @@
 /**
  * @file concepts.hpp
  * @date 31/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief concepts umbrella header
  */
 
 #pragma once
 
-// --- Includes ---
-
-// --- Dependencies ---
-
-// --- External dependencies ---
-
-// --- STD ---
-
-// --- System ---
-
 #include <rbe/concepts/trivially_wirable.hpp>
+#include <rbe/concepts/well_annotated.hpp>
 #include <rbe/concepts/wirable.hpp>
+#include <rbe/concepts/wirable_primitives.hpp>
