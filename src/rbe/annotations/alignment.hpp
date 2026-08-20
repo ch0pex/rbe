@@ -11,7 +11,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/detail/annotation_base.hpp>
+#include <rbe/annotations/detail/base.hpp>
 
 namespace rbe {
 

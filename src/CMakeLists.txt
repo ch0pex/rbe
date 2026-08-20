@@ -13,10 +13,10 @@ target_sources(
         FILES
 
         # annotations
-        rbe/annotations/detail/annotation_base.hpp
-        rbe/annotations/detail/annotations_correctness.hpp
-        rbe/annotations/detail/annotations_utils.hpp
-        rbe/annotations/detail/annotations_view.hpp
+        rbe/annotations/detail/base.hpp
+        rbe/annotations/detail/correctness.hpp
+        rbe/annotations/detail/utils.hpp
+        rbe/annotations/detail/view.hpp
         rbe/annotations/alignment.hpp
         rbe/annotations/derive.hpp
         rbe/annotations/endianness.hpp

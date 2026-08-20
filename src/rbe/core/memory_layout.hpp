@@ -14,7 +14,7 @@
 
 // --- Includes ---
 #include <rbe/annotations/alignment.hpp>
-#include <rbe/annotations/detail/annotations_correctness.hpp>
+#include <rbe/annotations/detail/correctness.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/core/detail/introspection.hpp>
 #include <rbe/core/detail/static_array.hpp>

@@ -13,7 +13,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/detail/annotations_utils.hpp>
+#include <rbe/annotations/detail/utils.hpp>
 #include <rbe/annotations/format.hpp>
 #include <rbe/core/detail/introspection.hpp>
 #include <rbe/core/wirable_concepts.hpp>

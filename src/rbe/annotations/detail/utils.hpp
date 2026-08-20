@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file annotations_utils.hpp
+ * @file utils.hpp
  * @version 1.0
  * @date 15/08/2026
  * @brief Short description
@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include <rbe/annotations/detail/annotations_view.hpp>
+#include <rbe/annotations/detail/view.hpp>
 
 namespace rbe::detail {
 

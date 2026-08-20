@@ -12,7 +12,7 @@
 
 // --- Includes ---
 #include <rbe/annotations/alignment.hpp>
-#include <rbe/annotations/detail/annotation_base.hpp>
+#include <rbe/annotations/detail/base.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/format.hpp>
 

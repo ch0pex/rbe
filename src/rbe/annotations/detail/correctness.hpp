@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file annotations_correctness.hpp
+ * @file correctness.hpp
  * @version 1.0
  * @date 15/08/2026
  * @brief Short description
@@ -13,8 +13,8 @@
 #pragma once
 
 #include <rbe/annotations/alignment.hpp>
-#include <rbe/annotations/detail/annotations_utils.hpp>
-#include <rbe/annotations/detail/annotations_view.hpp>
+#include <rbe/annotations/detail/utils.hpp>
+#include <rbe/annotations/detail/view.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/metadata.hpp>
 #include <rbe/core/detail/introspection.hpp>
