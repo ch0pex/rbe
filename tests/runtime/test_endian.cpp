@@ -5,9 +5,7 @@
 /**
  * @file test_endian.cpp
  * @date 27/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Doctest suite for rbe::endian conversion and load/store helpers
  */
 
 // --- Includes ---

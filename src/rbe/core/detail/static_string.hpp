@@ -3,11 +3,9 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file ctp.hpp
+ * @file static_string.hpp
  * @date 16/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief String type usable as a non-type template parameter via reflection
  */
 
 #pragma once

@@ -6,9 +6,7 @@
  * @file correctness.hpp
  * @version 1.0
  * @date 15/08/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Annotation dimension definitions and correctness checks used by well_annotated
  */
 #pragma once
 

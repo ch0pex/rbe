@@ -3,11 +3,9 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file serder.hpp
+ * @file custom.hpp
  * @date 17/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Primary template for user-provided custom serialization/deserialization
  */
 
 #pragma once

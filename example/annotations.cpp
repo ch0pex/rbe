@@ -3,12 +3,10 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file annotations.hpp
+ * @file annotations.cpp
  * @version 1.0
  * @date 12/08/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Examples of annotation inheritance and propagation across struct and member levels
  */
 
 #include <rbe/annotations.hpp>

@@ -5,9 +5,7 @@
 /**
  * @file test_static_array.cpp
  * @date 08/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Doctest suite for rbe::static_array
  */
 
 // --- Includes ---

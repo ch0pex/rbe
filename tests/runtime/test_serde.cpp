@@ -3,11 +3,9 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file test_serialize.cpp
+ * @file test_serde.cpp
  * @date 13/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Doctest suite for serialize/deserialize round-trip across eager, lazy and in-place strategies
  */
 
 // --- Includes ---

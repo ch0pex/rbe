@@ -5,9 +5,7 @@
 /**
  * @file message_list.hpp
  * @date 05/08/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Type list and variant/tuple aggregation of wirable message types
  */
 
 #pragma once

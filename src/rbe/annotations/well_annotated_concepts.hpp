@@ -5,9 +5,7 @@
 /**
  * @file well_annotated_concepts.hpp
  * @date 10/08/2026
- * @brief Short description
- *
- * Longer description
+ * @brief well_annotated concept verifying the annotation correctness of a type
  */
 
 #pragma once

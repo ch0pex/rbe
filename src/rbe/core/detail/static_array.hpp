@@ -5,9 +5,7 @@
 /**
  * @file static_array.hpp
  * @date 07/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Fixed-size array materialized at compile time via std::define_static_array
  */
 
 #pragma once

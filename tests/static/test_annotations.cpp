@@ -5,9 +5,7 @@
 /**
  * @file test_annotations.cpp
  * @date 01/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Static assertions for annotation detection, dimension checks and well_annotated
  */
 
 // --- Includes ---

@@ -5,9 +5,7 @@
 /**
  * @file base.hpp
  * @date 06/08/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Base type and predicates for identifying RBE annotations and annotation lists
  */
 
 #pragma once

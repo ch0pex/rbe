@@ -5,9 +5,7 @@
 /**
  * @file msg.hpp
  * @date 24/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Lazy deserialization proxy providing field-by-field access into a byte buffer
  */
 
 #pragma once

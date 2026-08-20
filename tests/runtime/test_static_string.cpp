@@ -5,9 +5,7 @@
 /**
  * @file test_static_string.cpp
  * @date 17/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Doctest suite for rbe::static_string
  */
 
 // --- Includes ---

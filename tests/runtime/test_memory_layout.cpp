@@ -3,11 +3,9 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file test_layout.cpp
+ * @file test_memory_layout.cpp
  * @date 27/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Doctest suite for struct and wire layout computation
  */
 
 // --- Includes ---

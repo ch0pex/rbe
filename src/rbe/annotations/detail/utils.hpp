@@ -6,9 +6,7 @@
  * @file utils.hpp
  * @version 1.0
  * @date 15/08/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Helpers for gathering and querying the RBE annotations attached to a type or member
  */
 #pragma once
 

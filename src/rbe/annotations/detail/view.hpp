@@ -6,9 +6,7 @@
  * @file view.hpp
  * @version 1.0
  * @date 15/08/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Range adaptor that flattens annotations and annotation lists into a single view
  */
 #pragma once
 

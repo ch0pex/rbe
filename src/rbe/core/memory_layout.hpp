@@ -5,9 +5,7 @@
 /**
  * @file memory_layout.hpp
  * @date 27/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief In-memory and wire struct layout computation via reflection
  */
 
 #pragma once

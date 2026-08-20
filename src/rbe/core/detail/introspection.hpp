@@ -5,9 +5,7 @@
 /**
  * @file introspection.hpp
  * @date 24/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Reflection helpers wrapping std::meta for non-static data member access
  */
 
 #pragma once

@@ -5,9 +5,7 @@
 /**
  * @file fmt.hpp
  * @date 27/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief std::format formatter for types annotated with [[=rbe::fmt]]
  */
 
 #pragma once

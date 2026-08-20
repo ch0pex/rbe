@@ -5,9 +5,7 @@
 /**
  * @file memcpy_constexpr.hpp
  * @date 24/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Constexpr-safe memcpy and load helpers built on std::bit_cast
  */
 
 #pragma once

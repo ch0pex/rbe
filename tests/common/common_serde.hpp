@@ -6,9 +6,7 @@
  * @file common_serde.hpp
  * @version 1.0
  * @date 30/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Shared golden test cases for serialization/deserialization round-trip tests
  */
 #pragma once
 

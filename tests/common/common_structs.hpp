@@ -3,12 +3,10 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file common.hpp
+ * @file common_structs.hpp
  * @version 1.0
  * @date 30/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Shared annotated struct definitions used across the test suite
  */
 #pragma once
 

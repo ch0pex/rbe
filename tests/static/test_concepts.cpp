@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file test_concepts.hpp
+ * @file test_concepts.cpp
  * @date 15/07/2026
  * @brief Test RBE concepts
  */

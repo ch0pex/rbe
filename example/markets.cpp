@@ -5,9 +5,7 @@
 /**
  * @file markets.cpp
  * @date 06/08/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Central include point aggregating the market data protocol headers
  */
 
 // --- Includes ---

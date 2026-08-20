@@ -5,9 +5,7 @@
 /**
  * @file endian.hpp
  * @date 27/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Endianness conversion and byte load/store helpers
  */
 
 #pragma once

@@ -3,11 +3,9 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file introspection.cpp
+ * @file test_introspection.cpp
  * @date 24/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Static assertions for the introspection.hpp reflection helpers
  */
 
 // --- Includes ---

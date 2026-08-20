@@ -5,9 +5,7 @@
 /**
  * @file wirable_primitives.hpp
  * @date 02/08/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Concepts and predicates for wirable primitive and custom-serialized types
  */
 
 #pragma once

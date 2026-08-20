@@ -5,9 +5,7 @@
 /**
  * @file test_memcpy_constexpr.cpp
  * @date 27/06/2026
- * @brief Short description
- *
- * Longer description
+ * @brief Doctest suite for memcpy_constexpr and load helpers
  */
 
 // --- Includes ---

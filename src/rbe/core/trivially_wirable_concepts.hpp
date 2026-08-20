@@ -5,9 +5,7 @@
 /**
  * @file trivially_wirable_concepts.hpp
  * @date 31/07/2026
- * @brief Short description
- *
- * Longer description
+ * @brief trivially_wirable concepts for types whose struct layout matches their wire layout
  */
 
 #pragma once
