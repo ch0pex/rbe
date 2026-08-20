@@ -16,7 +16,7 @@
 // --- Dependencies ---
 #include <rbe/core/fmt.hpp>
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/core/trivially_wirable.hpp>
+#include <rbe/core/trivially_wirable_concepts.hpp>
 
 // --- External dependencies ---
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN

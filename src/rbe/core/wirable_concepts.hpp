@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file wirable.hpp
+ * @file wirable_concepts.hpp
  * @date 30/06/2026
  * @brief Wirable concept definition
  */

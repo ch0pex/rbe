@@ -3,9 +3,9 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file format.hpp
+ * @file metadata.hpp
  * @date 20/08/2026
- * @brief Debugging annotations
+ * @brief Message metadata annotations
  */
 
 #pragma once
@@ -16,8 +16,9 @@
 namespace rbe {
 
 /**
- * @brief Debugging annotations
+ * @brief Message metadata annotations
  */
-inline constexpr struct : detail::base_annotation {} fmt {}; /// < format message for debugging purposes
+inline constexpr struct : detail::base_annotation {} id {};     /// < message id
+inline constexpr struct : detail::base_annotation {} length {}; /// < message length
 
 } // namespace rbe

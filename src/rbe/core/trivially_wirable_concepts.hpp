@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file trivially_wirable.hpp
+ * @file trivially_wirable_concepts.hpp
  * @date 31/07/2026
  * @brief Short description
  *
@@ -14,7 +14,7 @@
 
 // --- Includes ---
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/core/wirable.hpp>
+#include <rbe/core/wirable_concepts.hpp>
 #include <rbe/core/wirable_primitives.hpp>
 
 // --- STD ---

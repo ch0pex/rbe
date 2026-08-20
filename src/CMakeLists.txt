@@ -17,8 +17,12 @@ target_sources(
         rbe/annotations/detail/annotations_correctness.hpp
         rbe/annotations/detail/annotations_utils.hpp
         rbe/annotations/detail/annotations_view.hpp
-        rbe/annotations/annotations.hpp
-        rbe/annotations/well_annotated.hpp
+        rbe/annotations/alignment.hpp
+        rbe/annotations/derive.hpp
+        rbe/annotations/endianness.hpp
+        rbe/annotations/format.hpp
+        rbe/annotations/metadata.hpp
+        rbe/annotations/well_annotated_concepts.hpp
 
         # Core
         rbe/core/detail/introspection.hpp
@@ -31,8 +35,8 @@ target_sources(
         rbe/core/fmt.hpp
         rbe/core/memory_layout.hpp
         rbe/core/message_list.hpp
-        rbe/core/trivially_wirable.hpp
-        rbe/core/wirable.hpp
+        rbe/core/trivially_wirable_concepts.hpp
+        rbe/core/wirable_concepts.hpp
         rbe/core/wirable_primitives.hpp
 
         # deserialize
@@ -47,6 +51,7 @@ target_sources(
         rbe/srl/serialize.hpp
 
         # Umbrella headers
+        rbe/annotations.hpp
         rbe/core.hpp
         rbe/srl.hpp
         rbe/rbe.hpp

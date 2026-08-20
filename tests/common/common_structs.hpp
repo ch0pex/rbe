@@ -12,7 +12,12 @@
  */
 #pragma once
 
-#include <rbe/annotations/annotations.hpp>
+#include <rbe/annotations/alignment.hpp>
+#include <rbe/annotations/derive.hpp>
+#include <rbe/annotations/detail/annotation_base.hpp>
+#include <rbe/annotations/endianness.hpp>
+#include <rbe/annotations/format.hpp>
+#include <rbe/annotations/metadata.hpp>
 #include <rbe/core/custom.hpp>
 
 struct[[= rbe::fmt]] Empty { };

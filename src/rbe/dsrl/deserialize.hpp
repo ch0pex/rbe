@@ -14,8 +14,8 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/trivially_wirable.hpp>
-#include <rbe/core/wirable.hpp>
+#include <rbe/core/trivially_wirable_concepts.hpp>
+#include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
 #include <rbe/dsrl/msg.hpp>
 #include <rbe/dsrl/tags.hpp>

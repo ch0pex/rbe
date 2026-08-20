@@ -14,7 +14,6 @@
 #include "common_structs.hpp"
 
 // --- Dependencies ---
-#include <rbe/annotations/annotations.hpp>
 #include <rbe/core/fmt.hpp>
 
 // --- External dependencies ---

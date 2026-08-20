@@ -12,9 +12,11 @@
  */
 #pragma once
 
-#include <rbe/annotations/annotations.hpp>
+#include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/detail/annotations_utils.hpp>
 #include <rbe/annotations/detail/annotations_view.hpp>
+#include <rbe/annotations/endianness.hpp>
+#include <rbe/annotations/metadata.hpp>
 #include <rbe/core/detail/introspection.hpp>
 
 // --- STD ---

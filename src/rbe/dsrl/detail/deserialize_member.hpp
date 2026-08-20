@@ -12,7 +12,7 @@
 
 // --- Includes ---
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/core/wirable.hpp>
+#include <rbe/core/wirable_concepts.hpp>
 #include <rbe/core/wirable_primitives.hpp>
 #include <rbe/dsrl/detail/deserialize_fwd.hpp>
 

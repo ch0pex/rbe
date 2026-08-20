@@ -15,7 +15,7 @@
 // --- Includes ---
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/core/wirable.hpp>
+#include <rbe/core/wirable_concepts.hpp>
 
 // --- Dependencies ---
 

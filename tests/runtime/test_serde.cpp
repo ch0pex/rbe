@@ -15,8 +15,15 @@
 #include "common_structs.hpp"
 
 // --- Dependencies ---
-#include <rbe/dsrl.hpp>
-#include <rbe/srl.hpp>
+#include <rbe/core/detail/introspection.hpp>
+#include <rbe/core/detail/static_array.hpp>
+#include <rbe/core/memory_layout.hpp>
+#include <rbe/core/trivially_wirable_concepts.hpp>
+#include <rbe/core/wirable_concepts.hpp>
+#include <rbe/core/wirable_primitives.hpp>
+#include <rbe/dsrl/deserialize.hpp>
+#include <rbe/dsrl/tags.hpp>
+#include <rbe/srl/serialize.hpp>
 
 // --- External dependencies ---
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN

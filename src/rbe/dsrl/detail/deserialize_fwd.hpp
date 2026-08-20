@@ -12,7 +12,7 @@
 
 // --- Includes ---
 #include <rbe/core/endian.hpp>
-#include <rbe/core/trivially_wirable.hpp>
+#include <rbe/core/trivially_wirable_concepts.hpp>
 #include <rbe/dsrl/tags.hpp>
 
 // --- Dependencies ---

@@ -14,7 +14,7 @@
 
 #include "common_structs.hpp"
 
-#include <rbe/rbe.hpp>
+#include <rbe/core/wirable_concepts.hpp>
 
 #include <array>
 

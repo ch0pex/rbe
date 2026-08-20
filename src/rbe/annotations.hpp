@@ -3,14 +3,15 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file rbe.hpp
- * @date 24/06/2026
- * @brief RBE Umbrella header file
+ * @file annotations.hpp
+ * @date 20/08/2026
+ * @brief annotations umbrella header
  */
 
 #pragma once
 
-#include <rbe/annotations.hpp>
-#include <rbe/core.hpp>
-#include <rbe/dsrl.hpp>
-#include <rbe/srl.hpp>
+#include <rbe/annotations/alignment.hpp>
+#include <rbe/annotations/derive.hpp>
+#include <rbe/annotations/endianness.hpp>
+#include <rbe/annotations/format.hpp>
+#include <rbe/annotations/metadata.hpp>
