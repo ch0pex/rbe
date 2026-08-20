@@ -71,12 +71,12 @@ namespace cboe = rbe::cboeu;
 
 std::array<std::byte, 1500> buffer{};
 
-// Deserialize from raw buffer
-auto msg    = rbe::deserialize<cboe::AddOrder>(buffer);
+// Deserialize from raw buffer (lazy: reads fields on demand)
+auto msg    = rbe::deserialize<cboe::AddOrder>(buffer, rbe::dsrl::lazy);
 auto length = msg.field("length");
 
 // Serialize to raw buffer
-rbe::serialize(cboe::AddOrder{}, buffer);
+rbe::serialize(buffer, cboe::AddOrder{});
 ```
 
 ### Annotations reference

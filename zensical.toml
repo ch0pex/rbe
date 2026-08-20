@@ -46,10 +46,19 @@ Copyright &copy; 2026 The authors
 # Read more: https://zensical.org/docs/setup/navigation/
 nav = [
   { "Home" = "index.md" },
-  { "User's Guide" = [{ "Design Overview" = "explanation/design-overview.md" }] },
+  { "User's Guide" = [
+      { "Design Overview" = "explanation/design-overview.md" },
+      { "Type Concepts" = "explanation/concepts.md" },
+      { "Requirements" = "explanation/requirements.md" },
+  ] },
   { "How-To Guides" = [{ "Index" = "how-to/index.md" }] },
   { "Tutorials" = [{ "Getting Started" = "tutorials/getting-started.md" }] },
-  { "Reference" = [{ "Annotations" = "reference/annotations.md" }, { "Feature Matrix" = "reference/features.md" }] },
+  { "Reference" = [
+      { "Annotations" = "reference/annotations.md" },
+      { "Serialization" = "reference/serialization.md" },
+      { "Deserialization" = "reference/deserialization.md" },
+      { "Feature Matrix" = "reference/features.md" },
+  ] },
 ]
 
 # With the "extra_css" option you can add your own CSS styling to customize

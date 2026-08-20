@@ -14,9 +14,9 @@ A header-only C++ library for declarative binary serialization and deserializati
   [Browse guides →](how-to/index.md)
 
 - **Reference** — Complete description of annotations, types, and API.  
-  [Annotations →](reference/annotations.md) · [Feature matrix →](reference/features.md)
+  [Annotations →](reference/annotations.md) · [Serialization →](reference/serialization.md) · [Deserialization →](reference/deserialization.md) · [Feature matrix →](reference/features.md)
 
 - **Explanation** — Design rationale and architecture decisions.  
-  [Design overview →](explanation/design-overview.md)
+  [Design overview →](explanation/design-overview.md) · [Type concepts →](explanation/concepts.md) · [Requirements →](explanation/requirements.md)
 
 </div>
