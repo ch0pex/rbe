@@ -13,9 +13,9 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/concepts/wirable.hpp>
+#include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/core/static_string.hpp>
+#include <rbe/core/wirable.hpp>
 
 // --- Dependencies ---
 

@@ -11,7 +11,7 @@
  */
 
 // --- Includes ---
-#include <rbe/core/static_array.hpp>
+#include <rbe/core/detail/static_array.hpp>
 
 // --- Dependencies ---
 

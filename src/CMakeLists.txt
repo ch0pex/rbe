@@ -11,46 +11,47 @@ target_sources(
         PUBLIC
         FILE_SET HEADERS
         FILES
-        rbe/rbe.hpp
-        rbe/srl.hpp
-        rbe/dsrl.hpp
-        rbe/concepts.hpp
-        rbe/core.hpp
+
+        # annotations
+        rbe/annotations/detail/annotation_base.hpp
+        rbe/annotations/detail/annotations_correctness.hpp
+        rbe/annotations/detail/annotations_utils.hpp
+        rbe/annotations/detail/annotations_view.hpp
+        rbe/annotations/annotations.hpp
+        rbe/annotations/well_annotated.hpp
 
         # Core
-        rbe/core/annotations.hpp
+        rbe/core/detail/introspection.hpp
+        rbe/core/detail/memcpy_constexpr.hpp
+        rbe/core/detail/normalize.hpp
+        rbe/core/detail/static_array.hpp
+        rbe/core/detail/static_string.hpp
+        rbe/core/custom.hpp
         rbe/core/endian.hpp
         rbe/core/fmt.hpp
-        rbe/core/literals.hpp
         rbe/core/memory_layout.hpp
-        rbe/core/custom.hpp
-        rbe/core/static_array.hpp
-        rbe/core/static_string.hpp
-
-        # detail
-        rbe/detail/annotation_base.hpp
-        rbe/detail/annotations_correctness.hpp
-        rbe/detail/annotations_utils.hpp
-        rbe/detail/annotations_view.hpp
-        rbe/detail/deserialize_fwd.hpp
-        rbe/detail/deserialize_member.hpp
-        rbe/detail/introspection.hpp
-        rbe/detail/memcpy_constexpr.hpp
-        rbe/detail/normalize.hpp
-        rbe/detail/passkey.hpp
-
-        # concepts
-        rbe/concepts/trivially_wirable.hpp
-        rbe/concepts/wirable.hpp
-        rbe/concepts/wirable_primitives.hpp
+        rbe/core/message_list.hpp
+        rbe/core/trivially_wirable.hpp
+        rbe/core/wirable.hpp
+        rbe/core/wirable_primitives.hpp
 
         # deserialize
+        rbe/dsrl/detail/deserialize_fwd.hpp
+        rbe/dsrl/detail/deserialize_member.hpp
         rbe/dsrl/deserialize.hpp
         rbe/dsrl/msg.hpp
         rbe/dsrl/tags.hpp
 
         # serialize
+        rbe/srl/detail/serialize_impl.hpp
         rbe/srl/serialize.hpp
+
+        # Umbrella headers
+        rbe/core.hpp
+        rbe/srl.hpp
+        rbe/rbe.hpp
+        rbe/dsrl.hpp
+
 )
 
 add_library(rbe::rbe ALIAS rbe)

@@ -12,7 +12,7 @@
  */
 #pragma once
 
-#include <rbe/detail/annotations_view.hpp>
+#include <rbe/annotations/detail/annotations_view.hpp>
 
 namespace rbe::detail {
 

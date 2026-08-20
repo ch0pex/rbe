@@ -10,12 +10,11 @@
 
 #pragma once
 
-#include <rbe/core/annotations.hpp>
 #include <rbe/core/custom.hpp>
 #include <rbe/core/endian.hpp>
 #include <rbe/core/fmt.hpp>
-#include <rbe/core/literals.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/message_list.hpp>
-#include <rbe/core/static_array.hpp>
-#include <rbe/core/static_string.hpp>
+#include <rbe/core/trivially_wirable.hpp>
+#include <rbe/core/wirable.hpp>
+#include <rbe/core/wirable_primitives.hpp>

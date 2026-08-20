@@ -11,10 +11,7 @@
  *  - Need a lightweight copy into your object
  */
 
-#include <rbe/core/annotations.hpp>
-#include <rbe/core/fmt.hpp>
-#include <rbe/dsrl/deserialize.hpp>
-#include <rbe/srl/serialize.hpp>
+#include <rbe/rbe.hpp>
 
 #include <cstdint>
 #include <print>

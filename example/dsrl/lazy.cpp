@@ -12,9 +12,7 @@
  *  - Access fields selectively from high-volume message streams
  */
 
-#include <rbe/core/annotations.hpp>
-#include <rbe/dsrl/deserialize.hpp>
-#include <rbe/srl/serialize.hpp>
+#include <rbe/rbe.hpp>
 
 #include <cstdint>
 #include <print>

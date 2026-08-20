@@ -13,7 +13,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/concepts/wirable.hpp>
+#include <rbe/core/wirable.hpp>
 
 // --- Dependencies ---
 

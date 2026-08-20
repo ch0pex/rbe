@@ -13,7 +13,7 @@
 // --- Includes ---
 
 // --- Dependencies ---
-#include <rbe/detail/introspection.hpp>
+#include <rbe/core/detail/introspection.hpp>
 
 // --- External dependencies ---
 

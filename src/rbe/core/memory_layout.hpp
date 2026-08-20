@@ -13,12 +13,12 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/concepts/wirable.hpp>
-#include <rbe/core/annotations.hpp>
+#include <rbe/annotations/annotations.hpp>
+#include <rbe/annotations/detail/annotations_correctness.hpp>
+#include <rbe/core/detail/introspection.hpp>
+#include <rbe/core/detail/static_array.hpp>
 #include <rbe/core/endian.hpp>
-#include <rbe/core/static_array.hpp>
-#include <rbe/detail/annotations_correctness.hpp>
-#include <rbe/detail/introspection.hpp>
+#include <rbe/core/wirable.hpp>
 
 // --- Dependencies ---
 

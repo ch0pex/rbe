@@ -25,9 +25,7 @@
  */
 #pragma once
 
-#include <rbe/core/annotations.hpp>
-#include <rbe/core/custom.hpp>
-#include <rbe/core/message_list.hpp>
+#include <rbe/rbe.hpp>
 
 #include <cstdint>
 #include <tuple>

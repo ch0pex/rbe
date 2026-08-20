@@ -11,7 +11,7 @@
  */
 
 // --- Includes ---
-#include <rbe/core/static_string.hpp>
+#include <rbe/core/detail/static_string.hpp>
 
 // --- Dependencies ---
 

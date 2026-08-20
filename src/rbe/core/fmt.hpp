@@ -13,9 +13,10 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/concepts/wirable.hpp>
-#include <rbe/core/annotations.hpp>
-#include <rbe/detail/introspection.hpp>
+#include <rbe/annotations/annotations.hpp>
+#include <rbe/annotations/detail/annotations_utils.hpp>
+#include <rbe/core/detail/introspection.hpp>
+#include <rbe/core/wirable.hpp>
 
 // --- Dependencies ---
 
@@ -26,7 +27,6 @@
 #include <ostream>
 #include <string>
 
-#include "rbe/detail/annotations_utils.hpp"
 
 // --- System ---
 

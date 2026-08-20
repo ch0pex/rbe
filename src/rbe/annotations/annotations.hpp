@@ -13,7 +13,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/detail/annotation_base.hpp>
+#include <rbe/annotations/detail/annotation_base.hpp>
 
 // --- Dependencies ---
 

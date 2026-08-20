@@ -14,7 +14,7 @@
 
 #include "common_structs.hpp"
 
-#include <rbe/concepts.hpp>
+#include <rbe/rbe.hpp>
 
 #include <array>
 

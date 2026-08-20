@@ -11,8 +11,8 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/concepts/trivially_wirable.hpp>
 #include <rbe/core/endian.hpp>
+#include <rbe/core/trivially_wirable.hpp>
 #include <rbe/dsrl/tags.hpp>
 
 // --- Dependencies ---

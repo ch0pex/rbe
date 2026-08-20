@@ -11,7 +11,7 @@
  * Longer description
  */
 
-#include <rbe/core/annotations.hpp>
+#include <rbe/annotations/annotations.hpp>
 
 namespace {
 // Members derive parent type annotations

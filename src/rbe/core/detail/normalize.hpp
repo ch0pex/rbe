@@ -11,7 +11,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/concepts/wirable.hpp>
+#include <rbe/core/wirable.hpp>
 
 // --- Dependencies ---
 
@@ -41,7 +41,7 @@ auto normalize_endianness(T const value) -> T {
 
 /// Identity forwarder for non-primitive types (no byte-swapping needed).
 template<endian::order Order>
-auto normalize_endianness(auto const& value)  {
+auto normalize_endianness(auto const& value) {
   return value;
 }
 

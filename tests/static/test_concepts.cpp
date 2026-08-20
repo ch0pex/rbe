@@ -9,8 +9,10 @@
  */
 
 // --- Includes ---
-#include <rbe/concepts.hpp>
 #include "common_structs.hpp"
+
+// --- Dependencies ---
+#include <rbe/core.hpp>
 
 namespace {
 

@@ -15,13 +15,15 @@
 #include "common_structs.hpp"
 
 // --- Dependencies ---
-#include <ranges>
 #include <rbe/dsrl.hpp>
 #include <rbe/srl.hpp>
 
 // --- External dependencies ---
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
+
+// --- STD ---
+#include <ranges>
 
 namespace {
 

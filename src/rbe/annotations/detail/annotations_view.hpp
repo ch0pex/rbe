@@ -13,8 +13,8 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/detail/annotation_base.hpp>
-#include <rbe/detail/introspection.hpp>
+#include <rbe/annotations/detail/annotation_base.hpp>
+#include <rbe/core/detail/introspection.hpp>
 
 
 namespace rbe::detail::views {

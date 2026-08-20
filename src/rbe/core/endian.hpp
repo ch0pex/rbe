@@ -13,7 +13,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/detail/memcpy_constexpr.hpp>
+#include <rbe/core/detail/memcpy_constexpr.hpp>
 
 // --- Dependencies ---
 

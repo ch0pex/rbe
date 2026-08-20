@@ -14,12 +14,12 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/concepts/trivially_wirable.hpp>
-#include <rbe/concepts/wirable.hpp>
 #include <rbe/core/custom.hpp>
+#include <rbe/core/detail/memcpy_constexpr.hpp>
+#include <rbe/core/detail/normalize.hpp>
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/detail/memcpy_constexpr.hpp>
-#include <rbe/detail/normalize.hpp>
+#include <rbe/core/trivially_wirable.hpp>
+#include <rbe/core/wirable.hpp>
 
 // --- STD ---
 #include <cstddef>

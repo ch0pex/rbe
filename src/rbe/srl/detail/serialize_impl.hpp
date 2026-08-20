@@ -10,8 +10,8 @@
 
 #pragma once
 
+#include <rbe/core/detail/normalize.hpp>
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/detail/normalize.hpp>
 
 namespace rbe::detail {
 

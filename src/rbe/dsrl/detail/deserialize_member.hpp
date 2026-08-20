@@ -11,10 +11,10 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/concepts/wirable.hpp>
-#include <rbe/concepts/wirable_primitives.hpp>
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/detail/deserialize_fwd.hpp>
+#include <rbe/core/wirable.hpp>
+#include <rbe/core/wirable_primitives.hpp>
+#include <rbe/dsrl/detail/deserialize_fwd.hpp>
 
 // --- STD ---
 

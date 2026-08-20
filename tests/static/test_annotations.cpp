@@ -11,13 +11,13 @@
  */
 
 // --- Includes ---
-#include <rbe/core/annotations.hpp>
-#include <rbe/detail/annotations_correctness.hpp>
-
 #include "common_structs.hpp"
-#include "rbe/concepts/well_annotated.hpp"
 
 // --- Dependencies ---
+
+#include <rbe/annotations/annotations.hpp>
+#include <rbe/annotations/detail/annotations_correctness.hpp>
+#include <rbe/annotations/well_annotated.hpp>
 
 // --- External dependencies ---
 

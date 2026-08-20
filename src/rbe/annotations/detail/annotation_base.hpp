@@ -13,7 +13,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/detail/introspection.hpp>
+#include <rbe/core/detail/introspection.hpp>
 
 // --- STD ---
 #include <meta>
@@ -32,8 +32,8 @@ consteval auto is_rbe_annotation(std::meta::info info) -> bool {
     return false;
   }
   return info == ^^base_annotation or std::ranges::any_of(bases_of(info), [](std::meta::info const base_annotation) {
-    return is_rbe_annotation(base_annotation);
-  });
+           return is_rbe_annotation(base_annotation);
+         });
 }
 
 consteval auto is_annotation_list(std::meta::info info) -> bool {

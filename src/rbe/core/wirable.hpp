@@ -11,9 +11,9 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/concepts/wirable_primitives.hpp>
-#include <rbe/core/static_array.hpp>
-#include <rbe/detail/introspection.hpp>
+#include <rbe/core/detail/introspection.hpp>
+#include <rbe/core/detail/static_array.hpp>
+#include <rbe/core/wirable_primitives.hpp>
 
 // --- Dependencies ---
 

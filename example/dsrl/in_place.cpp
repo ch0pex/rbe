@@ -13,9 +13,7 @@
  *  - The most memory-efficient approach possible
  */
 
-#include <rbe/core/annotations.hpp>
-#include <rbe/dsrl/deserialize.hpp>
-#include <rbe/srl/serialize.hpp>
+#include <rbe/rbe.hpp>
 
 #include <cstdint>
 #include <print>

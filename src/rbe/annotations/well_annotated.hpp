@@ -13,7 +13,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/detail/annotations_correctness.hpp>
+#include <rbe/annotations/detail/annotations_correctness.hpp>
 
 // --- STD ---
 
