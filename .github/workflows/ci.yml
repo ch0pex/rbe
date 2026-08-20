@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "example/**"
+      - "test_package/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "conanfile.py"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "example/**"
+      - "test_package/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "conanfile.py"
+      - ".github/workflows/ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # Only GCC >= 16 currently implements C++26 static reflection, so the matrix
+    # has a single compiler axis value for now. Add entries here (and to the
+    # container/toolchain-install steps below) once clang/msvc gain reflection
+    # support. Ubuntu's gcc-16 (via ppa:ubuntu-toolchain-r/test) is still an early
+    # 16.0.1 trunk snapshot that miscompiles reflection code we rely on; Fedora
+    # ships a proper 16.1 release build, so the job runs inside a Fedora container
+    # until Ubuntu's package catches up.
+    name: "${{ matrix.build_type }} / ${{ matrix.compiler }}-${{ matrix.compiler_version }} / C++${{ matrix.cppstd }}"
+    runs-on: ubuntu-24.04
+    container: fedora:44
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Release, Debug]
+        compiler: [gcc]
+        compiler_version: [16]
+        cppstd: [26]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install gcc-${{ matrix.compiler_version }} and build tools
+        shell: bash
+        run: |
+          dnf install -y gcc-c++ cmake ninja-build ccache git-core tar gzip python3-pip which
+          echo "CC=gcc" >> "$GITHUB_ENV"
+          echo "CXX=g++" >> "$GITHUB_ENV"
+          installed_major="$(gcc -dumpversion | cut -d. -f1)"
+          if [[ "${installed_major}" != "${{ matrix.compiler_version }}" ]]; then
+            echo "::error::Fedora's default gcc is ${installed_major}.x, matrix expects gcc-${{ matrix.compiler_version }}"
+            exit 1
+          fi
+
+      - name: Set up ccache
+        shell: bash
+        run: |
+          mkdir -p /usr/local/lib/ccache
+          ln -sf "$(command -v ccache)" /usr/local/lib/ccache/gcc
+          ln -sf "$(command -v ccache)" /usr/local/lib/ccache/g++
+          echo "/usr/local/lib/ccache" >> "$GITHUB_PATH"
+          echo "CCACHE_DIR=${HOME}/.cache/ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=200M" >> "$GITHUB_ENV"
+
+      - name: Generate cache id
+        shell: bash
+        run: echo "cache_id=$(/bin/date -u "+%Y%m%d")" >> "$GITHUB_ENV"
+
+      - name: Cache Conan data
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2/p
+          key: conan-${{ matrix.compiler }}-${{ matrix.compiler_version }}-${{ matrix.cppstd }}-${{ matrix.build_type }}-${{ env.cache_id }}
+          restore-keys: |
+            conan-${{ matrix.compiler }}-${{ matrix.compiler_version }}-${{ matrix.cppstd }}-${{ matrix.build_type }}-
+            conan-${{ matrix.compiler }}-${{ matrix.compiler_version }}-${{ matrix.cppstd }}-
+
+      - name: Cache ccache data
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ matrix.compiler }}-${{ matrix.compiler_version }}-${{ matrix.cppstd }}-${{ matrix.build_type }}-${{ env.cache_id }}
+          restore-keys: |
+            ccache-${{ matrix.compiler }}-${{ matrix.compiler_version }}-${{ matrix.cppstd }}-${{ matrix.build_type }}-
+            ccache-${{ matrix.compiler }}-${{ matrix.compiler_version }}-${{ matrix.cppstd }}-
+
+      - name: Install Conan
+        shell: bash
+        run: pip install --break-system-packages -U conan
+
+      - name: Configure Conan profile
+        shell: bash
+        run: |
+          conan profile detect --force
+          conan profile show
+
+      - name: Print tool versions
+        shell: bash
+        run: |
+          ${CXX} --version
+          cmake --version
+          ninja --version
+          conan --version
+
+      - name: Build and test (conan create)
+        shell: bash
+        run: |
+          conan create . -b missing \
+            -s build_type=${{ matrix.build_type }} \
+            -s compiler=${{ matrix.compiler }} \
+            -s compiler.version=${{ matrix.compiler_version }} \
+            -s compiler.cppstd=${{ matrix.cppstd }} \
+            -c tools.cmake.cmaketoolchain:generator=Ninja \
+            -c user.rbe.build:all=True
