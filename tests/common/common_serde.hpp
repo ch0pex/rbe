@@ -356,3 +356,19 @@ constexpr TestCase nested_propagation_test {
       0x55, 0x66, 0x77, 0x88 // valor3 (big-endian, its own field)
   ),
 };
+
+// NestedPackParent structure test case -- regression for N-level pack propagation: NestedPackLeaf
+// carries no pack annotation of its own, so it must inherit packing transitively from
+// NestedPackParent, one level up, and drop its own inter-member padding on the wire.
+constexpr TestCase nested_pack_propagation_test {
+  .structure =
+      NestedPackParent {
+        .leaf = {.a = 0x11, .b = 0x22334455},
+        .tail = 0xAA,
+      },
+  .wire = bytes(
+      0x11, // leaf.a
+      0x55, 0x44, 0x33, 0x22, // leaf.b (little-endian, no padding despite its own native layout)
+      0xAA // tail
+  ),
+};

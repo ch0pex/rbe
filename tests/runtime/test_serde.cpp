@@ -168,6 +168,7 @@ TEST_SUITE("Serialization - Deserialization - Round Trip") {
   SERDE_TEST_CASE(message_with_array_test);
   SERDE_TEST_CASE(message_with_array_be_test);
   SERDE_TEST_CASE(nested_propagation_test);
+  SERDE_TEST_CASE(nested_pack_propagation_test);
 }
 
 } // namespace

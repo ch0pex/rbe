@@ -408,4 +408,19 @@ struct [[=rbe::big]] NestedParent {
   constexpr bool operator==(NestedParent const&) const = default;
 };
 
+// NestedPackLeaf carries no annotation of its own -- it must inherit packing transitively from
+// NestedPackParent, one level up, and drop its own inter-member padding on the wire even though
+// its in-memory layout still has it.
+struct NestedPackLeaf {
+  std::uint8_t a;
+  std::uint32_t b;
+  constexpr bool operator==(NestedPackLeaf const&) const = default;
+};
+
+struct [[=rbe::pack]] NestedPackParent {
+  NestedPackLeaf leaf;
+  std::uint8_t tail;
+  constexpr bool operator==(NestedPackParent const&) const = default;
+};
+
 // clang-format on

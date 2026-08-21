@@ -33,16 +33,6 @@
 
 namespace rbe {
 
-namespace detail {
-
-consteval auto has_pack_annotation(std::meta::info const info) -> bool {
-  if (has_annotation(info, pack))
-    return true;
-  return not is_type(info) ? has_annotation(type_of(info), pack) : false;
-}
-
-} // namespace detail
-
 using member_offset = std::meta::member_offset;
 
 struct member_layout {
@@ -62,17 +52,32 @@ struct struct_layout {
 };
 
 
-// recursively aggregates the size of the member variables
-consteval auto wire_size_of(std::meta::info const info) -> std::size_t {
-  if (not detail::has_pack_annotation(info) or is_trivially_wirable_primitive(info)) {
+/**
+ * @brief Wire size of `info` given an inherited `ctx` -- an unannotated member's packing falls back
+ * to `ctx` (whatever an outer ancestor resolved) instead of always assuming native padding, making
+ * `pack` propagate correctly through arbitrarily deep unannotated nesting, exactly like endianness.
+ */
+consteval auto wire_size_of(std::meta::info const info, detail::context const ctx) -> std::size_t {
+  auto const local = detail::merge_context(ctx, info); // info's own annotation overrides the ambient
+  // remove_all_extents: an array of primitives (e.g. std::array's own raw C-array member, reached one
+  // recursion hop below) is a leaf here too -- it has no inter-element padding to strip regardless of
+  // packing, and unlike a genuine aggregate it has no reflectable non-static data members to recurse
+  // into at all.
+  if (not local.packed or is_trivially_wirable_primitive(remove_all_extents(info))) {
     return size_of(info);
   }
 
   std::size_t result = 0;
   for (auto const member: detail::nsdm(info)) {
-    result += wire_size_of(type_of(member));
+    result += wire_size_of(type_of(member), detail::merge_context(local, member));
   }
   return result;
+}
+
+/// Context-free overload: no ambient annotation is inherited from anywhere -- the behavior every
+/// existing caller already relies on, unchanged.
+consteval auto wire_size_of(std::meta::info const info) -> std::size_t {
+  return wire_size_of(info, detail::context {});
 }
 
 // NOTE: at some point if compile times get really bad maybe we should consider caching the results
@@ -116,14 +121,14 @@ consteval auto get_wire_layout_padded(std::meta::info const info, detail::contex
     member_layouts.emplace_back(
         member_layout {
           .offset     = offset_of(m),
-          .size       = wire_size_of(type_of(m)),
+          .size       = wire_size_of(type_of(m), member_ctx),
           .endianness = member_ctx.endianness,
         }
     );
   }
 
   return {
-    .size    = wire_size_of(info),
+    .size    = wire_size_of(info, ctx),
     .members = {std::from_range, member_layouts},
   };
 }
@@ -138,8 +143,8 @@ consteval auto get_wire_layout_packed(std::meta::info const info, detail::contex
   // TODO: this implementation do not support bit fields
   member_offset current_offset {};
   for (auto const& member: members) {
-    auto const member_size = wire_size_of(type_of(member));
     auto const member_ctx  = detail::merge_context(local, member);
+    auto const member_size = wire_size_of(type_of(member), member_ctx);
     member_layouts.emplace_back(
         member_layout {
           .offset     = current_offset,
@@ -156,8 +161,13 @@ consteval auto get_wire_layout_packed(std::meta::info const info, detail::contex
   };
 }
 
+/**
+ * @brief Wire layout of `info` given an inherited `ctx` -- an unannotated member's packing falls back
+ * to `ctx` (whatever an outer ancestor resolved) instead of always assuming native padding, making
+ * `pack` propagate correctly through arbitrarily deep unannotated nesting, exactly like endianness.
+ */
 consteval auto get_wire_layout(std::meta::info const info, detail::context const ctx) -> struct_layout {
-  if (detail::has_annotation(info, pack)) {
+  if (detail::merge_context(ctx, info).packed) {
     return get_wire_layout_packed(info, ctx);
   }
   return get_wire_layout_padded(info, ctx);
