@@ -22,13 +22,13 @@ namespace rbe {
  * @brief Groups rbe annotations into one variable
  *
  * Users can use rbe::derive in annotations directly:
- * [[=rbe::derive<rbe::pack, rbe::native>]]
+ * [[=rbe::derive<rbe::pack, rbe::little>]]
  *
  * Or they can use it to create reusable group of annotations:
- * inline constexpr auto native_abi = rbe::derive<rbe::align, rbe::native>;
+ * inline constexpr auto packed_le = rbe::derive<rbe::pack, rbe::little>;
  *
  * And then use it like:
- * [[=native_abi]]
+ * [[=packed_le]]
  *
  * @tparam Args Annotations to be grouped
  */

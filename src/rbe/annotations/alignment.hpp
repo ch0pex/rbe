@@ -11,14 +11,32 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/detail/base.hpp>
+#include <rbe/annotations/detail/dimension.hpp>
+
+// --- STD ---
+#include <type_traits>
 
 namespace rbe {
+
+/// Two layout annotations cannot coexist within the same annotation range.
+struct alignment_dim {
+  static constexpr auto kind = detail::dimension_kind::exclusive;
+};
 
 /**
  * @brief Memory alignment annotations
  */
-inline constexpr struct : detail::base_annotation {} pack {};  /// < pragma pack ABI semantics
-inline constexpr struct : detail::base_annotation {} align {}; /// < C++ ABI alignment semantics
+inline constexpr struct {} pack {};  /// < pragma pack ABI semantics
+inline constexpr struct {} align {}; /// < C++ ABI alignment semantics
 
 } // namespace rbe
+
+template<>
+struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::pack)>> {
+  using dimension = rbe::alignment_dim;
+};
+
+template<>
+struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::align)>> {
+  using dimension = rbe::alignment_dim;
+};

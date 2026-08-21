@@ -34,22 +34,6 @@ namespace rbe {
 
 namespace detail {
 
-consteval auto endiannes_from_annotation(std::meta::info const info) -> endian::order {
-  if (has_annotation(info, little)) {
-    return endian::order::little;
-  }
-  if (has_annotation(info, big)) {
-    return endian::order::big;
-  }
-  return not is_type(info) ? endiannes_from_annotation(type_of(info)) : endian::order::native;
-}
-
-consteval auto has_endianness_annotation(std::meta::info const info) -> bool {
-  if (has_annotation(info, little) or has_annotation(info, big))
-    return true;
-  return not is_type(info) ? has_endianness_annotation(type_of(info)) : false;
-}
-
 consteval auto has_pack_annotation(std::meta::info const info) -> bool {
   if (has_annotation(info, pack))
     return true;
@@ -57,7 +41,7 @@ consteval auto has_pack_annotation(std::meta::info const info) -> bool {
 }
 
 consteval auto get_member_endianness(std::meta::info const parent, std::meta::info const member) -> endian::order {
-  return has_endianness_annotation(member) ? endiannes_from_annotation(member) : endiannes_from_annotation(parent);
+  return resolve<endian::order>(parent, member, ^^endianness_dim);
 }
 
 } // namespace detail

@@ -152,10 +152,10 @@ constexpr void test_case(T const& value) {
 
 // Golden source testing for serialization, deserialization, and round-trip cycles
 TEST_SUITE("Serialization - Deserialization - Round Trip") {
-  // SERDE_TEST_CASE(trivially_wirable_no_padding);
-  // SERDE_TEST_CASE(trivially_wirable_with_paddings);
-  // SERDE_TEST_CASE(wirable_custom_serder);
-  // SERDE_TEST_CASE(packed_test);
+  SERDE_TEST_CASE(trivially_wirable_no_padding);
+  SERDE_TEST_CASE(trivially_wirable_with_paddings);
+  SERDE_TEST_CASE(wirable_custom_serder);
+  SERDE_TEST_CASE(packed_test);
   // SERDE_TEST_CASE(mixed_endian_test);
   // SERDE_TEST_CASE(message_with_header_test);
   // SERDE_TEST_CASE(common_header_pack_be_test);

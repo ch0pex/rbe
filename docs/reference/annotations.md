@@ -15,7 +15,7 @@ Annotations are grouped into orthogonal **dimensions**. At most one annotation f
 
 | Dimension | Annotations | Constraint |
 |---|---|---|
-| Endianness | `little`, `big`, `native`, `bits` | at most one per annotation range |
+| Endianness | `little`, `big`, `bits` (native is the implicit default, no explicit spelling) | at most one per annotation range |
 | Alignment | `pack`, `align` | at most one per annotation range |
 | Metadata | `id`, `length` | each may appear at most once across the whole (possibly nested) type |
 | — (unconstrained) | `fmt` | none — freely repeatable/combinable |
@@ -32,8 +32,9 @@ Header: `rbe/annotations/endianness.hpp`
 |---|---|---|
 | `=rbe::little` | struct, member | Fields are serialized in little-endian byte order. |
 | `=rbe::big` | struct, member | Fields are serialized in big-endian byte order. |
-| `=rbe::native` | struct, member | Fields are serialized in the host's native byte order. This is also the implicit default when no endianness annotation is present ([REQ-077](../explanation/requirements.md#implicit-annotations)). |
 | `=rbe::bits(msb, lsb)` | member | Reserved for explicit bit-range placement. Declared and included in the endianness dimension's conflict checks, but not yet consumed by layout computation — **not implemented yet**. |
+
+There is no explicit `native` annotation — the host's native byte order is the implicit default whenever no endianness annotation is present anywhere in scope ([REQ-077](../explanation/requirements.md#implicit-annotations)).
 
 ## Alignment
 
@@ -70,8 +71,8 @@ Header: `rbe/annotations/derive.hpp`
 ```cpp
 struct [[=rbe::derive<rbe::pack, rbe::little>]] Order { /* ... */ };
 
-inline constexpr auto native_abi = rbe::derive<rbe::align, rbe::native>;
-struct [[=native_abi]] Msg { /* ... */ };
+inline constexpr auto packed_be = rbe::derive<rbe::pack, rbe::big>;
+struct [[=packed_be]] Msg { /* ... */ };
 ```
 
 RBE ships three built-in presets:

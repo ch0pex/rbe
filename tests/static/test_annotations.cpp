@@ -32,7 +32,13 @@ namespace {
 // clang-format off
 
 // --- is_rbe_annotation ---
-static_assert(std::ranges::all_of(rbe::detail::annotations::all, rbe::detail::is_rbe_annotation));
+static_assert(rbe::detail::is_rbe_annotation(^^rbe::pack));
+static_assert(rbe::detail::is_rbe_annotation(^^rbe::align));
+static_assert(rbe::detail::is_rbe_annotation(^^rbe::little));
+static_assert(rbe::detail::is_rbe_annotation(^^rbe::big));
+static_assert(rbe::detail::is_rbe_annotation(^^rbe::bits));
+static_assert(rbe::detail::is_rbe_annotation(^^rbe::id));
+static_assert(rbe::detail::is_rbe_annotation(^^rbe::length));
 static_assert(rbe::detail::is_rbe_annotation(^^annotation_a));
 static_assert(not rbe::detail::is_rbe_annotation(^^annotation_b));
 static_assert(not rbe::detail::is_rbe_annotation(^^int));
@@ -61,29 +67,29 @@ static_assert(std::ranges::equal(rbe::detail::views::rbe_annotations(rbe_annotat
 static_assert(std::ranges::equal(rbe::detail::views::rbe_annotations(not_all_rbe_annotations), rbe_annotations));
 
 // --- annotations_types_of ---
-static_assert(rbe::detail::annotation_types_of(^^AnnotatedStructA).size() == 1);
-static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^AnnotatedStructA), rbe::detail::types_list(^^annotation_a)));
-static_assert(rbe::detail::annotation_types_of(^^AnnotatedStructB).size() == 1);
-static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^AnnotatedStructB), rbe::detail::types_list(^^annotation_a))); // Annotation B is ignored, not an rbe annotation
-static_assert(rbe::detail::annotation_types_of(^^AnnotatedStructC).size() == 2);
-static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^AnnotatedStructC), rbe::detail::types_list(^^annotation_a, ^^annotation_c))); // Annotation B is ignored, not an rbe annotation
-static_assert(rbe::detail::annotation_types_of(^^WrongAnnotatedStruct).size() == 0);
-static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^WrongAnnotatedStruct), std::vector<std::meta::info>{}));
-static_assert(rbe::detail::annotation_types_of(^^Parent::child).size() == 2);
-static_assert(std::ranges::equal(rbe::detail::annotation_types_of(^^Parent::child), rbe::detail::types_list(^^rbe::pack, ^^rbe::big)));
+static_assert(rbe::detail::annotation_range(^^AnnotatedStructA).size() == 1);
+static_assert(std::ranges::equal(rbe::detail::annotation_range(^^AnnotatedStructA), rbe::detail::types_list(^^annotation_a)));
+static_assert(rbe::detail::annotation_range(^^AnnotatedStructB).size() == 1);
+static_assert(std::ranges::equal(rbe::detail::annotation_range(^^AnnotatedStructB), rbe::detail::types_list(^^annotation_a))); // Annotation B is ignored, not an rbe annotation
+static_assert(rbe::detail::annotation_range(^^AnnotatedStructC).size() == 2);
+static_assert(std::ranges::equal(rbe::detail::annotation_range(^^AnnotatedStructC), rbe::detail::types_list(^^annotation_a, ^^annotation_c))); // Annotation B is ignored, not an rbe annotation
+static_assert(rbe::detail::annotation_range(^^WrongAnnotatedStruct).size() == 0);
+static_assert(std::ranges::equal(rbe::detail::annotation_range(^^WrongAnnotatedStruct), std::vector<std::meta::info>{}));
+static_assert(rbe::detail::annotation_range(^^Parent::child).size() == 2);
+static_assert(std::ranges::equal(rbe::detail::annotation_range(^^Parent::child), rbe::detail::types_list(^^rbe::pack, ^^rbe::big)));
 
 // --- deep_annotations_types_of ---
-static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructA).size() == 1);
-static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructA), rbe::detail::types_list(^^annotation_a)));
-static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructB).size() == 1);
-static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructB), rbe::detail::types_list(^^annotation_a))); // Annotation B is ignored, not an rbe annotation
-static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructC).size() == 2);
-static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructC), rbe::detail::types_list(^^annotation_a, ^^annotation_c))); // Annotation B is ignored, not an rbe annotation
-static_assert(rbe::detail::deep_annotation_types_of(^^WrongAnnotatedStruct).size() == 0);
-static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^WrongAnnotatedStruct), std::vector<std::meta::info>{}));
-static_assert(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD).size() == 3);
-static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD), rbe::detail::types_list(^^annotation_a, ^^annotation_c, ^^annotation_a)));
-static_assert(std::ranges::equal(rbe::detail::deep_annotation_types_of(^^AnnotatedStructD), rbe::detail::deep_annotation_types_of(^^AnnotatedStructWithList)));
+static_assert(rbe::detail::deep_annotations(^^AnnotatedStructA).size() == 1);
+static_assert(std::ranges::equal(rbe::detail::deep_annotations(^^AnnotatedStructA), rbe::detail::types_list(^^annotation_a)));
+static_assert(rbe::detail::deep_annotations(^^AnnotatedStructB).size() == 1);
+static_assert(std::ranges::equal(rbe::detail::deep_annotations(^^AnnotatedStructB), rbe::detail::types_list(^^annotation_a))); // Annotation B is ignored, not an rbe annotation
+static_assert(rbe::detail::deep_annotations(^^AnnotatedStructC).size() == 2);
+static_assert(std::ranges::equal(rbe::detail::deep_annotations(^^AnnotatedStructC), rbe::detail::types_list(^^annotation_a, ^^annotation_c))); // Annotation B is ignored, not an rbe annotation
+static_assert(rbe::detail::deep_annotations(^^WrongAnnotatedStruct).size() == 0);
+static_assert(std::ranges::equal(rbe::detail::deep_annotations(^^WrongAnnotatedStruct), std::vector<std::meta::info>{}));
+static_assert(rbe::detail::deep_annotations(^^AnnotatedStructD).size() == 3);
+static_assert(std::ranges::equal(rbe::detail::deep_annotations(^^AnnotatedStructD), rbe::detail::types_list(^^annotation_a, ^^annotation_c, ^^annotation_a)));
+static_assert(std::ranges::equal(rbe::detail::deep_annotations(^^AnnotatedStructD), rbe::detail::deep_annotations(^^AnnotatedStructWithList)));
 
 // --- well_annotated ---
 

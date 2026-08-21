@@ -11,13 +11,21 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/detail/base.hpp>
+#include <rbe/annotations/detail/dimension.hpp>
+
+// --- STD ---
+#include <type_traits>
 
 namespace rbe {
 
 /**
  * @brief Debugging annotations
  */
-inline constexpr struct : detail::base_annotation {} fmt {}; /// < format message for debugging purposes
+inline constexpr struct {} fmt {}; /// < format message for debugging purposes
 
 } // namespace rbe
+
+/// `fmt` opts into RBE annotation identity but belongs to no dimension: no correctness rule is ever
+/// enforced for it, and well_annotated's generic dimension loop never even sees it.
+template<>
+struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::fmt)>> { };

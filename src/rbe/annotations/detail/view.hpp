@@ -35,8 +35,10 @@ struct rbe_annotations_view_fn : std::ranges::range_adaptor_closure<rbe_annotati
            | std::views::join; // join back to one single range of annotations
   }
 
-  consteval auto operator()(annotation_list auto annotation_list) const {
-    return types_of_rbe_annotation(^^annotation_list);
+  consteval auto operator()(auto value) const
+    requires annotation<decltype(value)> or annotation_list<decltype(value)>
+  {
+    return types_of_rbe_annotation(^^value);
   }
 };
 

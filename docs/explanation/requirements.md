@@ -117,7 +117,7 @@ The library must support three deserialization modes:
 
 Annotations in the RBE library are organized into orthogonal **dimensions**. Each dimension represents an independent aspect of type behavior:
 
-- **Endianness Dimension**: Controls byte ordering (`=rbe::big`, `=rbe::little`, `=rbe::native`)
+- **Endianness Dimension**: Controls byte ordering (`=rbe::big`, `=rbe::little`; native is the implicit default and has no explicit spelling)
 - **Packing Dimension**: Controls memory layout (`=rbe::pack`)
 - **Future Dimensions**: Additional orthogonal annotation categories may be added without conflicting with existing ones
 
@@ -132,7 +132,7 @@ Annotations from different dimensions can coexist on the same struct or member (
 
 ### Endianness and Packing
 
-- **REQ-062**: The library must support explicit endianness specification: `=rbe::big`, `=rbe::little`, `=rbe::native`
+- **REQ-062**: The library must support explicit endianness specification: `=rbe::big`, `=rbe::little`. There is no explicit spelling for native byte order — it is the implicit default (see REQ-077)
 - **REQ-063**: Endianness annotations can be applied at struct level or member level
 - **REQ-064**: The library must support `=rbe::pack` annotation for controlling struct member alignment
 - **REQ-065**: Pack annotation must compact struct layout and eliminate padding between members

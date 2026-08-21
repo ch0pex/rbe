@@ -11,6 +11,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/annotations/detail/dimension.hpp>
 #include <rbe/core/detail/introspection.hpp>
 
 // --- STD ---
@@ -19,26 +20,20 @@
 
 namespace rbe::detail {
 
-struct base_annotation { };
-
 template<auto... Args>
-struct annotations_t : base_annotation { };
-
-consteval auto is_rbe_annotation(std::meta::info info) -> bool {
-  info = not is_type(info) ? type_of(info) : info;
-  if (not is_class_type(info)) {
-    return false;
-  }
-  return info == ^^base_annotation or std::ranges::any_of(bases_of(info), [](std::meta::info const base_annotation) {
-           return is_rbe_annotation(base_annotation);
-         });
-}
+struct annotations_t { };
 
 consteval auto is_annotation_list(std::meta::info info) -> bool {
   info = normalize_type(info);
   return has_template_arguments(info) and template_of(info) == ^^annotations_t;
 }
 
+/// An entity is a first-class RBE annotation iff it opts in via `annotation_traits<T>` (dimension.hpp)
+/// -- either directly, or by being a `derive<...>` list thereof.
+consteval auto is_rbe_annotation(std::meta::info info) -> bool {
+  auto const type = normalize_type(info);
+  return is_annotation_list(type) or is_marked_annotation(type);
+}
 
 template<typename T>
 concept annotation = is_rbe_annotation(^^T) and not is_annotation_list(^^T);

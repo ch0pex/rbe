@@ -15,6 +15,7 @@ target_sources(
         # annotations
         rbe/annotations/detail/base.hpp
         rbe/annotations/detail/correctness.hpp
+        rbe/annotations/detail/dimension.hpp
         rbe/annotations/detail/utils.hpp
         rbe/annotations/detail/view.hpp
         rbe/annotations/alignment.hpp

@@ -18,10 +18,6 @@
 namespace rbe {
 
 template<typename T>
-concept well_annotated =
-    detail::annotations::verify_no_local_duplications(^^T) //
-    and detail::annotations::verify_dimension_correctness(^^T, detail::annotations::endianness) //
-    and detail::annotations::verify_dimension_correctness(^^T, detail::annotations::alignment) //
-    and detail::annotations::verify_global_unique_dimension(^^T, detail::annotations::global_unique); //
+concept well_annotated = detail::annotations::well_annotated(^^T);
 
 } // namespace rbe

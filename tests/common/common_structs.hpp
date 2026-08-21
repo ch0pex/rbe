@@ -18,6 +18,8 @@
 #include <rbe/annotations/metadata.hpp>
 #include <rbe/core/custom.hpp>
 
+#include <type_traits>
+
 struct[[= rbe::fmt]] Empty { };
 
 struct[[= rbe::fmt]] B {
@@ -334,9 +336,15 @@ struct[[=rbe::id]]     TestId{};
 struct[[=rbe::length]] TestLength{};
 struct[[=rbe::debug]]  TestDebug{};
 
-inline constexpr struct : rbe::detail::base_annotation {} annotation_a {};
-inline constexpr struct {} annotation_b {};
-inline constexpr struct : rbe::detail::base_annotation {} annotation_c {};
+inline constexpr struct {} annotation_a {};
+inline constexpr struct {} annotation_b {}; // deliberately NOT specialized -- stays a non-RBE annotation
+inline constexpr struct {} annotation_c {};
+
+template<>
+struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(annotation_a)>> { };
+
+template<>
+struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(annotation_c)>> { };
 struct [[=annotation_a]] AnnotatedStructA {
   int x;
   double y;
