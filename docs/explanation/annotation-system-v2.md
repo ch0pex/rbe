@@ -49,14 +49,19 @@ enum class dimension_kind : std::uint8_t {
 ### Adding an annotation to a dimension becomes one colocated block
 
 ```cpp
-// alignment.hpp
-struct alignment_dim { static constexpr auto kind = detail::dimension_kind::exclusive; };
+// alignment.hpp -- pack/align are literally alignment_mode::pack/::align, the enum reused directly
+// as the annotation value, exactly like little/big reuse endian::order directly (one annotation_traits
+// specialization for the whole enum, not one per enumerator).
+enum class alignment_mode : std::uint8_t { native, pack, align };
+struct alignment_dim {
+  static constexpr auto kind          = detail::dimension_kind::exclusive;
+  static constexpr auto default_value = alignment_mode::native;
+};
 
-inline constexpr struct {} pack {};
-inline constexpr struct {} align {};
+inline constexpr auto pack  = alignment_mode::pack;
+inline constexpr auto align = alignment_mode::align;
 
-template<> struct rbe::detail::annotation_traits<decltype(rbe::pack)>  { using dimension = rbe::alignment_dim; };
-template<> struct rbe::detail::annotation_traits<decltype(rbe::align)> { using dimension = rbe::alignment_dim; };
+template<> struct rbe::detail::annotation_traits<rbe::alignment_mode> { using dimension = rbe::alignment_dim; };
 ```
 
 No edit to any other file is needed — `correctness.hpp` no longer hand-lists which annotations exist per dimension; `well_annotated` discovers, for a given type, *which dimensions are actually used among its attached annotations*, and checks each one generically by its `kind`. A brand new dimension (not just a new annotation within an existing one) therefore requires **zero** edits to `well_annotated`/`correctness.hpp` — it falls out of the generic loop automatically.
@@ -351,7 +356,7 @@ The point that generalizes beyond endianness: every recursive step resolves its 
 
 The point specific to lazy deserialization: a `lazy_view` is constructed once and then queried across possibly many separate `field(name)` calls, so its context has to be resolved once and stored as part of the view itself at construction time — recomputing it fresh on every field access would be wasteful and, if the recursion state weren't captured anywhere, impossible to do correctly for fields reached through a struct-typed field's own nested fields.
 
-This pseudocode's shape is now real, shipped code (`core/detail/context.hpp`, `srl/serialize.hpp`, `dsrl/deserialize.hpp`, `dsrl/msg.hpp`) — see the "✅ Implemented" note at the top of this section for exactly where, plus the two real bugs that only surfaced once it was actually wired in. `context` now threads **two** dimensions the same way: `endianness` and `pack` (`context::packed`) — an unannotated nested aggregate inherits its ambient packing exactly like it inherits ambient endianness. Adding `pack` surfaced a third bug, distinct from the two documented above: `wire_size_of`'s packed-recursion assumed every nested type was a genuine aggregate reachable via `nsdm`, which broke the moment packing (previously only ever a per-type presence check, never inherited) started reaching `std::array` members — recursing one hop further into `std::array`'s own internal raw-C-array member and calling `nsdm` on a non-class array type threw. Fixed the same way `is_wirable_class_type` already handled this: check `is_trivially_wirable_primitive(remove_all_extents(info))` as a potential leaf *before* assuming a type has reflectable members to recurse into, since an array of primitives has no inter-element padding to strip regardless of packing and no `nsdm` to walk in the first place.
+This pseudocode's shape is now real, shipped code (`core/detail/context.hpp`, `srl/serialize.hpp`, `dsrl/deserialize.hpp`, `dsrl/msg.hpp`) — see the "✅ Implemented" note at the top of this section for exactly where, plus the two real bugs that only surfaced once it was actually wired in. `context` now threads **two** dimensions the same way: `endianness` and `alignment` (`context::alignment`, an `alignment_mode`) — an unannotated nested aggregate inherits its ambient packing exactly like it inherits ambient endianness, resolved via `resolve_in_scope<alignment_mode>` exactly like endianness (not a bespoke presence check), now that `pack`/`align` are `alignment_mode` values rather than distinct anonymous tag types. Adding `pack` surfaced a third bug, distinct from the two documented above: `wire_size_of`'s packed-recursion assumed every nested type was a genuine aggregate reachable via `nsdm`, which broke the moment packing (previously only ever a per-type presence check, never inherited) started reaching `std::array` members — recursing one hop further into `std::array`'s own internal raw-C-array member and calling `nsdm` on a non-class array type threw. Fixed the same way `is_wirable_class_type` already handled this: check `is_trivially_wirable_primitive(remove_all_extents(info))` as a potential leaf *before* assuming a type has reflectable members to recurse into, since an array of primitives has no inter-element padding to strip regardless of packing and no `nsdm` to walk in the first place.
 
 The same shape, closer to real C++ syntax (illustrative — element/offset computation, `find_member`/`index_of`, and the `serialize_primitive`/`deserialize_primitive` helpers are elided or simplified; only the `context`/`merge_context` declaration itself, not the functions built on top of it, was what actually got compiled):
 

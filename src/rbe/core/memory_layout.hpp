@@ -63,7 +63,7 @@ consteval auto wire_size_of(std::meta::info const info, detail::context const ct
   // recursion hop below) is a leaf here too -- it has no inter-element padding to strip regardless of
   // packing, and unlike a genuine aggregate it has no reflectable non-static data members to recurse
   // into at all.
-  if (not local.packed or is_trivially_wirable_primitive(remove_all_extents(info))) {
+  if (local.alignment == alignment_mode::native or is_trivially_wirable_primitive(remove_all_extents(info))) {
     return size_of(info);
   }
 
@@ -167,7 +167,7 @@ consteval auto get_wire_layout_packed(std::meta::info const info, detail::contex
  * `pack` propagate correctly through arbitrarily deep unannotated nesting, exactly like endianness.
  */
 consteval auto get_wire_layout(std::meta::info const info, detail::context const ctx) -> struct_layout {
-  if (detail::merge_context(ctx, info).packed) {
+  if (detail::merge_context(ctx, info).alignment != alignment_mode::native) {
     return get_wire_layout_packed(info, ctx);
   }
   return get_wire_layout_padded(info, ctx);
