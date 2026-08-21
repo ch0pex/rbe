@@ -14,8 +14,10 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/core/detail/context.hpp>
 #include <rbe/core/trivially_wirable_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
+#include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
 #include <rbe/dsrl/msg.hpp>
 #include <rbe/dsrl/tags.hpp>
@@ -38,83 +40,20 @@ namespace rbe {
 // ──────────────────────────────────────────────────────────────────
 
 /**
- * @brief Eager deserialization for non-trivial, non-custom wirable types.
+ * @brief Eager deserialization for a wirable type.
  *
- * Default-constructs the object, then deserializes each non-static data member
- * individually using the compile-time wire layout. Byte swapping is applied
- * per-member according to the layout's endianness.
+ * This is the single public entry point for eager deserialization: it always starts from the
+ * default (empty) ambient context and dispatches internally, via `detail::deserialize`, to whichever
+ * of the fast-path/custom/primitive/aggregate implementations applies to `T`.
  *
- * @tparam T The type to deserialize. Must be default-constructible, wirable, and
- *          neither trivially_wirable nor custom_wirable.
+ * @tparam T The type to deserialize. Must satisfy `wirable`.
  * @param input A span of bytes containing the serialized data.
  * @param eager Tag for eager deserialization strategy.
  * @return A fully constructed object of type T.
  */
 template<wirable T>
-  requires(std::is_default_constructible_v<T> and not trivially_wirable<T> and not custom_wirable<T>)
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
-  using std::ranges::to;
-
-  static constexpr auto wire    = get_wire_layout<T>();
-  static constexpr auto members = detail::nsdm(^^T) | std::ranges::to<static_array>();
-
-  T value;
-  template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
-    using member_type = [:type_of(member):];
-    value.[:member:]  = detail::deserialize_member<member_type, layout.endianness>(
-                         input.subspan<layout.offset.bytes, layout.size>()
-                     );
-  }
-  return value;
-}
-
-/**
- * @brief Eager deserialization for types with a custom serder.
- *
- * Delegates to the user-provided `custom<T>::deserialize` implementation.
- *
- * @tparam T The type to deserialize. Must satisfy `custom_wirable`.
- * @param input A span of bytes containing the serialized data.
- * @param eager Tag for eager deserialization strategy.
- * @return A fully constructed object of type T.
- */
-template<custom_wirable T>
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
-  return custom<T>::deserialize(input);
-}
-
-/**
- * @brief Eager deserialization for trivially wirable types (non-primitive).
- *
- * For types whose in-memory layout matches the wire layout, deserialization
- * is performed via a direct memory load without per-member processing.
- *
- * @tparam T The type to deserialize. Must satisfy `trivially_wirable` but not `trivially_wirable_primitive`.
- * @param input A span of bytes containing the serialized data.
- * @param eager Tag for eager deserialization strategy.
- * @return A fully constructed object of type T.
- */
-template<trivially_wirable T>
-  requires(not trivially_wirable_primitive<T>)
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
-  return detail::load<T>(input);
-}
-
-/**
- * @brief Eager deserialization for trivially wirable primitives.
- *
- * Loads an integral or enum type from the buffer, performing byte swapping
- * according to the specified endianness order.
- *
- * @tparam T The primitive type to deserialize. Must satisfy `trivially_wirable_primitive`.
- * @tparam Ord The endianness of the serialized data.
- * @param input A span of bytes containing the serialized data.
- * @param eager Tag for eager deserialization strategy.
- * @return A value of type T with bytes swapped to native order if necessary.
- */
-template<trivially_wirable_primitive T, endian::order Ord = endian::order::native>
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
-  return endian::load<T, Ord>(input.data());
+constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager) -> T {
+  return detail::deserialize<T, detail::context {}>(input, eager);
 }
 
 // ──────────────────────────────────────────────────────────────────

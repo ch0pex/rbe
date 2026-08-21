@@ -14,58 +14,29 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/custom.hpp>
-#include <rbe/core/detail/memcpy_constexpr.hpp>
-#include <rbe/core/detail/normalize.hpp>
-#include <rbe/core/memory_layout.hpp>
-#include <rbe/core/trivially_wirable_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
+#include <rbe/srl/detail/serialize_impl.hpp>
 
 // --- STD ---
 #include <cstddef>
 
 namespace rbe {
 
-/// Serializes a trivially wirable type by direct memory copy.
-constexpr auto serialize(std::span<std::byte> const out, trivially_wirable auto const& value) -> std::size_t {
-  detail::memcpy_constexpr(out, value);
-  return sizeof(value);
-}
-
-/// Serializes a custom-wirable type via its `custom<T>::serialize` specialization.
-constexpr auto serialize(std::span<std::byte> const out, custom_wirable auto const& value) -> std::size_t {
-  return custom<std::remove_cvref_t<decltype(value)>>::serialize(out, value);
-}
-
 /**
- * @brief Serializes a wirable aggregate into a buffer member-by-member.
+ * @brief Serializes a wirable value into a buffer.
  *
- * Iterates over each non-static data member, normalizes its endianness
- * according to the wire layout, and recursively serializes it into the
- * corresponding offset within the output buffer.
+ * This is the single public entry point for serialization: it always starts from the default
+ * (empty) ambient context and dispatches internally, via `detail::serialize`, to whichever of the
+ * fast-path/custom/primitive/aggregate implementations applies to `T`.
  *
- * @tparam T The aggregate type to serialize. Must satisfy `wirable_class`.
+ * @tparam T The type to serialize. Must satisfy `wirable`.
  * @param out Output buffer large enough to hold the serialized data.
  * @param value The object to serialize.
  * @return Number of bytes written to the buffer.
  */
-template<wirable_class T>
-  requires(not trivially_wirable<T> and not custom_wirable<T>)
+template<wirable T>
 constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {
-  using std::ranges::to;
-
-  static constexpr auto wire    = get_wire_layout<T>();
-  static constexpr auto members = detail::nsdm(^^T) | to<static_array>();
-
-  std::size_t bytes_written = 0;
-  template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
-    bytes_written += serialize(
-        out.subspan<layout.offset.bytes, layout.size>(),
-        detail::normalize_endianness<layout.endianness>(value.[:member:])
-    );
-  }
-
-  return bytes_written;
+  return detail::serialize<T>(out, value);
 }
 
 } // namespace rbe

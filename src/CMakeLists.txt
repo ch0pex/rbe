@@ -26,6 +26,7 @@ target_sources(
         rbe/annotations/well_annotated_concepts.hpp
 
         # Core
+        rbe/core/detail/context.hpp
         rbe/core/detail/introspection.hpp
         rbe/core/detail/memcpy_constexpr.hpp
         rbe/core/detail/normalize.hpp
@@ -42,6 +43,7 @@ target_sources(
 
         # deserialize
         rbe/dsrl/detail/deserialize_fwd.hpp
+        rbe/dsrl/detail/deserialize_impl.hpp
         rbe/dsrl/detail/deserialize_member.hpp
         rbe/dsrl/deserialize.hpp
         rbe/dsrl/msg.hpp

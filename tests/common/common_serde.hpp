@@ -339,3 +339,20 @@ constexpr TestCase message_with_array_be_test {
       0x77, 0x77, 0x77, 0x88, 0x88, 0x88, 0x88
   ),
 };
+
+// NestedParent structure test case -- regression for N-level annotation propagation: neither
+// NestedMiddle nor NestedLeaf carry an endianness annotation of their own, so both must inherit
+// big-endian transitively from NestedParent, two and one levels up respectively, rather than
+// silently defaulting to native the moment an intermediate level in the chain has nothing explicit.
+constexpr TestCase nested_propagation_test {
+  .structure =
+      NestedParent {
+        .node   = {.leaf = {.valor = 0x11223344}, .valor2 = 0xAABBCCDD},
+        .valor3 = 0x55667788,
+      },
+  .wire = bytes(
+      0x11, 0x22, 0x33, 0x44, // node.leaf.valor (big-endian, inherited two levels up)
+      0xAA, 0xBB, 0xCC, 0xDD, // node.valor2 (big-endian, inherited one level up)
+      0x55, 0x66, 0x77, 0x88 // valor3 (big-endian, its own field)
+  ),
+};

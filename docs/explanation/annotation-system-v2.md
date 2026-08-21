@@ -1,6 +1,6 @@
 # Annotation System Redesign
 
-> **Status: designed, not implemented.** This document records a design that has been worked out and partially verified against the real GCC 16 reflection implementation, but no code has been written yet. It is not linked from the site navigation. Once implemented, the relevant parts should move into [Design Overview](design-overview.md) and the [Annotations Reference](../reference/annotations.md), and this file should either be deleted or trimmed down to the parts that remain useful as rationale.
+> **Status: implemented**, except where a section is explicitly marked otherwise below. The trait-based dimension mechanism (identity, `kind`, `default_value`, the uniform range API) and N-level annotation propagation via `context` threading are both shipped and covered by real tests. `count`/variable-length fields and the "annotation scope" trait remain genuinely open. This file is not linked from the site navigation; the relevant implemented parts should eventually move into [Design Overview](design-overview.md) and the [Annotations Reference](../reference/annotations.md), and this file trimmed down to just the parts that remain useful as rationale for what's still open.
 
 ## Motivation
 
@@ -238,9 +238,15 @@ enum class annotation_scope : std::uint8_t { any, member_only, type_only };
 
 defaulting to `any` so no existing annotation needs to change. Verified feasible: it's possible to detect, generically, whether an annotation of a given type showed up directly in `std::meta::annotations_of(a_type)` (struct-level) as opposed to `std::meta::annotations_of(a_member)` (member-level) — the two are already gathered separately at the call sites that matter, they're just unioned together today for dimension-membership purposes. `well_annotated` would gain a third generic check, symmetric to the `kind` check, that rejects an annotation found at a scope it doesn't declare support for.
 
-## Open problem: N-level annotation propagation
+## N-level annotation propagation — ✅ Implemented
 
-`resolve<T>(parent, member, dim)` (above) only looks one level up: the member's own scope, then its *immediate* containing struct, then the dimension's default. [REQ-066](requirements.md#nested-structure-handling)–[070](requirements.md#nested-structure-handling) require full transitive propagation through arbitrarily deep nesting — `example/annotations.cpp`'s own worked example spells out the intent explicitly:
+> Originally written up here as an open problem; the section below is kept as-is for the reasoning and the `parent_of` dead-end, since both remain the reason the codebase looks the way it does. The `context`/`merge_context` mechanism described here is now real, shipped code — see `core/detail/context.hpp`, the four-overload split in `srl/serialize.hpp` and `dsrl/deserialize.hpp`, and `dsrl/msg.hpp`. Regression coverage: `tests/runtime/test_serde.cpp`'s `"N-level propagation: unannotated nested structs inherit an ancestor's endianness"` test case, using the `NestedParent`/`NestedMiddle`/`NestedLeaf` structs in `tests/common/common_structs.hpp`.
+>
+> Two real bugs turned up only once this was wired into actual serialize/deserialize code, both fixed:
+> 1. `detail::normalize_endianness<Ctx.endianness>(value)` (one explicit template argument) silently binds to `normalize_endianness`'s *identity-forwarder* overload (`template<endian::order Order> auto normalize_endianness(auto const&)`) instead of the byte-swapping one (`template<T, Order> auto normalize_endianness(T const)`) — with one explicit argument, it binds to the first template parameter of whichever overload's parameter list makes that argument's *position* valid, and the forwarder's abbreviated `auto` parameter happily accepts it. Both `T` and `Order` must be given explicitly at the call site.
+> 2. `dsrl::msg<T, Ctx>` computed its own `context` from `^^value_type` (a member type alias, `using value_type = T;`) instead of `^^T` directly — `std::meta::annotations_of` does not see through a type alias to the annotations on the type it names, so the alias-based lookup silently found nothing. Reflect the template parameter directly, never a same-named alias, when the reflection feeds into annotation lookup.
+>
+> `resolve<T>(parent, member, dim)` (below) only looked one level up: the member's own scope, then its *immediate* containing struct, then the dimension's default. [REQ-066](requirements.md#nested-structure-handling)–[070](requirements.md#nested-structure-handling) require full transitive propagation through arbitrarily deep nesting — `example/annotations.cpp`'s own worked example spells out the intent explicitly:
 
 ```cpp
 struct [[=rbe::pack]] MiddleNode {
@@ -287,27 +293,35 @@ function wire_layout(T, context):
         emit { offset, size, endianness: member_context.endianness } for that member
 
 # ── serialize ──────────────────────────────────────────────────────
-function serialize(value: T, out_buffer, context = <dimension defaults>):
+# Leaf and aggregate are two SEPARATE function definitions, each guarded by what kind of T
+# it accepts -- never one function branching internally on "is this a struct". The caller
+# below never asks that question either; it just calls serialize() and the language picks
+# whichever of the two definitions accepts this particular member's type. This mirrors how
+# the real codebase already splits trivially_wirable_primitive / custom_wirable / wirable_class
+# into separate overloads today (srl/serialize.hpp) rather than branching inside one function.
+
+function serialize(value: T, out_buffer, context)  -- for T a primitive/leaf:
+    write_primitive(value, out_buffer, context.endianness)
+
+function serialize(value: T, out_buffer, context = <dimension defaults>)  -- for T an aggregate:
     local  = merge(context, T)                     # T's own annotations override the inherited ambient
     layout = wire_layout(T, local)
     for (member, member_layout) in layout:
-        if member.type is itself a struct:
-            member_context = merge(local, member)  # one hop further down, never reset
-            serialize(value.member, out_buffer at member_layout.offset, member_context)
-        else:
-            write_primitive(value.member, out_buffer at member_layout.offset, member_layout.endianness)
+        member_context = merge(local, member)      # one hop further down, never reset
+        serialize(value.member, out_buffer at member_layout.offset, member_context)
+        # ^ whichever of the two serialize() definitions accepts member's type runs -- no branch here
 
-# ── deserialize: eager (mirror image of serialize) ───────────────────
-function deserialize_eager(in_buffer, T, context = <dimension defaults>) -> T:
+# ── deserialize: eager (mirror image of serialize, same two-definition split) ────────
+function deserialize_eager(in_buffer, T, context)  -> T  -- for T a primitive/leaf:
+    return read_primitive(in_buffer, context.endianness)
+
+function deserialize_eager(in_buffer, T, context = <dimension defaults>) -> T  -- for T an aggregate:
     local  = merge(context, T)
     layout = wire_layout(T, local)
     result = new T
     for (member, member_layout) in layout:
-        if member.type is itself a struct:
-            member_context = merge(local, member)
-            result.member = deserialize_eager(in_buffer at member_layout.offset, member.type, member_context)
-        else:
-            result.member = read_primitive(in_buffer at member_layout.offset, member_layout.endianness)
+        member_context = merge(local, member)
+        result.member = deserialize_eager(in_buffer at member_layout.offset, member.type, member_context)
     return result
 
 # ── deserialize: lazy ─────────────────────────────────────────────────
@@ -318,13 +332,11 @@ class lazy_view(in_buffer, T, context = <dimension defaults>):
 
     function field(name):
         member, member_layout = lookup(wire_layout(T, local), name)
-        if member.type is itself a struct:
-            member_context = merge(local, member)
-            # nested-struct fields already collapse to an eager read even under a lazy top-level
-            # call in the current code -- keep that shape, just resolve ITS context too:
-            return deserialize_eager(in_buffer at member_layout.offset, member.type, member_context)
-        else:
-            return read_primitive(in_buffer at member_layout.offset, member_layout.endianness)
+        member_context = merge(local, member)
+        # nested-struct fields already collapse to an eager read even under a lazy top-level call
+        # in the current code -- keep that shape. field() calls the SAME overloaded
+        # deserialize_eager used above and never itself asks "is this member a struct":
+        return deserialize_eager(in_buffer at member_layout.offset, member.type, member_context)
 
 # ── deserialize: in_place ──────────────────────────────────────────────
 # context only matters for deciding WHETHER T qualifies at all: T's wire layout, computed with
@@ -339,7 +351,7 @@ The point that generalizes beyond endianness: every recursive step resolves its 
 
 The point specific to lazy deserialization: a `lazy_view` is constructed once and then queried across possibly many separate `field(name)` calls, so its context has to be resolved once and stored as part of the view itself at construction time — recomputing it fresh on every field access would be wasteful and, if the recursion state weren't captured anywhere, impossible to do correctly for fields reached through a struct-typed field's own nested fields.
 
-Two things worth being precise about, since the pseudocode above illustrates a *shape*, not verified code: the concrete `context`/`merge` mechanism it's built on **was** compiled and checked against GCC 16.1.1 (a plain aggregate struct usable as a non-type template parameter, refined level by level — see the two-outer-structs and three-level `ParentNode`/`MiddleNode`/`Leaf` checks above); wiring it through the *actual* `serialize`/`deserialize`/`get_wire_layout`/`dsrl::msg` C++ signatures, and extending it to the alignment dimension alongside endianness, is real implementation work, deliberately **out of scope** here — this pseudocode is the recorded shape for that future work, not a substitute for it.
+This pseudocode's shape is now real, shipped code (`core/detail/context.hpp`, `srl/serialize.hpp`, `dsrl/deserialize.hpp`, `dsrl/msg.hpp`) — see the "✅ Implemented" note at the top of this section for exactly where, plus the two real bugs that only surfaced once it was actually wired in. **Still out of scope, deliberately:** extending `context` to the alignment dimension alongside endianness (today only `endianness` is threaded; `pack` stays a simple presence check as before) — the mechanism generalizes directly (one more field on `context`, one more `merge_context` branch) whenever that's needed.
 
 The same shape, closer to real C++ syntax (illustrative — element/offset computation, `find_member`/`index_of`, and the `serialize_primitive`/`deserialize_primitive` helpers are elided or simplified; only the `context`/`merge_context` declaration itself, not the functions built on top of it, was what actually got compiled):
 
@@ -368,7 +380,16 @@ consteval auto get_wire_layout() -> struct_layout {
   return {.size = ..., .members = {std::from_range, members}};
 }
 
-// ── serialize: context flows DOWN as an explicit template argument ────────────────
+// ── serialize: leaf and aggregate are two SEPARATE overloads, picked by concept -- no
+//    `if constexpr` anywhere. This is the same split the real codebase already uses for
+//    trivially_wirable_primitive/custom_wirable/wirable_class in srl/serialize.hpp; a full
+//    implementation would give custom_wirable its own third overload the same way, calling
+//    custom<T>::serialize -- elided here since it's orthogonal to context threading.
+template<wirable_primitive T, context Ctx>
+constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {
+  return serialize_primitive<Ctx.endianness>(out, value); // leaf: context ends here, writes bytes
+}
+
 template<wirable_class T, context Ctx = context{}> // top-level calls seed the true dimension defaults
 constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {
   static constexpr auto local = merge_context(Ctx, ^^T);   // T's own annotations override the inherited ambient
@@ -377,18 +398,20 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
   std::size_t written = 0;
   template for (constexpr auto [layout, member] : std::views::zip(wire.members, nsdm(^^T))) {
     using member_type = typename[:type_of(member):];
-    if constexpr (wirable_class<member_type>) {
-      // nested struct: pass the ambient ONE hop further down, don't reset to the global default
-      written += serialize<member_type, merge_context(local, member)>(
-          out.subspan(layout.offset.bytes, layout.size), value.[:member:]);
-    } else {
-      written += serialize_primitive<layout.endianness>(out.subspan(layout.offset.bytes, layout.size), value.[:member:]);
-    }
+    // overload resolution alone picks the leaf or aggregate serialize<member_type, ...> above --
+    // this call site never asks "is member_type itself a struct"
+    written += serialize<member_type, merge_context(local, member)>(
+        out.subspan(layout.offset.bytes, layout.size), value.[:member:]);
   }
   return written;
 }
 
-// ── deserialize (eager): exact mirror image ────────────────────────────────────────
+// ── deserialize (eager): same two-overload split, exact mirror image ───────────────
+template<wirable_primitive T, context Ctx>
+constexpr auto deserialize(std::span<std::byte const> const in, dsrl::eager_t) -> T {
+  return deserialize_primitive<T, Ctx.endianness>(in);
+}
+
 template<wirable_class T, context Ctx = context{}>
 constexpr auto deserialize(std::span<std::byte const> const in, dsrl::eager_t) -> T {
   static constexpr auto local = merge_context(Ctx, ^^T);
@@ -397,12 +420,8 @@ constexpr auto deserialize(std::span<std::byte const> const in, dsrl::eager_t) -
   T value;
   template for (constexpr auto [layout, member] : std::views::zip(wire.members, nsdm(^^T))) {
     using member_type = typename[:type_of(member):];
-    if constexpr (wirable_class<member_type>) {
-      value.[:member:] = deserialize<member_type, merge_context(local, member)>(
-          in.subspan(layout.offset.bytes, layout.size), dsrl::eager);
-    } else {
-      value.[:member:] = deserialize_primitive<member_type, layout.endianness>(in.subspan(layout.offset.bytes, layout.size));
-    }
+    value.[:member:] = deserialize<member_type, merge_context(local, member)>(
+        in.subspan(layout.offset.bytes, layout.size), dsrl::eager);
   }
   return value;
 }
@@ -422,15 +441,12 @@ public:
     static constexpr auto layout     = get_wire_layout<T, local>().members[index_of(member)];
     using member_type = typename[:type_of(member):];
 
-    if constexpr (wirable_class<member_type>) {
-      // nested struct field: today's code already collapses this to an eager recursive call
-      // (deserialize_member -> deserialize<T>(..., eager)) rather than a nested msg<T> -- keep
-      // that shape, just resolve ITS context too instead of letting it reset to the default:
-      return deserialize<member_type, merge_context(local, member)>(
-          data_.subspan(layout.offset.bytes, layout.size), dsrl::eager);
-    } else {
-      return deserialize_primitive<member_type, layout.endianness>(data_.subspan(layout.offset.bytes, layout.size));
-    }
+    // today's code already collapses nested-struct fields to an eager recursive call
+    // (deserialize_member -> deserialize<T>(..., eager)) rather than a nested msg<T> -- keep that
+    // shape. This calls the SAME overloaded deserialize(..., eager) as above; field() never
+    // branches on member_type either, leaf or aggregate is resolved by overload resolution alone.
+    return deserialize<member_type, merge_context(local, member)>(
+        data_.subspan(layout.offset.bytes, layout.size), dsrl::eager);
   }
 };
 

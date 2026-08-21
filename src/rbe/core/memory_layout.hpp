@@ -14,6 +14,7 @@
 #include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/detail/correctness.hpp>
 #include <rbe/annotations/endianness.hpp>
+#include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/introspection.hpp>
 #include <rbe/core/detail/static_array.hpp>
 #include <rbe/core/endian.hpp>
@@ -38,10 +39,6 @@ consteval auto has_pack_annotation(std::meta::info const info) -> bool {
   if (has_annotation(info, pack))
     return true;
   return not is_type(info) ? has_annotation(type_of(info), pack) : false;
-}
-
-consteval auto get_member_endianness(std::meta::info const parent, std::meta::info const member) -> endian::order {
-  return resolve<endian::order>(parent, member, ^^endianness_dim);
 }
 
 } // namespace detail
@@ -105,15 +102,22 @@ consteval auto get_struct_layout(std::meta::info const info) -> struct_layout {
   };
 }
 
-consteval auto get_wire_layout_padded(std::meta::info const info) -> struct_layout {
+/**
+ * @brief Wire layout of `info` given an inherited `ctx` -- an unannotated member's endianness falls
+ * back to `ctx` (whatever an outer ancestor resolved) instead of the dimension's global default,
+ * making annotations propagate correctly through arbitrarily deep unannotated nesting.
+ */
+consteval auto get_wire_layout_padded(std::meta::info const info, detail::context const ctx) -> struct_layout {
+  auto const local = detail::merge_context(ctx, info); // info's own annotation overrides the ambient
   std::vector<member_layout> member_layouts;
 
   for (auto const m: detail::nsdm(info)) {
+    auto const member_ctx = detail::merge_context(local, m); // member's own annotation wins over local
     member_layouts.emplace_back(
         member_layout {
           .offset     = offset_of(m),
           .size       = wire_size_of(type_of(m)),
-          .endianness = detail::get_member_endianness(info, m),
+          .endianness = member_ctx.endianness,
         }
     );
   }
@@ -124,8 +128,9 @@ consteval auto get_wire_layout_padded(std::meta::info const info) -> struct_layo
   };
 }
 
-consteval auto get_wire_layout_packed(std::meta::info const info) -> struct_layout {
-  auto members = detail::nsdm(info);
+consteval auto get_wire_layout_packed(std::meta::info const info, detail::context const ctx) -> struct_layout {
+  auto const local   = detail::merge_context(ctx, info);
+  auto const members = detail::nsdm(info);
 
   std::vector<member_layout> member_layouts;
   member_layouts.reserve(members.size());
@@ -134,11 +139,12 @@ consteval auto get_wire_layout_packed(std::meta::info const info) -> struct_layo
   member_offset current_offset {};
   for (auto const& member: members) {
     auto const member_size = wire_size_of(type_of(member));
+    auto const member_ctx  = detail::merge_context(local, member);
     member_layouts.emplace_back(
         member_layout {
           .offset     = current_offset,
           .size       = member_size,
-          .endianness = detail::get_member_endianness(info, member),
+          .endianness = member_ctx.endianness,
         }
     );
     current_offset.bytes += static_cast<std::ptrdiff_t>(member_size);
@@ -150,11 +156,17 @@ consteval auto get_wire_layout_packed(std::meta::info const info) -> struct_layo
   };
 }
 
-consteval auto get_wire_layout(std::meta::info const info) -> struct_layout {
+consteval auto get_wire_layout(std::meta::info const info, detail::context const ctx) -> struct_layout {
   if (detail::has_annotation(info, pack)) {
-    return get_wire_layout_packed(info);
+    return get_wire_layout_packed(info, ctx);
   }
-  return get_wire_layout_padded(info);
+  return get_wire_layout_padded(info, ctx);
+}
+
+/// Context-free overload: no ambient annotation is inherited from anywhere -- the behavior every
+/// existing caller (is_trivially_wirable, get_wire_layout<T>(), ...) already relies on, unchanged.
+consteval auto get_wire_layout(std::meta::info const info) -> struct_layout {
+  return get_wire_layout(info, detail::context {});
 }
 
 template<wirable T>
@@ -167,9 +179,9 @@ consteval auto get_struct_layout() -> struct_layout {
   return get_struct_layout(^^T);
 }
 
-template<wirable_class T>
+template<wirable_class T, detail::context Ctx = detail::context {}>
 consteval auto get_wire_layout() -> struct_layout {
-  return get_wire_layout(^^T);
+  return get_wire_layout(^^T, Ctx);
 }
 
 } // namespace rbe

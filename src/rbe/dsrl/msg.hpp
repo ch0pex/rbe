@@ -11,6 +11,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
@@ -26,16 +27,22 @@
 
 namespace rbe::dsrl {
 
-template<wirable T>
+template<wirable T, rbe::detail::context Ctx>
   requires(not custom_wirable<T>)
 class msg {
+  // Resolved once, at construction type: T's own annotations override whatever ambient context was
+  // inherited, so a msg<T> nested arbitrarily deep still propagates correctly instead of resetting.
+  // NOTE: must reflect ^^T directly, not ^^value_type -- std::meta::annotations_of does not see
+  // through a type alias to the annotations on the type it names.
+  static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
+  static constexpr auto wire  = get_wire_layout<T, local>();
+
 public:
   // --- Type traits ---
 
   using value_type = T;
   using size_type  = std::size_t;
 
-  static constexpr auto wire = get_wire_layout<T>();
 
   // --- Constructors ---
 
@@ -50,8 +57,9 @@ public:
   constexpr auto field() const {
     using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
     static constexpr auto member_layout = wire.members[Index];
+    static constexpr auto member_ctx    = rbe::detail::merge_context(local, rbe::detail::nsdm(^^value_type, Index));
 
-    return rbe::detail::deserialize_member<member_type, member_layout.endianness>(
+    return rbe::detail::deserialize_member<member_type, member_ctx>(
         data_.subspan<member_layout.offset.bytes, member_layout.size>()
     );
   }
