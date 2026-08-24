@@ -27,7 +27,7 @@
 
 namespace rbe::dsrl {
 
-template<wirable T, rbe::detail::context Ctx>
+template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
   requires(not custom_wirable<T>)
 class msg {
   // Resolved once, at construction type: T's own annotations override whatever ambient context was

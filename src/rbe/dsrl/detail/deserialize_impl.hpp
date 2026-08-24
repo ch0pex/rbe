@@ -21,7 +21,6 @@
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/trivially_wirable_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
-#include <rbe/dsrl/detail/deserialize_fwd.hpp>
 #include <rbe/dsrl/tags.hpp>
 
 // --- STD ---
@@ -29,6 +28,31 @@
 #include <span>
 
 namespace rbe::detail {
+
+// Forward declarations so every overload below can recurse into any sibling regardless of
+// definition order -- e.g. the aggregate overload needs to see the range overload, and vice versa.
+
+template<trivially_wirable T, context Ctx = context {}>
+  requires(Ctx == context {})
+constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
+
+template<custom_wirable T, context Ctx = context {}>
+constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
+
+template<trivially_wirable_primitive T, context Ctx>
+  requires(Ctx != context {})
+constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
+
+template<wirable_class T, context Ctx = context {}>
+  requires(
+      std::is_default_constructible_v<T> and not custom_wirable<T> and not wirable_range<T> and
+      (not trivially_wirable<T> or Ctx != context {})
+  )
+constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
+
+template<wirable_range T, context Ctx = context {}>
+  requires(not trivially_wirable_range<T> or Ctx != context {})
+constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
 
 /**
  * @brief Eager deserialization for trivially wirable types with no ambient context forcing anything.

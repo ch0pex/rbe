@@ -42,7 +42,6 @@ target_sources(
         rbe/core/wirable_primitives.hpp
 
         # deserialize
-        rbe/dsrl/detail/deserialize_fwd.hpp
         rbe/dsrl/detail/deserialize_impl.hpp
         rbe/dsrl/detail/deserialize_member.hpp
         rbe/dsrl/deserialize.hpp
@@ -59,7 +58,6 @@ target_sources(
         rbe/srl.hpp
         rbe/rbe.hpp
         rbe/dsrl.hpp
-
 )
 
 add_library(rbe::rbe ALIAS rbe)
