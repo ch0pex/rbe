@@ -114,6 +114,7 @@ jobs:
           mkdir -p coverage
           gcovr --filter src/rbe --exclude-unreachable-branches \
             --html-details coverage/index.html \
+            --cobertura coverage.xml \
             --markdown-summary >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage report
@@ -121,3 +122,10 @@ jobs:
         with:
           name: coverage-report
           path: coverage/
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          fail_ci_if_error: true
