@@ -10,6 +10,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/annotations/detail/traits.hpp>
 #include <rbe/core/detail/introspection.hpp>
 
 // --- STD ---
@@ -24,43 +25,18 @@ namespace rbe::detail {
  */
 enum class dimension_kind : std::uint8_t {
   exclusive, ///< at most one annotation of the dimension may appear within a single annotation range
-  unique,    ///< each annotation of the dimension may independently appear at most once across the whole (deep) type
+  unique, ///< each annotation of the dimension may independently appear at most once across the whole (deep) type
 };
-
-/**
- * @brief Customization point establishing RBE annotation identity and, optionally, dimension membership.
- *
- * Every RBE annotation type -- an empty tag struct, a payload-carrying struct, or a plain enumeration
- * reused directly (e.g. `endian::order`) -- must specialize this template exactly once, colocated with
- * the annotation's own definition. Completeness of the specialization is what makes `is_rbe_annotation`
- * recognize the type; this mirrors the `rbe::custom<T>` customization point used for user-provided
- * serders (see core/custom.hpp) and replaces base-class inheritance, which enum types cannot
- * participate in.
- *
- * Annotations that don't belong to any orthogonal dimension (free markers like `rbe::fmt`) specialize
- * this template with an empty body -- no `dimension` member required. Annotations that DO belong to a
- * dimension additionally provide `using dimension = SomeDimensionTag;`, naming an (empty) tag type
- * identifying the dimension. Two annotations belong to the same dimension iff they name the same tag
- * type. Adding a new annotation to an existing dimension is therefore just: define the annotation,
- * specialize this trait once, done -- no separate registry to edit.
- */
-template<class T>
-struct annotation_traits;
-
-/// True iff `type` opted into RBE annotation identity via `annotation_traits<T>`.
-consteval auto is_marked_annotation(std::meta::info const type) -> bool {
-  return is_complete_type(substitute(^^annotation_traits, {type}));
-}
 
 /**
  * @brief The dimension tag type `type` belongs to, or a null reflection if it belongs to none.
  */
-consteval auto dimension_of(std::meta::info const type) -> std::meta::info {
-  auto const traits = substitute(^^annotation_traits, {type});
-  if (not is_complete_type(traits)) {
+consteval auto dimension_of(std::meta::info const type) -> std::meta::info { // clang-format off
+  auto const traits = traits_of(type);
+  if (not traits) {
     return std::meta::info {};
   }
-  for (auto const member: members_of(traits, default_context)) {
+  for (auto const member: members_of(*traits, default_context)) {
     if (is_type_alias(member) and has_identifier(member) and identifier_of(member) == "dimension") {
       return dealias(member);
     }
