@@ -16,7 +16,9 @@
 // --- External dependencies ---
 
 // --- STD ---
+#include <array>
 #include <meta>
+#include <vector>
 
 // --- System ---
 
@@ -75,6 +77,25 @@ struct ManyMembers {
   int f;
   int g;
   int h;
+};
+
+struct Base {
+  int base_field;
+};
+
+struct Derived : Base {
+  int derived_field;
+};
+
+struct WithStaticFns {
+  int regular_field;
+  static int compute() { return 42; }
+  static void helper(int) { }
+};
+
+struct WithConstMember {
+  const int x;
+  int& y;
 };
 
 
@@ -211,6 +232,57 @@ static_assert(test_nsdm_index(^^ManyMembers, "a", 0));
 static_assert(test_nsdm_index(^^ManyMembers, "h", 7));
 static_assert(not test_nsdm_index(^^ManyMembers, "z", 0)); // No such member
 
+
+// ============================================================
+// nsdm_count
+// ============================================================
+
+static_assert(rbe::detail::nsdm_count(^^TestStruct) == 3);
+static_assert(rbe::detail::nsdm_count(^^EmptyStruct) == 0);
+static_assert(rbe::detail::nsdm_count(^^SingleMember) == 1);
+static_assert(rbe::detail::nsdm_count(^^WithStatic) == 2); // static member excluded
+static_assert(rbe::detail::nsdm_count(^^ManyMembers) == 8);
+static_assert(rbe::detail::nsdm_count(^^AccessClass, std::meta::access_context::current()) == 1);
+
+// ============================================================
+// specialization_of
+// ============================================================
+
+static_assert(rbe::detail::specialization_of(^^std::vector<int>, ^^std::vector));
+static_assert(rbe::detail::specialization_of(^^std::array<int, 3>, ^^std::array));
+static_assert(not rbe::detail::specialization_of(^^std::vector<int>, ^^std::array)); // wrong template
+static_assert(not rbe::detail::specialization_of(^^int, ^^std::vector)); // not a specialization at all
+static_assert(not rbe::detail::specialization_of(^^TestStruct, ^^std::vector)); // ordinary class, no template args
+
+// ============================================================
+// bases_of
+// ============================================================
+
+static_assert(rbe::detail::bases_of(^^EmptyStruct).empty());
+static_assert(rbe::detail::bases_of(^^TestStruct).empty());
+static_assert(rbe::detail::bases_of(^^Derived).size() == 1);
+static_assert(type_of(rbe::detail::bases_of(^^Derived)[0]) == ^^Base);
+
+// ============================================================
+// static_member_functions_of
+// ============================================================
+
+static_assert(rbe::detail::static_member_functions_of(^^TestStruct).empty());
+static_assert(rbe::detail::static_member_functions_of(^^WithStaticFns).size() == 2);
+
+// ============================================================
+// normalize_type
+// ============================================================
+
+// info already denotes a type -> returned as-is (cvref-stripped, here a no-op)
+static_assert(rbe::detail::normalize_type(^^TestStruct) == ^^TestStruct);
+static_assert(rbe::detail::normalize_type(^^int) == ^^int);
+
+// info denotes a member -> its (cvref-stripped) type is returned
+static_assert(rbe::detail::normalize_type(rbe::detail::nsdm(^^TestStruct, "a")) == ^^int);
+static_assert(rbe::detail::normalize_type(rbe::detail::nsdm(^^TestStruct, "b")) == ^^double);
+static_assert(rbe::detail::normalize_type(rbe::detail::nsdm(^^WithConstMember, "x")) == ^^int); // const stripped
+static_assert(rbe::detail::normalize_type(rbe::detail::nsdm(^^WithConstMember, "y")) == ^^int); // reference stripped
 
 // --- Annotation tests ---
 
