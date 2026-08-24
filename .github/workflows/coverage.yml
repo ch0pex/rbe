@@ -1,0 +1,123 @@
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "conanfile.py"
+      - ".github/workflows/coverage.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - "conanfile.py"
+      - ".github/workflows/coverage.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: "Coverage / gcc-16 / C++26"
+    runs-on: ubuntu-24.04
+    container: fedora:44
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install gcc-16, gcovr and build tools
+        shell: bash
+        run: |
+          dnf install -y gcc-c++ cmake ninja-build ccache git-core tar gzip python3-pip gcovr which
+          echo "CC=gcc" >> "$GITHUB_ENV"
+          echo "CXX=g++" >> "$GITHUB_ENV"
+
+      - name: Set up ccache
+        shell: bash
+        run: |
+          mkdir -p /usr/local/lib/ccache
+          ln -sf "$(command -v ccache)" /usr/local/lib/ccache/gcc
+          ln -sf "$(command -v ccache)" /usr/local/lib/ccache/g++
+          echo "/usr/local/lib/ccache" >> "$GITHUB_PATH"
+          echo "CCACHE_DIR=${HOME}/.cache/ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=200M" >> "$GITHUB_ENV"
+
+      - name: Generate cache id
+        shell: bash
+        run: echo "cache_id=$(/bin/date -u "+%Y%m%d")" >> "$GITHUB_ENV"
+
+      - name: Cache Conan data
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2/p
+          key: conan-coverage-gcc-16-26-${{ env.cache_id }}
+          restore-keys: |
+            conan-coverage-gcc-16-26-
+
+      - name: Cache ccache data
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-coverage-gcc-16-26-${{ env.cache_id }}
+          restore-keys: |
+            ccache-coverage-gcc-16-26-
+
+      - name: Install Conan
+        shell: bash
+        run: pip install --break-system-packages -U conan
+
+      - name: Configure Conan profile
+        shell: bash
+        run: conan profile detect --force
+
+      - name: Install Conan dependencies
+        shell: bash
+        run: |
+          conan install . -b missing \
+            -s build_type=Debug \
+            -s compiler=gcc -s compiler.version=16 -s compiler.cppstd=26 \
+            -c tools.cmake.cmaketoolchain:generator=Ninja \
+            -c user.rbe.build:all=True \
+            -c 'tools.build:cxxflags=["-coverage"]'
+
+      - name: Print tool versions
+        shell: bash
+        run: |
+          ${CXX} --version
+          cmake --version
+          conan --version
+          gcovr --version
+
+      - name: Build with Conan
+        shell: bash
+        run: |
+          conan build . -b missing \
+            -s build_type=Debug \
+            -s compiler=gcc -s compiler.version=16 -s compiler.cppstd=26 \
+            -c tools.cmake.cmaketoolchain:generator=Ninja \
+            -c user.rbe.build:all=True \
+            -c 'tools.build:cxxflags=["-coverage"]'
+
+      - name: Collect coverage information
+        shell: bash
+        run: |
+          mkdir -p coverage
+          gcovr --filter src/rbe --exclude-unreachable-branches \
+            --html-details coverage/index.html \
+            --markdown-summary >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
