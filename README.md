@@ -1,5 +1,11 @@
 # RBE — Reflection Binary Encoding
 
+[![CI](https://github.com/ch0pex/rbe/actions/workflows/ci.yml/badge.svg)](https://github.com/ch0pex/rbe/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ch0pex/rbe/branch/main/graph/badge.svg)](https://codecov.io/gh/ch0pex/rbe)
+[![C++](https://img.shields.io/badge/C%2B%2B-26-blue.svg)](https://en.cppreference.com/w/cpp/26)
+[![GCC](https://img.shields.io/badge/GCC-16%2B-blue.svg)](https://gcc.gnu.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A header-only C++ library for declarative binary serialization and deserialization via reflection-based annotations. Define your wire protocol once as plain C++ structs; RBE handles the rest.
 
 ## Motivation
