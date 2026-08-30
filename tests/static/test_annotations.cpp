@@ -99,4 +99,16 @@ static_assert(not rbe::well_annotated<DuplicatedAnnotations>);
 static_assert(not rbe::well_annotated<ConflictingAnnotations>);
 static_assert(not rbe::well_annotated<BadParent>);
 
+
+// --- Lenght annotation correctness ---
+
+static_assert(rbe::well_annotated<AddOrder>); // length annotation is correct
+static_assert(not rbe::well_annotated<LenghtAnnotatedTwice>); // length is annotated twice, fails dimension check
+static_assert(not rbe::well_annotated<LenghtNotConvertible>); // length is annotated on a non covertible type to std::size_t, fails check
+
+// --- id annotation correctness ---
+static_assert(rbe::well_annotated<AddOrder>); // id annotation is correct
+static_assert(not rbe::well_annotated<IdAnnotatedTwice>); // id is annotated twice, fails dimension check
+static_assert(not rbe::well_annotated<IdNotEqualityComparable>); // id is annotated on a non equality comparable type, fails check
+
 } // namespace

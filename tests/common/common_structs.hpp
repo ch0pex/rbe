@@ -423,4 +423,26 @@ struct [[=rbe::pack]] NestedPackParent {
   constexpr bool operator==(NestedPackParent const&) const = default;
 };
 
+struct LenghtAnnotatedTwice {
+  [[=rbe::length]] std::uint32_t length;
+  [[=rbe::length]] std::uint32_t length2;
+};
+
+struct LenghtNotConvertible {
+  [[=rbe::length]] NestedPackLeaf length; // not convertible to std::size_t
+};
+
+struct IdAnnotatedTwice {
+  [[=rbe::id]] std::uint32_t id;
+  [[=rbe::id]] std::uint32_t id2;
+};
+
+struct IdNotEqualityComparable {
+  struct NoEqualityComparable {
+    int x;
+    bool operator==(NoEqualityComparable const&) const = delete; // explicitly deleted
+  };
+  [[=rbe::id]] NoEqualityComparable id; // not equality comparable
+};
+
 // clang-format on

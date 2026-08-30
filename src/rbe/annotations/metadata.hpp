@@ -12,8 +12,11 @@
 
 // --- Includes ---
 #include <rbe/annotations/detail/dimension.hpp>
+#include <rbe/core/detail/introspection.hpp>
+#include <rbe/core/detail/invoke_concept.hpp>
 
 // --- STD ---
+#include <concepts>
 #include <type_traits>
 
 namespace rbe {
@@ -28,17 +31,27 @@ struct metadata_dim {
 /**
  * @brief Message metadata annotations
  */
+// clang-format off
 inline constexpr struct {} id {};     /// < message id
 inline constexpr struct {} length {}; /// < message length
+// clang-format on
 
 } // namespace rbe
 
 template<>
 struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::id)>> {
   using dimension = rbe::metadata_dim;
+
+  static consteval auto check(std::meta::info const /**/, std::meta::info const entity) -> bool { // clang-format off
+     return invoke_concept(^^std::equality_comparable, {normalize_type(entity)});
+   } // clang-format on
 };
 
 template<>
 struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::length)>> {
   using dimension = rbe::metadata_dim;
+
+  static consteval auto check(std::meta::info const /**/, std::meta::info const entity) -> bool { // clang-format off
+    return is_convertible_type(normalize_type(entity), ^^std::size_t);
+  } // clang-format on
 };

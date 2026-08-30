@@ -82,11 +82,38 @@ consteval auto dimensions_used_in(std::meta::info const type) -> std::vector<std
 }
 
 consteval auto verify_dimension(std::meta::info const type, std::meta::info const dim) -> bool {
-  switch (kind_of(dim)) {
+  switch (kind_of(dim)) { // clang-format off
     case dimension_kind::exclusive: return verify_dimension_correctness(type, dim);
     case dimension_kind::unique:    return verify_global_unique_dimension(type, dim);
-  }
+  } // clang-format on
   throw std::meta::exception("unhandled dimension_kind", dim);
+}
+
+// --- Local constraints : verify that every annotation found in `type` satisfies its own correctness rule
+
+consteval auto verify_check(std::meta::info const value, std::meta::info const entity) -> bool {
+  auto const traits = traits_of(normalize_type(value));
+  if (not traits) {
+    throw std::meta::exception("annotation is not marked with annotation_traits<T>", ^^verify_check);
+  }
+
+  auto static_member_fns = static_member_functions_of(*traits);
+  auto const check_fn    = std::ranges::find(static_member_fns, std::string {"check"}, std::meta::identifier_of);
+  if (check_fn == std::ranges::end(static_member_fns)) {
+    return true;
+  }
+
+  using check_fn_t = bool (*)(std::meta::info const, std::meta::info const);
+  return std::meta::extract<check_fn_t>(*check_fn)(value, entity);
+}
+
+consteval auto verify_local_constraints(std::meta::info info) -> bool {
+  auto check = std::ranges::all_of(annotation_range(info), [info](std::meta::info value) { //
+    return verify_check(value, info);
+  });
+
+  info = normalize_type(info);
+  return check and (is_class_type(info) ? std::ranges::all_of(nsdm(info), verify_local_constraints) : true);
 }
 
 /**
@@ -97,12 +124,11 @@ consteval auto verify_dimension(std::meta::info const type, std::meta::info cons
  * dynamically from the annotations actually attached to `type`.
  */
 consteval auto well_annotated(std::meta::info const type) -> bool {
-  if (not verify_no_local_duplications(type)) {
-    return false;
-  }
-  return std::ranges::all_of(dimensions_used_in(type), [type](std::meta::info const dim) {
-    return verify_dimension(type, dim);
-  });
+  auto const dimension_check = [type](std::meta::info const dim) { return verify_dimension(type, dim); };
+
+  return verify_no_local_duplications(type) //
+         and verify_local_constraints(type) //
+         and std::ranges::all_of(dimensions_used_in(type), dimension_check);
 }
 
 } // namespace rbe::detail::annotations

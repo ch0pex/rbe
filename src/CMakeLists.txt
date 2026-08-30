@@ -29,6 +29,7 @@ target_sources(
         # Core
         rbe/core/detail/context.hpp
         rbe/core/detail/introspection.hpp
+        rbe/core/detail/invoke_concept.hpp
         rbe/core/detail/memcpy_constexpr.hpp
         rbe/core/detail/normalize.hpp
         rbe/core/detail/static_array.hpp
