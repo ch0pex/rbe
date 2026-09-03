@@ -27,7 +27,6 @@ Originally designed for high-frequency trading systems, RBE is suitable for any 
 - **Annotation-driven** — control endianness, packing, length, and message ID per field or per type
 - **Zero-boilerplate** — no hand-written serialize/deserialize functions
 - **Header-only** — single include, no link step
-- **Sanitizer-clean** — ASan + UBSan presets included
 
 ## Quick Start
 
@@ -36,20 +35,16 @@ Originally designed for high-frequency trading systems, RBE is suitable for any 
 ```cpp
 namespace cboeu {
 
-[[=rbe::little, =rbe::pack]]
-struct PacketHeader {
+struct [[=rbe::pack_le]] PacketHeader {
     std::uint16_t length;
     std::uint8_t  count;
     std::uint8_t  unit;
     std::uint32_t sequence;
 };
 
-[[=rbe::little, =rbe::pack]]
-struct AddOrder {
-    [[=rbe::length]] 
-    std::uint8_t  length;
-    [[=rbe::id]] 
-    std::uint8_t  message_type;
+struct [[=rbe::pack_le]] AddOrder {
+    [[=rbe::length]] std::uint8_t  length;
+    [[=rbe::id]]     std::uint8_t  message_type;
     std::uint32_t time_offset;
     std::uint32_t order_id;
     std::uint8_t  side_indicator;
@@ -58,8 +53,7 @@ struct AddOrder {
     std::uint32_t price;
 };
 
-[[=rbe::little, =rbe::pack]]
-struct ReduceSize {
+struct [[=rbe::pack_le]] ReduceSize {
     [[=rbe::length]] std::uint8_t  length;
     [[=rbe::id]]     std::uint8_t  message_type;
     std::uint32_t time_offset;
@@ -70,16 +64,18 @@ struct ReduceSize {
 } // namespace cboeu
 ```
 
+> The `[[=...]]` annotation on a struct must sit right after the `struct`/`class` keyword, before the type name — that's what attaches it to the class-head so reflection can see it. Putting it on the line above (`[[=...]]\nstruct Foo {...}`) instead attaches it to the *declaration*, and the annotation is silently invisible to RBE. `rbe::pack_le` is shorthand for `rbe::derive<rbe::pack, rbe::little>` (see [Annotations reference](#annotations-reference)); field annotations go directly before the member.
+
 ### Serialize and deserialize
 
 ```cpp
-namespace cboe = rbe::cboeu;
+namespace cboe = cboeu;
 
 std::array<std::byte, 1500> buffer{};
 
 // Deserialize from raw buffer (lazy: reads fields on demand)
 auto msg    = rbe::deserialize<cboe::AddOrder>(buffer, rbe::dsrl::lazy);
-auto length = msg.field("length");
+auto length = msg.field<"length">();
 
 // Serialize to raw buffer
 rbe::serialize(buffer, cboe::AddOrder{});
@@ -89,67 +85,62 @@ rbe::serialize(buffer, cboe::AddOrder{});
 
 | Annotation | Scope | Effect |
 |---|---|---|
-| `=rbe::little` | struct | Fields are serialized in little-endian byte order |
-| `=rbe::pack` | struct | Fields are packed without padding |
-| `=rbe::length` | field | Marks the field that encodes the message length |
-| `=rbe::id` | field | Marks the field that encodes the message type ID |
+| `=rbe::little` | struct, member | Little-endian byte order |
+| `=rbe::big` | struct, member | Big-endian byte order |
+| `=rbe::pack` | struct, member | Fields are packed without padding |
+| `=rbe::align` | struct, member | Explicit standard C++ alignment (the implicit default) |
+| `=rbe::length` | member | Marks the field that encodes the message length |
+| `=rbe::id` | member | Marks the field that encodes the message type ID |
+| `=rbe::fmt` | struct | Opts the type into RBE's `std::format`/`std::ostream` debug formatter |
+| `=rbe::derive<...>` | struct, member | Groups several annotations under one `=` clause; `rbe::pack_le`, `rbe::pack_be`, and `rbe::debug` are built-in presets |
+
+`little`/`big` and `pack`/`align` are each mutually exclusive within the same scope; `id`/`length` may each appear once per (possibly nested) type. See [`docs/reference/annotations.md`](docs/reference/annotations.md) for the full inheritance and conflict rules.
 
 ## Building
+
+RBE is packaged as a Conan recipe (`conanfile.py` at the repo root) that generates its own CMake presets — there is no hand-maintained `CMakePresets.json` and no separate `conan/` directory to `cd` into.
 
 ### Prerequisites
 
 | Tool | Minimum version |
 |---|---|
-| CMake | 3.30 |
+| CMake | 3.31 |
 | Conan | 2.x |
-| Ninja | any recent |
-| Compiler | C++26 capable (reflection support required) |
+| Ninja | any recent (or another CMake generator) |
+| Compiler | GCC 16+ |
 | ccache *(optional)* | any |
 
-> **Compiler support:** RBE relies on C++ static reflection, which is currently only implemented in GCC. Clang and MSVC presets are included in the build system for future compatibility but are not supported yet.
+> **Compiler support:** RBE relies on C++26 static reflection, which today is only implemented by GCC ≥ 16. The Conan recipe's `validate()` rejects Clang and MSVC outright until they support it — there's no partial/experimental path yet.
 
-### Install dependencies
+### Build and test (one shot)
 
-```bash
-cd conan
-./install.sh          # installs Conan dependencies for the default profile
-```
-
-Or manually for a specific preset:
+This mirrors what CI runs — it builds the library, tests, and examples, then runs the test suite:
 
 ```bash
-conan install . --profile=<your-profile> --build=missing
+conan create . -b missing \
+    -s compiler=gcc -s compiler.version=16 -s compiler.cppstd=26 \
+    -c user.rbe.build:all=True
 ```
 
-### Configure and build
+### Configure and build (iterating locally)
 
 ```bash
-# Debug build with GCC
-cmake --workflow --preset Debug-gcc
+# Install dependencies and generate CMake presets. `user.rbe.build:all=True`
+# is required to build tests/examples (without it, only the header-only
+# package itself is configured).
+conan install . -b missing -c user.rbe.build:all=True \
+    -s compiler=gcc -s compiler.version=16 -s compiler.cppstd=26 -s build_type=Debug
 
-# Release build with Clang
-cmake --workflow --preset Release-clang
-
-# Release build with MSVC (Windows)
-cmake --workflow --preset Release-msvc
+cmake --preset conan-default
+cmake --build --preset conan-debug
 ```
 
-### Available presets
-
-| Preset | Compiler | Type | Supported |
-|---|---|---|---|
-| `Debug-gcc` / `Release-gcc` / `RelWithDebInfo-gcc` | GCC | Standard | yes |
-| `Sanitize-gcc` | GCC | ASan + UBSan | yes |
-| `Coverage-gcc` | GCC | Coverage instrumentation | yes |
-| `Debug-clang` / `Release-clang` / `RelWithDebInfo-clang` | Clang | Standard + clang-tidy | not yet |
-| `Sanitize-clang` | Clang | ASan + UBSan | not yet |
-| `Debug-msvc` / `Release-msvc` / `RelWithDebInfo-msvc` | MSVC | Standard | not yet |
-| `Sanitize-msvc` | MSVC | Sanitize | not yet |
+The preset names above (`conan-default` / `conan-debug`) come from Conan's `CMakeToolchain` and vary with `build_type` (e.g. `conan-release` for a Release build) — check the generated `CMakeUserPresets.json` at the repo root, or run `cmake --list-presets`, if unsure.
 
 ### Run tests
 
 ```bash
-ctest --preset Debug-gcc        # or any other preset
+ctest --preset conan-debug --output-on-failure
 ```
 
 ## Project Structure
@@ -158,10 +149,11 @@ ctest --preset Debug-gcc        # or any other preset
 rbe/
 ├── src/rbe/rbe.hpp     # library (header-only)
 ├── tests/              # doctest test suite
-├── conan/              # Conan recipe and configuration
+├── example/            # standalone usage examples
+├── docs/               # reference and design documentation
 ├── cmake/              # CMake modules
-├── CMakeLists.txt
-└── CMakePresets.json
+├── conanfile.py        # Conan recipe
+└── CMakeLists.txt
 ```
 
 ## License
