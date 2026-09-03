@@ -70,7 +70,9 @@ static_assert([] {
 //   return dst.size() == sizeof(EmptyStruct);
 // }());
 
-TEST_CASE("memcpy_constexpr produces correct bytes for types without padding") {
+TEST_SUITE_BEGIN("memcpy_constexpr");
+
+TEST_CASE("memcpy_constexpr - produces correct bytes for types without padding") {
   using B = std::byte;
   NonPaddedStruct src {.a = 42, .b = 84, .c = 3.14};
   std::array<std::byte, sizeof(NonPaddedStruct)> dst {};
@@ -86,7 +88,7 @@ TEST_CASE("memcpy_constexpr produces correct bytes for types without padding") {
   REQUIRE(std::bit_cast<NonPaddedStruct>(dst) == src);
 }
 
-TEST_CASE("memcpy_constexpr handles empty structs") {
+TEST_CASE("memcpy_constexpr - handles empty structs") {
   EmptyStruct src {};
   std::array<std::byte, sizeof(EmptyStruct)> dst {};
   memcpy_constexpr(dst, src);
@@ -94,7 +96,7 @@ TEST_CASE("memcpy_constexpr handles empty structs") {
   REQUIRE(std::bit_cast<EmptyStruct>(dst) == src);
 }
 
-TEST_CASE("memcpy_constexpr copies field bytes correctly for padded types") {
+TEST_CASE("memcpy_constexpr - copies field bytes correctly for padded types") {
   using B = std::byte;
   PaddedStruct src {.a = 1, .b = 2.0, .c = 'c'};
   std::array<B, sizeof(PaddedStruct)> dst {};
@@ -120,5 +122,7 @@ TEST_CASE("memcpy_constexpr copies field bytes correctly for padded types") {
   REQUIRE(dst[c_off] == B {0x63}); // c = 'c'
   REQUIRE(std::bit_cast<PaddedStruct>(dst) == src);
 }
+
+TEST_SUITE_END();
 
 } // namespace

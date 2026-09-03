@@ -25,7 +25,9 @@
 
 namespace {
 
-TEST_CASE("Test B layout") {
+TEST_SUITE_BEGIN("memory_layout");
+
+TEST_CASE("memory_layout - B layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<B>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(B),
@@ -40,7 +42,7 @@ TEST_CASE("Test B layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test X layout") {
+TEST_CASE("memory_layout - X layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<X>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(X),
@@ -55,7 +57,7 @@ TEST_CASE("Test X layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test Y layout") {
+TEST_CASE("memory_layout - Y layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<Y>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(Y),
@@ -70,7 +72,7 @@ TEST_CASE("Test Y layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test Inner layout") {
+TEST_CASE("memory_layout - Inner layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<Inner>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(Inner),
@@ -89,7 +91,7 @@ TEST_CASE("Test Inner layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test Outer layout") {
+TEST_CASE("memory_layout - Outer layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<Outer>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(Outer),
@@ -108,7 +110,7 @@ TEST_CASE("Test Outer layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test Deep layout") {
+TEST_CASE("memory_layout - Deep layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<Deep>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(Deep),
@@ -127,7 +129,7 @@ TEST_CASE("Test Deep layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test Base layout") {
+TEST_CASE("memory_layout - Base layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<Base>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(Base),
@@ -150,7 +152,7 @@ TEST_CASE("Test Base layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test UnnamedMember layout") {
+TEST_CASE("memory_layout - UnnamedMember layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<UnnamedMember>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(UnnamedMember),
@@ -165,7 +167,7 @@ TEST_CASE("Test UnnamedMember layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test Bits layout") {
+TEST_CASE("memory_layout - Bits layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<Bits>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(Bits),
@@ -188,7 +190,7 @@ TEST_CASE("Test Bits layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test PacketHeader packed layout") {
+TEST_CASE("memory_layout - PacketHeader packed layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<PacketHeader>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = 8,
@@ -215,7 +217,7 @@ TEST_CASE("Test PacketHeader packed layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test AddOrder packed layout") {
+TEST_CASE("memory_layout - AddOrder packed layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<AddOrder>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = 27,
@@ -258,7 +260,7 @@ TEST_CASE("Test AddOrder packed layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test ReduceSize layout (no pack, has padding)") {
+TEST_CASE("memory_layout - ReduceSize layout (no pack, has padding)") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<ReduceSize>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(ReduceSize),
@@ -289,7 +291,7 @@ TEST_CASE("Test ReduceSize layout (no pack, has padding)") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test NoPack layout") {
+TEST_CASE("memory_layout - NoPack layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<NoPack>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(NoPack),
@@ -308,7 +310,7 @@ TEST_CASE("Test NoPack layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test Packed layout") {
+TEST_CASE("memory_layout - Packed layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<Packed>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = 5,
@@ -327,7 +329,7 @@ TEST_CASE("Test Packed layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test MixedEndian layout") {
+TEST_CASE("memory_layout - MixedEndian layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<MixedEndian>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(MixedEndian),
@@ -353,7 +355,7 @@ TEST_CASE("Test MixedEndian layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test Complex packed layout") {
+TEST_CASE("memory_layout - Complex packed layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<Complex>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = 7,
@@ -379,7 +381,7 @@ TEST_CASE("Test Complex packed layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test NonPaddedStruct2 layout") {
+TEST_CASE("memory_layout - NonPaddedStruct2 layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<NonPaddedStruct2>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(NonPaddedStruct2),
@@ -402,7 +404,7 @@ TEST_CASE("Test NonPaddedStruct2 layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test CommonHeader layout") {
+TEST_CASE("memory_layout - CommonHeader layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<CommonHeader>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(CommonHeader),
@@ -429,7 +431,7 @@ TEST_CASE("Test CommonHeader layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test MessageWithHeader layout") {
+TEST_CASE("memory_layout - MessageWithHeader layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<MessageWithHeader>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(MessageWithHeader),
@@ -456,7 +458,7 @@ TEST_CASE("Test MessageWithHeader layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test CommonHeaderPackBe layout") {
+TEST_CASE("memory_layout - CommonHeaderPackBe layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<CommonHeaderPackBe>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(CommonHeaderPackBe),
@@ -487,7 +489,7 @@ TEST_CASE("Test CommonHeaderPackBe layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test MessageWithHeaderPackBe layout") {
+TEST_CASE("memory_layout - MessageWithHeaderPackBe layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<MessageWithHeaderPackBe>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(MessageWithHeaderPackBe),
@@ -518,7 +520,7 @@ TEST_CASE("Test MessageWithHeaderPackBe layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test MessageWithEnum layout") {
+TEST_CASE("memory_layout - MessageWithEnum layout") {
   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<MessageWithEnum>();
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(MessageWithEnum),
@@ -541,7 +543,7 @@ TEST_CASE("Test MessageWithEnum layout") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test struct layout - Nested class") {
+TEST_CASE("memory_layout - MessageWithArray nested struct layout") {
   static constexpr auto layout                        = rbe::get_struct_layout(^^MessageWithArray);
   static constexpr rbe::struct_layout layout_expected = {
     .size    = sizeof(MessageWithArray),
@@ -563,7 +565,7 @@ TEST_CASE("Test struct layout - Nested class") {
   CHECK(layout == layout_expected);
 }
 
-TEST_CASE("Test struct with big endian array") {
+TEST_CASE("memory_layout - MessageWithArrayBe big-endian array layout") {
   static constexpr auto wire_layout                   = rbe::get_wire_layout(^^MessageWithArrayBe);
   static constexpr auto layout                        = rbe::get_struct_layout(^^MessageWithArrayBe);
   static constexpr rbe::struct_layout layout_expected = {
@@ -605,6 +607,8 @@ TEST_CASE("Test struct with big endian array") {
   CHECK(layout == layout_expected);
   CHECK(wire_layout == wire_layout_expected);
 }
+
+TEST_SUITE_END();
 
 
 static_assert(rbe::get_wire_layout<CommonHeaderPackBe>() != rbe::get_struct_layout<CommonHeaderPackBe>());

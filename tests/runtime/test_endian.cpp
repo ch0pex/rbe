@@ -202,10 +202,12 @@ static_assert(test_load_be<std::uint64_t>());
 static_assert(test_load_be<std::int64_t>());
 
 
+TEST_SUITE_BEGIN("endian");
+
 // --- to_native ---
 
 TEST_CASE_TEMPLATE(
-    "to_native<native> is identity", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
+    "endian - to_native<native> is identity", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
     std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
@@ -213,7 +215,7 @@ TEST_CASE_TEMPLATE(
 }
 
 TEST_CASE_TEMPLATE(
-    "to_native is an involution", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
+    "endian - to_native is an involution", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
     std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
@@ -222,7 +224,7 @@ TEST_CASE_TEMPLATE(
 }
 
 TEST_CASE_TEMPLATE(
-    "to_native byteswaps for non-native order", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
+    "endian - to_native byteswaps for non-native order", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
     std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
@@ -237,7 +239,7 @@ TEST_CASE_TEMPLATE(
 }
 
 TEST_CASE_TEMPLATE(
-    "native_to is a symmetric alias for to_native", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
+    "endian - native_to is a symmetric alias for to_native", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
     std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
@@ -250,7 +252,7 @@ TEST_CASE_TEMPLATE(
 // --- store ---
 
 TEST_CASE_TEMPLATE(
-    "store writes correct little-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
+    "endian - store writes correct little-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
     std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
@@ -260,7 +262,7 @@ TEST_CASE_TEMPLATE(
 }
 
 TEST_CASE_TEMPLATE(
-    "store writes correct big-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
+    "endian - store writes correct big-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
     std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
@@ -273,7 +275,7 @@ TEST_CASE_TEMPLATE(
 // --- load ---
 
 TEST_CASE_TEMPLATE(
-    "load reads correct value from little-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
+    "endian - load reads correct value from little-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
     std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
@@ -281,7 +283,7 @@ TEST_CASE_TEMPLATE(
 }
 
 TEST_CASE_TEMPLATE(
-    "load reads correct value from big-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
+    "endian - load reads correct value from big-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
     std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
@@ -292,7 +294,7 @@ TEST_CASE_TEMPLATE(
 // --- round-trip ---
 
 TEST_CASE_TEMPLATE(
-    "load(store(v)) round-trips value", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
+    "endian - load(store(v)) round-trips value", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
     std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
@@ -304,5 +306,7 @@ TEST_CASE_TEMPLATE(
   endian::store<T, order::big>(buf.data(), tr::value);
   REQUIRE(endian::load<T, order::big>(buf.data()) == tr::value);
 }
+
+TEST_SUITE_END();
 
 } // namespace

@@ -24,33 +24,33 @@
 
 namespace {
 
-TEST_SUITE_BEGIN("Universal formatter");
+TEST_SUITE_BEGIN("format");
 
-TEST_CASE("Empty struct") {
+TEST_CASE("format - empty struct") {
   std::string const expected = "Empty {}";
   std::string const result   = std::format("{}", Empty {});
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("B struct") {
+TEST_CASE("format - B struct") {
   std::string const expected = "B {\n  .m0 = 0,\n}";
   std::string const result   = std::format("{}", B {});
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("X struct") {
+TEST_CASE("format - X struct") {
   std::string const expected = "X {\n  .m1 = 1,\n}";
   std::string const result   = std::format("{}", X {});
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Y struct") {
+TEST_CASE("format - Y struct") {
   std::string const expected = "Y {\n  .m2 = 2,\n}";
   std::string const result   = std::format("{}", Y {});
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Z struct with base classes") {
+TEST_CASE("format - struct with base classes (Z)") {
   std::string const expected = R"(Z {
   X {
     .m1 = 1,
@@ -65,7 +65,7 @@ TEST_CASE("Z struct with base classes") {
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Struct with nested struct member") {
+TEST_CASE("format - struct with nested struct member") {
   std::string const expected = R"(Outer {
   .inner = Inner {
     .x = 10,
@@ -77,7 +77,7 @@ TEST_CASE("Struct with nested struct member") {
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Struct with deeply nested struct members") {
+TEST_CASE("format - struct with deeply nested struct members") {
   std::string const expected = R"(Deep {
   .outer = Outer {
     .inner = Inner {
@@ -92,7 +92,7 @@ TEST_CASE("Struct with deeply nested struct members") {
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Struct with range member") {
+TEST_CASE("format - struct with range member") {
   std::string const expected = R"(WithVector {
   .values = [1, 2, 3],
   .extra = 42,
@@ -101,7 +101,7 @@ TEST_CASE("Struct with range member") {
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Struct with array member") {
+TEST_CASE("format - struct with array member") {
   std::string const expected = R"(WithArray {
   .values = [1, 2, 3],
   .extra = 42,
@@ -110,7 +110,7 @@ TEST_CASE("Struct with array member") {
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Struct with span member") {
+TEST_CASE("format - struct with span member") {
   std::vector<int> vec {1, 2, 3};
   WithSpan ws {
     .values = std::span<int>(vec.data(), vec.size()),
@@ -125,7 +125,7 @@ TEST_CASE("Struct with span member") {
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Struct derived from empty base class") {
+TEST_CASE("format - struct derived from empty base class") {
   std::string const expected = R"(DerivedFromEmpty {
   EmptyBase {},
   .m0 = 0,
@@ -134,7 +134,7 @@ TEST_CASE("Struct derived from empty base class") {
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Struct with unnamed member") {
+TEST_CASE("format - struct with unnamed member") {
   std::string const expected = R"(UnnamedMember {
   ._ = 42,
 })";
@@ -142,7 +142,7 @@ TEST_CASE("Struct with unnamed member") {
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Struct derived from non-empty base class") {
+TEST_CASE("format - struct derived from non-empty base class") {
   std::string const expected = R"(EmptyDerived {
   Base {
     .m0 = 0,
@@ -154,7 +154,7 @@ TEST_CASE("Struct derived from non-empty base class") {
   CHECK_EQ(expected, result);
 }
 
-TEST_CASE("Struct with bit-fields") {
+TEST_CASE("format - struct with bit-fields") {
   std::string const expected = R"(Bits {
   .a:3 = 0,
   .b:5 = 0,

@@ -180,13 +180,13 @@ static_assert(static_array_first_last_subspan(), "static_array_first_last_subspa
 
 TEST_SUITE_BEGIN("static_array");
 
-TEST_CASE("Default construction") {
+TEST_CASE("static_array - default construction") {
   static constexpr rbe::static_array<int> arr;
   CHECK(arr.size() == 0);
   CHECK(arr.empty());
 }
 
-TEST_CASE("Construct with vector") {
+TEST_CASE("static_array - construct with vector") {
   constexpr std::array<int, 5> vec_data {1, 2, 3, 4, 5};
   static constexpr rbe::static_array<int> arr {std::from_range, vec_data};
   CHECK(arr.size() == 5);
@@ -197,7 +197,7 @@ TEST_CASE("Construct with vector") {
   CHECK(arr[4] == 5);
 }
 
-TEST_CASE("Construct with array") {
+TEST_CASE("static_array - construct with array") {
   constexpr std::array<int, 5> arr_data {1, 2, 3, 4, 5};
   static constexpr rbe::static_array arr {std::from_range, arr_data};
   CHECK(arr.size() == 5);
@@ -208,7 +208,7 @@ TEST_CASE("Construct with array") {
   CHECK(arr[4] == 5);
 }
 
-TEST_CASE("Initializer list") {
+TEST_CASE("static_array - initializer list construction") {
   static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
   CHECK(arr.size() == 5);
   CHECK(arr[0] == 1);
@@ -218,7 +218,7 @@ TEST_CASE("Initializer list") {
   CHECK(arr[4] == 5);
 }
 
-TEST_CASE("Initializer list deduction") {
+TEST_CASE("static_array - initializer list deduces element type") {
   static constexpr rbe::static_array arr {
     SomeData {.a = 1, .b = 'a'},
     SomeData {.a = 2, .b = 'b'},
@@ -230,7 +230,7 @@ TEST_CASE("Initializer list deduction") {
   CHECK(arr[1].b == 'b');
 }
 
-TEST_CASE("Static array random access") {
+TEST_CASE("static_array - random access") {
   static constexpr rbe::static_array arr {
     SomeData {.a = 1, .b = 'a'}, SomeData {.a = 2, .b = 'b'}, SomeData {.a = 3, .b = 'c'}, SomeData {.a = 4, .b = 'd'},
     SomeData {.a = 5, .b = 'e'}, SomeData {.a = 6, .b = 'f'}, SomeData {.a = 7, .b = 'g'},
@@ -256,7 +256,7 @@ TEST_CASE("Static array random access") {
   CHECK(arr.back().a == 7);
 }
 
-TEST_CASE("Array iteration") {
+TEST_CASE("static_array - forward iteration") {
   static constexpr rbe::static_array arr {
     SomeData {.a = 1, .b = 'a'}, SomeData {.a = 2, .b = 'b'}, SomeData {.a = 3, .b = 'c'}, SomeData {.a = 4, .b = 'd'},
     SomeData {.a = 5, .b = 'e'}, SomeData {.a = 6, .b = 'f'}, SomeData {.a = 7, .b = 'g'},
@@ -267,7 +267,7 @@ TEST_CASE("Array iteration") {
   }
 }
 
-TEST_CASE("Array reverse iteration") {
+TEST_CASE("static_array - reverse iteration") {
   static constexpr rbe::static_array arr {
     SomeData {.a = 1, .b = 'a'}, SomeData {.a = 2, .b = 'b'}, SomeData {.a = 3, .b = 'c'}, SomeData {.a = 4, .b = 'd'},
     SomeData {.a = 5, .b = 'e'}, SomeData {.a = 6, .b = 'f'}, SomeData {.a = 7, .b = 'g'},
@@ -278,7 +278,7 @@ TEST_CASE("Array reverse iteration") {
   }
 }
 
-TEST_CASE("Template for iteration") {
+TEST_CASE("static_array - iteration via template for") {
   static constexpr SomeNumbers data {
     .a = 0,
     .b = 1,
@@ -293,7 +293,7 @@ TEST_CASE("Template for iteration") {
   template for (constexpr auto member: members) { CHECK(data.[:member:] == counter++); }
 }
 
-TEST_CASE("Static array first elements") {
+TEST_CASE("static_array - first(n)") {
   static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
   static constexpr auto first_three = arr.first(3);
 
@@ -303,7 +303,7 @@ TEST_CASE("Static array first elements") {
   CHECK(first_three[2] == 3);
 }
 
-TEST_CASE("Static array last elements") {
+TEST_CASE("static_array - last(n)") {
   static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
   static constexpr auto last_two = arr.last(2);
 
@@ -312,7 +312,7 @@ TEST_CASE("Static array last elements") {
   CHECK(last_two[1] == 5);
 }
 
-TEST_CASE("Static array subspan") {
+TEST_CASE("static_array - subspan(offset, count)") {
   static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
   static constexpr auto subspan = arr.subspan(1, 3);
 

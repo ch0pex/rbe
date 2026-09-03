@@ -53,7 +53,7 @@ static_assert(test());
 
 TEST_SUITE_BEGIN("static_string");
 
-TEST_CASE("static string") { CHECK(test()); }
+TEST_CASE("static_string - equal literals yield the same NTTP type") { CHECK(test()); }
 
 
 TEST_SUITE_END();

@@ -145,12 +145,12 @@ constexpr void test_case(T const& value) {
 } // namespace round_trip
 
 #define SERDE_TEST_CASE(test_case_struct)                                                                              \
-  TEST_CASE(#test_case_struct " [dsrl]") { dsrl::test_case(test_case_struct); }                                        \
-  TEST_CASE(#test_case_struct " [srl]") { srl::test_case(test_case_struct); }                                          \
-  TEST_CASE(#test_case_struct " [round_trip]") { round_trip::test_case(test_case_struct.structure); }
+  TEST_CASE("serde - " #test_case_struct " [dsrl]") { dsrl::test_case(test_case_struct); }                                        \
+  TEST_CASE("serde - " #test_case_struct " [srl]") { srl::test_case(test_case_struct); }                                          \
+  TEST_CASE("serde - " #test_case_struct " [round_trip]") { round_trip::test_case(test_case_struct.structure); }
 
 // Golden source testing for serialization, deserialization, and round-trip cycles
-TEST_SUITE("Serialization - Deserialization - Round Trip") {
+TEST_SUITE("serde") {
   SERDE_TEST_CASE(trivially_wirable_no_padding);
   SERDE_TEST_CASE(trivially_wirable_with_paddings);
   SERDE_TEST_CASE(wirable_custom_serder);
