@@ -24,7 +24,6 @@
 #include <rbe/srl/serialize.hpp>
 
 // --- External dependencies ---
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
 // --- STD ---

@@ -1,55 +1,25 @@
-function(create_test test_name test_src)
-    if (NOT TARGET rbe-tests)
-        add_custom_target(rbe-tests)
-    endif ()
-
-    set(target_exe "test_rbe_${test_name}")
-
-    set(options "")
-    set(oneValueArgs RESOURCE_LOCK)
-    set(multiValueArgs LABELS)
-    cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-
-    add_executable(${target_exe} ${test_src})
-    target_link_libraries(${target_exe} PRIVATE doctest::doctest rbe::rbe)
-
-    add_test(NAME ${target_exe} COMMAND ${target_exe})
-
-    add_dependencies(rbe-tests ${target_exe})
-
-    if (CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-        set_tests_properties(${target_exe} PROPERTIES
-                WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
-        )
-    endif ()
-
-    set(final_labels "rbe")
-    if (ARG_LABELS)
-        list(APPEND final_labels ${ARG_LABELS})
-    endif ()
-
-    set_tests_properties(${target_exe} PROPERTIES
-            LABELS "${final_labels}"
-    )
-
-    if (ARG_RESOURCE_LOCK)
-        set_tests_properties(${target_exe} PROPERTIES
-                RESOURCE_LOCK "${ARG_RESOURCE_LOCK}"
-        )
-    endif ()
+function(create_test_suite target_name)
+    add_executable(${target_name} ${ARGN})
+    target_link_libraries(${target_name} PRIVATE doctest::doctest rbe::rbe)
+    target_include_directories(${target_name} PRIVATE ${CMAKE_SOURCE_DIR}/tests/common)
 
     # if (SANITIZED_BUILD)
-    #     set_tests_properties(${target_exe} PROPERTIES
-    #             ENVIRONMENT "ASAN_OPTIONS=detect_odr_violation=0;LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/cmake/supp/lsan.supp"
+    #     set(doctest_discover_tests_extra_args
+    #             PROPERTIES ENVIRONMENT "ASAN_OPTIONS=detect_odr_violation=0;LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/cmake/supp/lsan.supp"
     #     )
     # endif ()
 
-    target_include_directories(${target_exe} PUBLIC ${CMAKE_SOURCE_DIR}/tests/common)
+    doctest_discover_tests(${target_name}
+            WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+            PROPERTIES LABELS "rbe"
+            ${doctest_discover_tests_extra_args}
+    )
 endfunction()
 
 
 find_package(doctest CONFIG REQUIRED)
 enable_testing()
+include(doctest)
 find_program(MEMORYCHECK_COMMAND valgrind)
 set(MEMORYCHECK_COMMAND_OPTIONS "--leak-check=full --error-exitcode=1 --suppressions=${CMAKE_SOURCE_DIR}/cmake/supp/valgrind.supp")
 include(CTest)
