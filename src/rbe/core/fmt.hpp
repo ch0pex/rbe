@@ -16,10 +16,6 @@
 #include <rbe/core/detail/introspection.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 #include <meta>
 #include <ostream>

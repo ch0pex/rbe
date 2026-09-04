@@ -12,10 +12,6 @@
 
 // --- Includes ---
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 #include <algorithm>
 #include <meta>

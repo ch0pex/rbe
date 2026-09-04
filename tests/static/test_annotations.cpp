@@ -11,8 +11,6 @@
 // --- Includes ---
 #include "common_structs.hpp"
 
-// --- Dependencies ---
-
 #include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/derive.hpp>
 #include <rbe/annotations/detail/correctness.hpp>
@@ -20,8 +18,6 @@
 #include <rbe/annotations/format.hpp>
 #include <rbe/annotations/metadata.hpp>
 #include <rbe/annotations/well_annotated_concepts.hpp>
-
-// --- External dependencies ---
 
 // --- STD ---
 

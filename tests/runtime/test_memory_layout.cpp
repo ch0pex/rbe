@@ -11,7 +11,6 @@
 // --- Includes ---
 #include "common_structs.hpp"
 
-// --- Dependencies ---
 #include <rbe/core/fmt.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/trivially_wirable_concepts.hpp>

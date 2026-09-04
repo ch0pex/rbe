@@ -15,10 +15,6 @@
 #include <rbe/core/detail/static_array.hpp>
 #include <rbe/core/wirable_primitives.hpp>
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 #include <meta>
 #include <type_traits>

@@ -22,10 +22,6 @@
 #include <rbe/dsrl/msg.hpp>
 #include <rbe/dsrl/tags.hpp>
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 #include <cstddef>
 #include <memory>

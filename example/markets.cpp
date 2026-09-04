@@ -16,10 +16,6 @@
 #include "markets/nasdaq.hpp"
 #include "markets/opra.hpp"
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 
 // --- System ---

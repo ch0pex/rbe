@@ -13,10 +13,6 @@
 // --- Includes ---
 #include <rbe/core/detail/memcpy_constexpr.hpp>
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 #include <bit>
 #include <concepts>

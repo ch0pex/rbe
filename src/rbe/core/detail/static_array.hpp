@@ -12,10 +12,6 @@
 
 // --- Includes ---
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 #include <initializer_list>
 #include <meta>

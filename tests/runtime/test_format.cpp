@@ -11,7 +11,6 @@
 // --- Includes ---
 #include "common_structs.hpp"
 
-// --- Dependencies ---
 #include <rbe/core/fmt.hpp>
 
 // --- External dependencies ---

@@ -11,7 +11,6 @@
 // --- Includes ---
 #include "common_structs.hpp"
 
-// --- Dependencies ---
 #include <rbe/core/detail/memcpy_constexpr.hpp>
 
 // --- External dependencies ---

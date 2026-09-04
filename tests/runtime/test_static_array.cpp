@@ -11,8 +11,6 @@
 // --- Includes ---
 #include <rbe/core/detail/static_array.hpp>
 
-// --- Dependencies ---
-
 // --- External dependencies ---
 #include <doctest/doctest.h>
 

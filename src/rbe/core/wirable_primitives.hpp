@@ -13,10 +13,6 @@
 // --- Includes ---
 #include <rbe/core/custom.hpp>
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 #include <concepts>
 #include <meta>

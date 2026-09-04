@@ -12,7 +12,6 @@
 #include "common_serde.hpp"
 #include "common_structs.hpp"
 
-// --- Dependencies ---
 #include <rbe/core/detail/introspection.hpp>
 #include <rbe/core/detail/static_array.hpp>
 #include <rbe/core/memory_layout.hpp>

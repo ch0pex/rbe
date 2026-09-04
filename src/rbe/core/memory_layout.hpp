@@ -20,10 +20,6 @@
 #include <rbe/core/endian.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 #include <cstddef>
 #include <ranges>

@@ -12,10 +12,6 @@
 
 // --- Includes ---
 
-// --- Dependencies ---
-
-// --- External dependencies ---
-
 // --- STD ---
 #include <cassert>
 #include <ranges>

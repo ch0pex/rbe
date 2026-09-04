@@ -15,10 +15,7 @@
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
-
-// --- Dependencies ---
-
-// --- External dependencies ---
+#include <rbe/dsrl/detail/deserialize_member.hpp>
 
 // --- STD ---
 

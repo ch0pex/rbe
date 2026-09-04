@@ -9,8 +9,6 @@
  */
 
 // --- Includes ---
-
-// --- Dependencies ---
 #include <rbe/core/endian.hpp>
 
 // --- External dependencies ---

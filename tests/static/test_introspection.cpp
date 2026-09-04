@@ -9,11 +9,7 @@
  */
 
 // --- Includes ---
-
-// --- Dependencies ---
 #include <rbe/core/detail/introspection.hpp>
-
-// --- External dependencies ---
 
 // --- STD ---
 #include <array>

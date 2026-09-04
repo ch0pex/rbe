@@ -11,7 +11,6 @@
 // --- Includes ---
 #include "common_structs.hpp"
 
-// --- Dependencies ---
 #include <rbe/core/detail/invoke_concept.hpp>
 #include <rbe/core/trivially_wirable_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
