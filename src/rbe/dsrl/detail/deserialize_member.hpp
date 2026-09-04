@@ -31,7 +31,7 @@ namespace rbe::detail {
  */
 template<wirable T, context Ctx>
 auto deserialize_member(std::span<std::byte const> const input) -> T {
-  return deserialize<T, Ctx>(input, dsrl::eager);
+  return deserialize<T, Ctx>(input);
 }
 
 /**
@@ -43,7 +43,7 @@ auto deserialize_member(std::span<std::byte const> const input) -> T {
  */
 template<trivially_wirable_primitive T, context Ctx>
 auto deserialize_member(std::span<std::byte const> const input) -> T {
-  return deserialize<T, Ctx>(input, dsrl::eager);
+  return deserialize<T, Ctx>(input);
 }
 
 template<trivially_wirable_range T, context Ctx>
@@ -57,7 +57,7 @@ auto deserialize_member(std::span<std::byte const> input) -> T {
   T array;
   using element_type = std::ranges::range_value_t<T>;
   for (auto& e: array) {
-    e     = deserialize<element_type, Ctx>(input, dsrl::eager);
+    e     = deserialize<element_type, Ctx>(input);
     input = input.subspan(wire_size_of(^^element_type));
   }
   return array;

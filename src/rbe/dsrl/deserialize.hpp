@@ -52,8 +52,8 @@ namespace rbe {
  * @return A fully constructed object of type T.
  */
 template<wirable T>
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager) -> T {
-  return detail::deserialize<T, detail::context {}>(input, eager);
+constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t /*eager*/) -> T {
+  return detail::deserialize<T, detail::context {}>(input);
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -73,10 +73,7 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
  * @note If the input buffer does not meet the alignment requirements of type T, behavior is undefined.
  */
 template<trivially_wirable T>
-constexpr auto deserialize(
-    std::span<std::byte const> const input, //
-    dsrl::in_place_t in_place [[maybe_unused]]
-) -> T const& {
+constexpr auto deserialize(std::span<std::byte const> const input, dsrl::in_place_t /*in_place*/) -> T const& {
   auto* ptr = std::start_lifetime_as<T>(input.data());
   return *ptr;
 }
@@ -95,7 +92,7 @@ constexpr auto deserialize(
  * @note If the input buffer does not meet the alignment requirements of type T, behavior is undefined.
  */
 template<trivially_wirable T>
-constexpr auto deserialize(std::span<std::byte> const input, dsrl::in_place_mut_t in_place_mut [[maybe_unused]]) -> T& {
+constexpr auto deserialize(std::span<std::byte> const input, dsrl::in_place_mut_t /*in_place_mut*/) -> T& {
   auto* ptr = std::start_lifetime_as<T>(input.data());
   return *ptr;
 }
@@ -117,7 +114,7 @@ constexpr auto deserialize(std::span<std::byte> const input, dsrl::in_place_mut_
  * @return A `dsrl::msg<T>` proxy that deserializes fields on-demand when accessed.
  */
 template<wirable T>
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::lazy_t lazy [[maybe_unused]]) -> dsrl::msg<T> {
+constexpr auto deserialize(std::span<std::byte const> const input, dsrl::lazy_t /*lazy*/) -> dsrl::msg<T> {
   return dsrl::msg<T> {input};
 }
 

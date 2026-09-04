@@ -34,25 +34,25 @@ namespace rbe::detail {
 
 template<trivially_wirable T, context Ctx = context {}>
   requires(Ctx == context {})
-constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
+constexpr auto deserialize(std::span<std::byte const>) -> T;
 
 template<custom_wirable T, context Ctx = context {}>
-constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
+constexpr auto deserialize(std::span<std::byte const>) -> T;
 
 template<trivially_wirable_primitive T, context Ctx>
   requires(Ctx != context {})
-constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
+constexpr auto deserialize(std::span<std::byte const>) -> T;
 
 template<wirable_class T, context Ctx = context {}>
   requires(
       std::is_default_constructible_v<T> and not custom_wirable<T> and not wirable_range<T> and
       (not trivially_wirable<T> or Ctx != context {})
   )
-constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
+constexpr auto deserialize(std::span<std::byte const>) -> T;
 
 template<wirable_range T, context Ctx = context {}>
   requires(not trivially_wirable_range<T> or Ctx != context {})
-constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
+constexpr auto deserialize(std::span<std::byte const>) -> T;
 
 /**
  * @brief Eager deserialization for trivially wirable types with no ambient context forcing anything.
@@ -61,12 +61,11 @@ constexpr auto deserialize(std::span<std::byte const>, dsrl::eager_t) -> T;
  *
  * @tparam T The type to deserialize. Must satisfy `trivially_wirable`.
  * @param input A span of bytes containing the serialized data.
- * @param eager Tag for eager deserialization strategy.
  * @return A fully constructed object of type T.
  */
 template<trivially_wirable T, context Ctx>
   requires(Ctx == context {})
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
+constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   return load<T>(input);
 }
 
@@ -78,11 +77,10 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
  *
  * @tparam T The type to deserialize. Must satisfy `custom_wirable`.
  * @param input A span of bytes containing the serialized data.
- * @param eager Tag for eager deserialization strategy.
  * @return A fully constructed object of type T.
  */
 template<custom_wirable T, context Ctx>
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
+constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   return rbe::custom<T>::deserialize(input);
 }
 
@@ -92,12 +90,11 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
  * @tparam T The primitive type to deserialize. Must satisfy `trivially_wirable_primitive`.
  * @tparam Ctx The ambient context; must not be the default (otherwise the fast path above applies).
  * @param input A span of bytes containing the serialized data.
- * @param eager Tag for eager deserialization strategy.
  * @return A value of type T with bytes swapped to native order.
  */
 template<trivially_wirable_primitive T, context Ctx>
   requires(Ctx != context {})
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
+constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   return endian::load<T, Ctx.endianness>(input.data());
 }
 
@@ -110,7 +107,6 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
  *
  * @tparam T The type to deserialize. Must be default-constructible and wirable.
  * @param input A span of bytes containing the serialized data.
- * @param eager Tag for eager deserialization strategy.
  * @return A fully constructed object of type T.
  */
 template<wirable_class T, context Ctx>
@@ -118,7 +114,7 @@ template<wirable_class T, context Ctx>
       std::is_default_constructible_v<T> and not custom_wirable<T> and not wirable_range<T> and
       (not trivially_wirable<T> or Ctx != context {})
   )
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
+constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   using std::ranges::to;
 
   static constexpr auto local    = merge_context(Ctx, ^^T);
@@ -129,7 +125,7 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
   template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
     using member_type = [:type_of(member):];
     value.[:member:]  = deserialize<member_type, merge_context(local, member)>(
-                         input.subspan<layout.offset.bytes, layout.size>(), eager
+                         input.subspan<layout.offset.bytes, layout.size>()
                      );
   }
   return value;
@@ -144,18 +140,17 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
  *
  * @tparam T The range type to deserialize. Must satisfy `wirable_range`.
  * @param input A span of bytes containing the serialized data.
- * @param eager Tag for eager deserialization strategy.
  * @return A fully constructed range of type T.
  */
 template<wirable_range T, context Ctx>
   requires(not trivially_wirable_range<T> or Ctx != context {})
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t eager [[maybe_unused]]) -> T {
+constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   using element_type = std::ranges::range_value_t<T>;
 
   T value;
   auto remaining = input;
   for (auto& element: value) {
-    element   = deserialize<element_type, Ctx>(remaining, eager);
+    element   = deserialize<element_type, Ctx>(remaining);
     remaining = remaining.subspan(wire_size_of(^^element_type));
   }
   return value;
