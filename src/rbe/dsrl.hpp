@@ -12,4 +12,5 @@
 
 #include <rbe/dsrl/deserialize.hpp>
 #include <rbe/dsrl/msg.hpp>
+#include <rbe/dsrl/return_type.hpp>
 #include <rbe/dsrl/tags.hpp>

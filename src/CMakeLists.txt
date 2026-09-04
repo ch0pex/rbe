@@ -46,8 +46,10 @@ target_sources(
         # deserialize
         rbe/dsrl/detail/deserialize_impl.hpp
         rbe/dsrl/detail/deserialize_member.hpp
+        rbe/dsrl/detail/return_type_impl.hpp
         rbe/dsrl/deserialize.hpp
         rbe/dsrl/msg.hpp
+        rbe/dsrl/return_type.hpp
         rbe/dsrl/tags.hpp
 
         # serialize
