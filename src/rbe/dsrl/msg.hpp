@@ -14,14 +14,15 @@
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
+#include <rbe/core/message_concepts.hpp>
 #include <rbe/core/metadata_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/annotated_field.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
 #include "rbe/annotations/metadata.hpp"
-#include "rbe/core/message_list.hpp"
 
 // --- STD ---
+#include <algorithm>
 
 // --- System ---
 
@@ -69,13 +70,41 @@ public:
 
   [[nodiscard]] constexpr auto length() const { return rbe::detail::read_length_field<value_type, Ctx>(data_); }
 
-  [[nodiscard]] auto as_span() const -> buffer_type { return data_.first(length()); }
+  /**
+   * @brief Whether `length()` claims more bytes than the buffer actually holds
+   *
+   * A `length` field is only as trustworthy as the bytes it came from -- corruption, a truncated
+   * capture, or a wire message this build doesn't know about can all make it lie. Checking this before
+   * trusting `length()` (or the clamping already done by `as_span`/`remainder`) is how callers tell
+   * "this message is short" apart from "this message is empty".
+   *
+   * @return `true` if `length()` exceeds the buffer's size, `false` otherwise
+   */
+  [[nodiscard]] constexpr auto truncated() const -> bool { return length() > data_.size(); }
+
+  /**
+   * @brief Exposes the underlying buffer trimmed to this message's own length
+   * @return This message's bytes, sized to `length()`, clamped to the buffer's actual size if
+   * `length()` claims more than is available (see `truncated()`)
+   */
+  [[nodiscard]] constexpr auto as_span() const -> buffer_type {
+    return data_.first(std::min<std::size_t>(length(), data_.size()));
+  }
 
   /**
    * @brief Exposes the underlying buffer as-is, without trimming it to this message's own length
    * @return The raw buffer this proxy was constructed with, which may extend past this message
    */
   [[nodiscard]] constexpr auto data() const -> buffer_type { return data_; }
+
+  /**
+   * @brief Exposes the bytes left over past this message's own length
+   * @return The buffer's bytes past `length()`, or an empty span if the buffer holds none or
+   * `length()` claims more than is available (see `truncated()`)
+   */
+  [[nodiscard]] constexpr auto remainder() const -> buffer_type {
+    return data_.subspan(std::min<std::size_t>(length(), data_.size()));
+  }
 
 private:
   buffer_type data_;

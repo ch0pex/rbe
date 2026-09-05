@@ -13,6 +13,7 @@
 // --- Includes ---
 #include <rbe/core/detail/introspection.hpp>
 #include <rbe/core/memory_layout.hpp>
+#include <rbe/core/message_concepts.hpp>
 #include <rbe/core/metadata_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/msg.hpp>
@@ -23,48 +24,6 @@
 // --- System ---
 
 namespace rbe {
-
-consteval auto is_identificable(std::meta::info type, detail::context ctx = {}) -> bool {
-  return get_id_layout(type, ctx).has_value();
-}
-
-consteval auto has_length_field(std::meta::info type, detail::context ctx = {}) -> bool {
-  return get_length_layout(type, ctx).has_value();
-}
-
-template<typename T>
-concept identificable = wirable<T> and is_identificable(^^T);
-
-template<typename T>
-consteval auto is_msg_list_type() -> bool {
-  if (T::types.empty()) {
-    return false;
-  }
-
-  auto id_layout     = get_id_layout(T::types[0]);
-  auto length_layout = get_length_layout(T::types[0]);
-
-  if (not id_layout.has_value() or not length_layout.has_value()) {
-    return false;
-  }
-
-  return std::ranges::all_of(T::types, [&](std::meta::info type) {
-    return get_id_layout(type) == id_layout and get_length_layout(type) == length_layout;
-  });
-}
-
-template<typename T>
-concept is_msg_list = is_msg_list_type<T>();
-
-/// True when `T`'s candidates carry an explicit `length` field on the wire, readable straight from
-/// the buffer without first knowing which candidate it is.
-template<typename T>
-concept explicit_length = is_msg_list<T> and has_length_field(T::types[0]);
-
-/// True when `T`'s candidates carry no `length` field -- the size is only known once the buffer's id
-/// resolves it to a concrete candidate, via that candidate's own wire size.
-template<typename T>
-concept implicit_length = is_msg_list<T> and not explicit_length<T>;
 
 template<identificable... T>
   requires(sizeof...(T) >= 1)
