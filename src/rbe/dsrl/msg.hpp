@@ -18,6 +18,8 @@
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/annotated_field.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
+#include "rbe/annotations/metadata.hpp"
+#include "rbe/core/message_list.hpp"
 
 // --- STD ---
 
@@ -29,9 +31,8 @@ namespace rbe::dsrl {
 template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
   requires(not custom_wirable<T>)
 class msg {
-  static constexpr auto local    = rbe::detail::merge_context(Ctx, ^^T);
-  static constexpr auto wire     = get_wire_layout<T, local>();
-  static constexpr auto metadata = get_metadata_layout(^^T);
+  static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
+  static constexpr auto wire  = get_wire_layout<T, local>();
 
 public:
   // --- Type traits ---
@@ -61,7 +62,7 @@ public:
   }
 
   [[nodiscard]] constexpr auto id() const
-    requires(metadata.id.has_value())
+    requires(rbe::identificable<value_type>)
   {
     return rbe::detail::read_id_field<value_type, Ctx>(data_);
   }

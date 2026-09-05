@@ -16,6 +16,7 @@
 #include <rbe/core/metadata_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/msg.hpp>
+#include "rbe/core/detail/context.hpp"
 
 // --- STD ---
 
@@ -23,7 +24,13 @@
 
 namespace rbe {
 
-consteval auto is_identificable(std::meta::info type) -> bool { return get_id_layout(type).has_value(); }
+consteval auto is_identificable(std::meta::info type, detail::context ctx = {}) -> bool {
+  return get_id_layout(type, ctx).has_value();
+}
+
+consteval auto has_length_field(std::meta::info type, detail::context ctx = {}) -> bool {
+  return get_length_layout(type, ctx).has_value();
+}
 
 template<typename T>
 concept identificable = wirable<T> and is_identificable(^^T);
@@ -48,6 +55,16 @@ consteval auto is_msg_list_type() -> bool {
 
 template<typename T>
 concept is_msg_list = is_msg_list_type<T>();
+
+/// True when `T`'s candidates carry an explicit `length` field on the wire, readable straight from
+/// the buffer without first knowing which candidate it is.
+template<typename T>
+concept explicit_length = is_msg_list<T> and has_length_field(T::types[0]);
+
+/// True when `T`'s candidates carry no `length` field -- the size is only known once the buffer's id
+/// resolves it to a concrete candidate, via that candidate's own wire size.
+template<typename T>
+concept implicit_length = is_msg_list<T> and not explicit_length<T>;
 
 template<identificable... T>
   requires(sizeof...(T) >= 1)

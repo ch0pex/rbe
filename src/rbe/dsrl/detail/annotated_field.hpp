@@ -71,6 +71,9 @@ constexpr auto read_id_field(std::span<std::byte const> const data) {
  */
 template<wirable T, context Ctx = context {}>
 constexpr auto read_length_field(std::span<std::byte const> const data) {
+  // NOTE: in the future when we support variable length messages with repeating groups
+  // we need at compilte to advise the user that if there is not length() annotation
+  // the message is not wirable
   if constexpr (get_annotated_member<rbe::length>(^^T, Ctx).has_value()) {
     return read_annotated_field<rbe::length, T, Ctx>(data);
   }
