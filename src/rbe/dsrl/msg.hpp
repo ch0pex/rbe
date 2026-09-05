@@ -14,7 +14,9 @@
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
+#include <rbe/core/metadata_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
+#include <rbe/dsrl/detail/annotated_field.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
 
 // --- STD ---
@@ -27,23 +29,20 @@ namespace rbe::dsrl {
 template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
   requires(not custom_wirable<T>)
 class msg {
-  // Resolved once, at construction type: T's own annotations override whatever ambient context was
-  // inherited, so a msg<T> nested arbitrarily deep still propagates correctly instead of resetting.
-  // NOTE: must reflect ^^T directly, not ^^value_type -- std::meta::annotations_of does not see
-  // through a type alias to the annotations on the type it names.
-  static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
-  static constexpr auto wire  = get_wire_layout<T, local>();
+  static constexpr auto local    = rbe::detail::merge_context(Ctx, ^^T);
+  static constexpr auto wire     = get_wire_layout<T, local>();
+  static constexpr auto metadata = get_metadata_layout(^^T);
 
 public:
   // --- Type traits ---
 
-  using value_type = T;
-  using size_type  = std::size_t;
-
+  using value_type  = T;
+  using size_type   = std::size_t;
+  using buffer_type = std::span<std::byte const>;
 
   // --- Constructors ---
 
-  constexpr explicit msg(std::span<std::byte const> const data) : data_(data) { }
+  constexpr explicit msg(buffer_type const data) : data_(data) { }
 
   template<static_string Name>
   constexpr auto field() const {
@@ -61,8 +60,24 @@ public:
     );
   }
 
+  [[nodiscard]] constexpr auto id() const
+    requires(metadata.id.has_value())
+  {
+    return rbe::detail::read_id_field<value_type, Ctx>(data_);
+  }
+
+  [[nodiscard]] constexpr auto length() const { return rbe::detail::read_length_field<value_type, Ctx>(data_); }
+
+  [[nodiscard]] auto as_span() const -> buffer_type { return data_.first(length()); }
+
+  /**
+   * @brief Exposes the underlying buffer as-is, without trimming it to this message's own length
+   * @return The raw buffer this proxy was constructed with, which may extend past this message
+   */
+  [[nodiscard]] constexpr auto data() const -> buffer_type { return data_; }
+
 private:
-  std::span<std::byte const> data_;
+  buffer_type data_;
 };
 
 } // namespace rbe::dsrl

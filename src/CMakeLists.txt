@@ -33,6 +33,7 @@ target_sources(
         rbe/core/detail/memcpy_constexpr.hpp
         rbe/core/detail/no_throw.hpp
         rbe/core/detail/normalize.hpp
+        rbe/core/overload.hpp
         rbe/core/detail/static_array.hpp
         rbe/core/detail/static_string.hpp
         rbe/core/custom.hpp
@@ -40,6 +41,7 @@ target_sources(
         rbe/core/fmt.hpp
         rbe/core/memory_layout.hpp
         rbe/core/message_list.hpp
+        rbe/core/metadata_layout.hpp
         rbe/core/trivially_wirable_concepts.hpp
         rbe/core/wirable_concepts.hpp
         rbe/core/wirable_primitives.hpp
@@ -47,9 +49,13 @@ target_sources(
         # deserialize
         rbe/dsrl/detail/deserialize_impl.hpp
         rbe/dsrl/detail/deserialize_member.hpp
+        rbe/dsrl/detail/message_dispatcher_impl.hpp
         rbe/dsrl/detail/return_type_impl.hpp
+        rbe/dsrl/any_msg.hpp
         rbe/dsrl/deserialize.hpp
+        rbe/dsrl/message_dispatcher_concept.hpp
         rbe/dsrl/msg.hpp
+        rbe/dsrl/packet.hpp
         rbe/dsrl/return_type.hpp
         rbe/dsrl/tags.hpp
 
