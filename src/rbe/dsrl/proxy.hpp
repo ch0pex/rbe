@@ -16,11 +16,14 @@
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
+#include <rbe/core/message_concepts.hpp>
+#include <rbe/core/metadata_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
 
 // --- STD ---
+#include <algorithm>
 
 // --- System ---
 
@@ -80,7 +83,7 @@ public:
   [[nodiscard]] constexpr auto data() const -> buffer_type { return data_; }
 
 private:
-  std::span<std::byte const> data_;
+  buffer_type data_;
 };
 
 } // namespace rbe::dsrl
