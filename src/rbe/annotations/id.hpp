@@ -23,8 +23,10 @@ namespace rbe {
 
 namespace detail {
 
-/// The id a message type is dispatched under -- the annotation value produced by `rbe::id(value)`.
-/// Never spelled directly: `struct [[=rbe::id(25)]] Heartbeat {};`
+/**
+ * The id a message type is dispatched under -- the annotation value produced by `rbe::id(value)`.
+ * Never spelled directly: `struct [[=rbe::id(25)]] Heartbeat {};`
+ */
 template<std::equality_comparable T>
 struct id_value {
   T value;
@@ -33,11 +35,13 @@ struct id_value {
 
 } // namespace detail
 
-/// `id` and `id(value)` are the two halves of message identity -- where the id lives on the wire, and
-/// which id a type is dispatched under -- so they share a dimension: they may not appear in the same
-/// annotation range (a field is one or the other, never both), and neither may repeat across the
-/// whole (deep) type. They are not exclusive with any other dimension: a message may carry an id and
-/// any of the length annotations.
+/**
+ * `id` and `id(value)` are the two halves of message identity -- where the id lives on the wire, and
+ * which id a type is dispatched under -- so they share a dimension: they may not appear in the same
+ * annotation range (a field is one or the other, never both), and neither may repeat across the
+ * whole (deep) type. They are not exclusive with any other dimension: a message may carry an id and
+ * any of the length annotations.
+ */
 struct id_dim {
   static constexpr auto kind = detail::dimension_kind::exclusive | detail::dimension_kind::unique;
 };

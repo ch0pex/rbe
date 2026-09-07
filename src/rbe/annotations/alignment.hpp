@@ -18,13 +18,17 @@
 
 namespace rbe {
 
-/// The alignment strategies a type or member can be annotated with. There is no explicit spelling
-/// for `native` (regular padded layout) -- same reasoning as `endian::order::native` having none:
-/// it's only ever reached implicitly, as the value nothing along the way overrode.
+/**
+ * The alignment strategies a type or member can be annotated with. There is no explicit spelling
+ * for `native` (regular padded layout) -- same reasoning as `endian::order::native` having none:
+ * it's only ever reached implicitly, as the value nothing along the way overrode.
+ */
 enum class alignment_mode : std::uint8_t { native, pack, align };
 
-/// At most one alignment-dimension annotation may appear within a single annotation range. The
-/// implicit default (no explicit annotation anywhere in scope) is `native` -- regular padded layout.
+/**
+ * At most one alignment-dimension annotation may appear within a single annotation range. The
+ * implicit default (no explicit annotation anywhere in scope) is `native` -- regular padded layout.
+ */
 struct alignment_dim {
   static constexpr auto kind          = detail::dimension_kind::exclusive;
   static constexpr auto default_value = alignment_mode::native;

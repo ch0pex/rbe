@@ -52,8 +52,10 @@ template<wirable_range T, context Ctx = context {}>
   requires(not trivially_wirable_range<T> or Ctx != context {})
 constexpr auto serialize(std::span<std::byte>, T const&) -> std::size_t;
 
-/// Fast path: nothing has forced a non-default context onto this member, so it's safe to serialize
-/// with a single direct memory copy -- exactly today's behavior/optimization, unchanged.
+/**
+ * Fast path: nothing has forced a non-default context onto this member, so it's safe to serialize
+ * with a single direct memory copy -- exactly today's behavior/optimization, unchanged.
+ */
 template<trivially_wirable T, context Ctx>
   requires(Ctx == context {})
 constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {
@@ -61,15 +63,19 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
   return sizeof(value);
 }
 
-/// Serializes a custom-wirable type via its `custom<T>::serialize` specialization. The wire format is
-/// entirely user-defined, so the ambient context never applies to it.
+/**
+ * Serializes a custom-wirable type via its `custom<T>::serialize` specialization. The wire format is
+ * entirely user-defined, so the ambient context never applies to it.
+ */
 template<custom_wirable T, context Ctx>
 constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {
   return rbe::custom<std::remove_cvref_t<decltype(value)>>::serialize(out, value);
 }
 
-/// A primitive that would otherwise be memcpy-able alone, but an ancestor's annotation forces a
-/// specific byte order onto it -- write it with that order applied explicitly.
+/**
+ * A primitive that would otherwise be memcpy-able alone, but an ancestor's annotation forces a
+ * specific byte order onto it -- write it with that order applied explicitly.
+ */
 template<trivially_wirable_primitive T, context Ctx>
   requires(Ctx != context {})
 constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {

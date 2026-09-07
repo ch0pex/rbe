@@ -36,8 +36,10 @@ struct context {
   friend constexpr bool operator==(context, context) = default; ///< required: NTTPs must be structural types
 };
 
-/// Overwrites `ambient` with whatever `entity` explicitly annotates itself; leaves everything else
-/// inherited from `ambient` untouched.
+/**
+ * Overwrites `ambient` with whatever `entity` explicitly annotates itself; leaves everything else
+ * inherited from `ambient` untouched.
+ */
 consteval auto merge_context(context const ambient, std::meta::info const entity) -> context {
   context result = ambient;
   if (auto v = resolve_in_scope<endian::order>(entity)) {

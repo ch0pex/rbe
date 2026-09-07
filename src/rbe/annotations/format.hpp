@@ -25,7 +25,9 @@ inline constexpr struct {} fmt {}; /// < format message for debugging purposes
 
 } // namespace rbe
 
-/// `fmt` opts into RBE annotation identity but belongs to no dimension: no correctness rule is ever
-/// enforced for it, and well_annotated's generic dimension loop never even sees it.
+/**
+ * `fmt` opts into RBE annotation identity but belongs to no dimension: no correctness rule is ever
+ * enforced for it, and well_annotated's generic dimension loop never even sees it.
+ */
 template<>
 struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::fmt)>> { };

@@ -20,10 +20,12 @@
 
 namespace rbe {
 
-/// A field encodes exactly one length, so the three annotations may not share an annotation range;
-/// across the whole (deep) type each is independently unique -- a message may carry any combination
-/// of frame/payload/header lengths, each at most once.
-/// NOTE: length annotations require an entity convertible to std::size_t
+/**
+ * A field encodes exactly one length, so the three annotations may not share an annotation range;
+ * across the whole (deep) type each is independently unique -- a message may carry any combination
+ * of frame/payload/header lengths, each at most once.
+ * NOTE: length annotations require an entity convertible to std::size_t
+ */
 struct length_dim {
   static constexpr auto kind = detail::dimension_kind::exclusive | detail::dimension_kind::unique;
 };

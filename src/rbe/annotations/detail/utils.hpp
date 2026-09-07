@@ -15,14 +15,18 @@
 
 namespace rbe::detail {
 
-/// NOTE: most annotations are variables with anonymous types, however those annotations that require arguments are
-/// types so we need to normalize them into a list of types to define dimensions
+/**
+ * NOTE: most annotations are variables with anonymous types, however those annotations that require arguments are
+ * types so we need to normalize them into a list of types to define dimensions
+ */
 consteval auto types_list(auto... args) {
   return std::array<std::meta::info, sizeof...(args)> {normalize_type(args)...};
 }
 
-/// The RBE annotations written directly on `entity` (a type or a non-static data member) -- derive<...>
-/// lists already expanded, non-RBE attributes already filtered out.
+/**
+ * The RBE annotations written directly on `entity` (a type or a non-static data member) -- derive<...>
+ * lists already expanded, non-RBE attributes already filtered out.
+ */
 consteval auto rbe_annotations(std::meta::info const entity) -> std::vector<std::meta::info> {
   std::vector<std::meta::info> raw_annotations;
   if (is_nonstatic_data_member(entity) or std::meta::is_type(entity)) {
@@ -79,8 +83,10 @@ consteval auto has_annotation(std::ranges::range auto const& annotations, auto v
   });
 }
 
-/// Single entry point: `value` may be a plain annotation OR a `derive<...>` list -- both normalize
-/// through the same `views::rbe_annotations` range, so there is exactly one code path.
+/**
+ * Single entry point: `value` may be a plain annotation OR a `derive<...>` list -- both normalize
+ * through the same `views::rbe_annotations` range, so there is exactly one code path.
+ */
 consteval auto has_annotation(std::meta::info const info, auto value) -> bool
   requires annotation<decltype(value)> or annotation_list<decltype(value)>
 {
@@ -88,10 +94,12 @@ consteval auto has_annotation(std::meta::info const info, auto value) -> bool
   return has_annotation(haystack, value);
 }
 
-/// Flattens a single raw attribute into the RBE annotation VALUES it denotes (a `derive<...>` list
-/// expands into its filtered constituents, a plain annotation is itself, anything else vanishes).
-/// Unlike `views::rbe_annotations`/`annotation_range`, this does NOT normalize to types -- it must
-/// preserve the actual values so `value_of` can `extract<T>` them.
+/**
+ * Flattens a single raw attribute into the RBE annotation VALUES it denotes (a `derive<...>` list
+ * expands into its filtered constituents, a plain annotation is itself, anything else vanishes).
+ * Unlike `views::rbe_annotations`/`annotation_range`, this does NOT normalize to types -- it must
+ * preserve the actual values so `value_of` can `extract<T>` them.
+ */
 consteval auto rbe_annotation_values(std::meta::info const raw) -> std::vector<std::meta::info> {
   if (is_annotation_list(raw)) {
     return template_arguments_of(type_of(raw)) | std::views::filter(is_rbe_annotation) | std::ranges::to<std::vector>();
@@ -99,8 +107,10 @@ consteval auto rbe_annotation_values(std::meta::info const raw) -> std::vector<s
   return is_rbe_annotation(raw) ? std::vector {raw} : std::vector<std::meta::info> {};
 }
 
-/// Same annotation range as `annotation_range` (member's own, unioned with its type's own), but
-/// preserving values instead of normalizing to types -- the range `resolve_in_scope` searches.
+/**
+ * Same annotation range as `annotation_range` (member's own, unioned with its type's own), but
+ * preserving values instead of normalizing to types -- the range `resolve_in_scope` searches.
+ */
 consteval auto annotation_values(std::meta::info const entity) -> std::vector<std::meta::info> {
   std::vector<std::meta::info> result;
   for (auto const a: std::meta::annotations_of(entity)) {
@@ -114,8 +124,10 @@ consteval auto annotation_values(std::meta::info const entity) -> std::vector<st
   return result;
 }
 
-/// Searches entity's REQ-058..061 annotation range (its own annotations, unioned with its type's own
-/// annotations for a member) for the first annotation that yields a `T`.
+/**
+ * Searches entity's REQ-058..061 annotation range (its own annotations, unioned with its type's own
+ * annotations for a member) for the first annotation that yields a `T`.
+ */
 template<typename T>
 consteval auto resolve_in_scope(std::meta::info const entity) -> std::optional<T> {
   for (auto const a: annotation_values(entity)) {
@@ -126,8 +138,10 @@ consteval auto resolve_in_scope(std::meta::info const entity) -> std::optional<T
   return std::nullopt;
 }
 
-/// Replaces the endianness-specific `endiannes_from_annotation`/`has_endianness_annotation`/
-/// `get_member_endianness` chain with one function, generically, for ANY value-bearing dimension.
+/**
+ * Replaces the endianness-specific `endiannes_from_annotation`/`has_endianness_annotation`/
+ * `get_member_endianness` chain with one function, generically, for ANY value-bearing dimension.
+ */
 template<typename T>
 consteval auto resolve(std::meta::info const parent, std::meta::info const member, std::meta::info const dim) -> T {
   if (auto v = resolve_in_scope<T>(member)) {

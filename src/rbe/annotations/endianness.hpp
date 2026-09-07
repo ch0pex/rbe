@@ -19,10 +19,12 @@
 
 namespace rbe {
 
-/// At most one endianness-dimension annotation may appear within a single annotation range. The
-/// implicit default (no explicit annotation anywhere in scope) is the platform's native byte order,
-/// resolved at compile time -- there is no explicit `native` spelling; see docs/explanation/
-/// annotation-system-v2.md for why.
+/**
+ * At most one endianness-dimension annotation may appear within a single annotation range. The
+ * implicit default (no explicit annotation anywhere in scope) is the platform's native byte order,
+ * resolved at compile time -- there is no explicit `native` spelling; see docs/explanation/
+ * annotation-system-v2.md for why.
+ */
 struct endianness_dim {
   static constexpr auto kind          = detail::dimension_kind::exclusive;
   static constexpr auto default_value = endian::order::native;

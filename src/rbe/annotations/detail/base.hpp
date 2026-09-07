@@ -28,8 +28,10 @@ consteval auto is_annotation_list(std::meta::info info) -> bool {
   return has_template_arguments(info) and template_of(info) == ^^annotations_t;
 }
 
-/// An entity is a first-class RBE annotation iff it opts in via `annotation_traits<T>` (dimension.hpp)
-/// -- either directly, or by being a `derive<...>` list thereof.
+/**
+ * An entity is a first-class RBE annotation iff it opts in via `annotation_traits<T>` (dimension.hpp)
+ * -- either directly, or by being a `derive<...>` list thereof.
+ */
 consteval auto is_rbe_annotation(std::meta::info info) -> bool {
   auto const type = normalize_type(info);
   return is_annotation_list(type) or is_marked_annotation(type);
