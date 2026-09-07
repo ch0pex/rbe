@@ -16,7 +16,8 @@
 #include <rbe/annotations/detail/correctness.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/format.hpp>
-#include <rbe/annotations/metadata.hpp>
+#include <rbe/annotations/id.hpp>
+#include <rbe/annotations/length.hpp>
 #include <rbe/annotations/well_annotated_concepts.hpp>
 
 // --- STD ---

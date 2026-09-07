@@ -66,7 +66,7 @@ The four tag types (`rbe::dsrl::eager_t`, `lazy_t`, `in_place_t`, `in_place_mut_
 
 ## Planned
 
-🚧 **Type-erased dispatch — `any_msg`.** A struct annotated `=rbe::id` (see [Annotations Reference](annotations.md#metadata)) is meant to participate in dispatch through `rbe::any_msg<MessageList>`, holding a message of any registered type and exposing `visit`/`match` so callers can process an incoming buffer without knowing its concrete type upfront:
+🚧 **Type-erased dispatch — `any_msg`.** A struct annotated `=rbe::id` (see [Annotations Reference](annotations.md#message-id)) is meant to participate in dispatch through `rbe::any_msg<MessageList>`, holding a message of any registered type and exposing `visit`/`match` so callers can process an incoming buffer without knowing its concrete type upfront:
 
 ```cpp
 rbe::any_msg<cboe::msgs> msg = receive(buffer);

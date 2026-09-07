@@ -17,7 +17,8 @@ Annotations are grouped into orthogonal **dimensions**. At most one annotation f
 |---|---|---|
 | Endianness | `little`, `big`, `bits` (native is the implicit default, no explicit spelling) | at most one per annotation range |
 | Alignment | `pack`, `align` | at most one per annotation range |
-| Metadata | `id`, `frame_length`, `payload_length`, `header_length` | each may appear at most once across the whole (possibly nested) type |
+| Id | `id` | may appear at most once across the whole (possibly nested) type |
+| Length | `frame_length`, `payload_length`, `header_length` | each may appear at most once across the whole (possibly nested) type |
 | — (unconstrained) | `fmt` | none — freely repeatable/combinable |
 
 Struct-level annotations are inherited by every member; a member's own annotations (or its type's annotations, for nested structs) take precedence and fully replace the inherited ones on a per-dimension basis.
@@ -45,18 +46,27 @@ Header: `rbe/annotations/alignment.hpp`
 | `=rbe::pack` | struct, member | The annotated struct's members are packed on the wire with no padding between them. |
 | `=rbe::align` | struct, member | Explicit opt-in to standard (non-packed) C++ alignment. Functionally equivalent to omitting an alignment annotation; provided so that alignment can be stated explicitly, e.g. to override an inherited `pack`. |
 
-## Metadata
+## Message id
 
-Header: `rbe/annotations/metadata.hpp`
+Header: `rbe/annotations/id.hpp`
 
 | Annotation | Scope | Description |
 |---|---|---|
-| `=rbe::id` | member | Marks the field that identifies the message type. Reserved for the type-erased dispatch mechanism (`any_msg`) described in the design overview — **dispatch is not implemented yet**; today the annotation only participates in the metadata dimension's uniqueness check. |
+| `=rbe::id` | member | Marks the field that identifies the message type. Reserved for the type-erased dispatch mechanism (`any_msg`) described in the design overview — **dispatch is not implemented yet**; today the annotation only participates in the id dimension's uniqueness check. |
+
+The annotated field must be equality comparable.
+
+## Length
+
+Header: `rbe/annotations/length.hpp`
+
+| Annotation | Scope | Description |
+|---|---|---|
 | `=rbe::frame_length` | member | Marks the field that encodes the total frame length on the wire — header + payload. |
 | `=rbe::payload_length` | member | Marks the field that encodes the payload length — the frame minus its header. |
 | `=rbe::header_length` | member | Marks the field that encodes the header length. |
 
-The three length annotations are independent: a message may carry any combination of them, each at most once across the whole (possibly nested) type. Like `id`, they currently only participate in the metadata dimension's uniqueness check — **none of them is read by serialization/deserialization yet**.
+The three are independent: a message may carry any combination of them, each at most once across the whole (possibly nested) type. The annotated field must be convertible to `std::size_t`. Like `id`, they currently only participate in their dimension's uniqueness check — **none of them is read by serialization/deserialization yet**.
 
 ## Debugging
 

@@ -23,7 +23,8 @@ target_sources(
         rbe/annotations/derive.hpp
         rbe/annotations/endianness.hpp
         rbe/annotations/format.hpp
-        rbe/annotations/metadata.hpp
+        rbe/annotations/id.hpp
+        rbe/annotations/length.hpp
         rbe/annotations/well_annotated_concepts.hpp
 
         # Core

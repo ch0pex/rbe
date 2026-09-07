@@ -15,7 +15,8 @@
 #include <rbe/annotations/detail/base.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/format.hpp>
-#include <rbe/annotations/metadata.hpp>
+#include <rbe/annotations/id.hpp>
+#include <rbe/annotations/length.hpp>
 #include <rbe/core/custom.hpp>
 
 #include <type_traits>

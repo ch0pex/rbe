@@ -44,7 +44,7 @@ enum class dimension_kind : std::uint8_t {
 };
 ```
 
-`exclusive` is the current `alignment`/`endianness` rule (`[[=rbe::little, =rbe::big]]` conflicts). `unique` is the current metadata rule — `id`, `frame_length`, `payload_length` and `header_length` are *not* mutually exclusive with each other, but each must not repeat across the whole (possibly nested) message.
+`exclusive` is the current `alignment`/`endianness` rule (`[[=rbe::little, =rbe::big]]` conflicts). `unique` is the current `id`/length rule — `id`, `frame_length`, `payload_length` and `header_length` are *not* mutually exclusive with each other, but each must not repeat across the whole (possibly nested) message.
 
 ### Adding an annotation to a dimension becomes one colocated block
 
@@ -492,7 +492,7 @@ This is a self-contained follow-up design (touching the `wirable`/`trivially_wir
 | `annotations/detail/base.hpp` | `base_annotation` removed; `is_rbe_annotation` becomes trait-completeness-based instead of `bases_of`-walking. |
 | `annotations/detail/view.hpp`, `detail/utils.hpp` | Unchanged in shape; `has_annotation` collapses to one overload. |
 | `annotations/detail/correctness.hpp` | Central `alignment`/`endianness`/`global_unique` lists removed; `well_annotated` becomes a generic loop over the dimensions actually found on a type. |
-| `annotations/alignment.hpp`, `endianness.hpp`, `metadata.hpp`, `format.hpp` | Each annotation gains a colocated `annotation_traits<T>` specialization; `endianness.hpp` additionally reuses `std::endian` for `little`/`big`. |
+| `annotations/alignment.hpp`, `endianness.hpp`, `id.hpp`, `length.hpp`, `format.hpp` | Each annotation gains a colocated `annotation_traits<T>` specialization; `endianness.hpp` additionally reuses `std::endian` for `little`/`big`. |
 | `annotations/derive.hpp` | No change. |
 | `core/memory_layout.hpp` | `endiannes_from_annotation`/`has_endianness_annotation`/`get_member_endianness` collapse into one call to the generic `resolve<endian::order>`. |
 | `tests/common/common_structs.hpp`, `tests/static/test_annotations.cpp` | Mechanical fallout: `annotation_a`/`annotation_c` gain a trait specialization instead of inheriting `base_annotation`; a couple of assertions that iterated the old central lists need rewriting against the new discovery mechanism. |
