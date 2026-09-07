@@ -17,7 +17,7 @@ Annotations are grouped into orthogonal **dimensions**. At most one annotation f
 |---|---|---|
 | Endianness | `little`, `big`, `bits` (native is the implicit default, no explicit spelling) | at most one per annotation range |
 | Alignment | `pack`, `align` | at most one per annotation range |
-| Metadata | `id`, `length` | each may appear at most once across the whole (possibly nested) type |
+| Metadata | `id`, `frame_length`, `payload_length`, `header_length` | each may appear at most once across the whole (possibly nested) type |
 | — (unconstrained) | `fmt` | none — freely repeatable/combinable |
 
 Struct-level annotations are inherited by every member; a member's own annotations (or its type's annotations, for nested structs) take precedence and fully replace the inherited ones on a per-dimension basis.
@@ -52,7 +52,11 @@ Header: `rbe/annotations/metadata.hpp`
 | Annotation | Scope | Description |
 |---|---|---|
 | `=rbe::id` | member | Marks the field that identifies the message type. Reserved for the type-erased dispatch mechanism (`any_msg`) described in the design overview — **dispatch is not implemented yet**; today the annotation only participates in the metadata dimension's uniqueness check. |
-| `=rbe::length` | member | Marks the field that encodes the wire length of the message. Currently only participates in the metadata dimension's uniqueness check — **not yet read by serialization/deserialization**. |
+| `=rbe::frame_length` | member | Marks the field that encodes the total frame length on the wire — header + payload. |
+| `=rbe::payload_length` | member | Marks the field that encodes the payload length — the frame minus its header. |
+| `=rbe::header_length` | member | Marks the field that encodes the header length. |
+
+The three length annotations are independent: a message may carry any combination of them, each at most once across the whole (possibly nested) type. Like `id`, they currently only participate in the metadata dimension's uniqueness check — **none of them is read by serialization/deserialization yet**.
 
 ## Debugging
 

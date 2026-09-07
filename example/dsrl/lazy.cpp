@@ -25,7 +25,7 @@
 using namespace rbe;
 struct[[= rbe::derive<pack, little>]] Trade {
   [[rbe::id]] std::uint8_t message_type; // identifies message
-  [[rbe::length]] std::uint16_t length; // total message size
+  [[rbe::frame_length]] std::uint16_t length; // total message size
   std::uint32_t trade_id; // trade identifier
   std::uint32_t buyer_id; // buyer party
   std::uint32_t seller_id; // seller party

@@ -76,4 +76,4 @@ msg.match(
 );
 ```
 
-The registry of dispatchable types is meant to be built from [`rbe::msg_list<T...>`](annotations.md) (`rbe/core/message_list.hpp`), which already exposes the set as `type_list`, `variant_type`, and `tuple_type`. Neither `any_msg` nor a way to iterate a `msg_list` and read back each member's `=rbe::id` / `=rbe::length` metadata (e.g. to build a dispatch table, keyed by id, at compile time) exists yet.
+The registry of dispatchable types is meant to be built from [`rbe::msg_list<T...>`](annotations.md) (`rbe/core/message_list.hpp`), which already exposes the set as `type_list`, `variant_type`, and `tuple_type`. Neither `any_msg` nor a way to iterate a `msg_list` and read back each member's `=rbe::id` / `=rbe::frame_length` metadata (e.g. to build a dispatch table, keyed by id, at compile time) exists yet.

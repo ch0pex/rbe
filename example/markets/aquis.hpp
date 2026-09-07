@@ -15,7 +15,7 @@
  * Every market data message starts with a 6-byte header carrying the
  * message type, its total wire length, and the stream sequence number.
  * It is expressed as a nested `Header` field so that `rbe::id` and
- * `rbe::length` are declared once and dispatch/framing work through
+ * `rbe::frame_length` are declared once and dispatch/framing work through
  * introspection of the nested struct.
  */
 #pragma once
@@ -132,11 +132,11 @@ struct[[= rbe::pack_le]] PacketHeader {
 ///
 /// Each message struct embeds this as its first member and default-
 /// initializes `msg_type` and `length` to its own compile-time values.
-/// The `rbe::id` and `rbe::length` annotations live here so they are
+/// The `rbe::id` and `rbe::frame_length` annotations live here so they are
 /// declared exactly once for the whole protocol.
 struct[[= rbe::pack_le]] Header {
   [[= rbe::id]] message_type_t msg_type {};
-  [[= rbe::length]] std::uint8_t length {};
+  [[= rbe::frame_length]] std::uint8_t length {};
   std::uint32_t seq_no {};
 };
 

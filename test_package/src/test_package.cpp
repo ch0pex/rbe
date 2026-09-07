@@ -25,7 +25,7 @@ using namespace rbe;
 
 struct[[= rbe::derive<pack, little, fmt>]] Order {
   [[rbe::id]] std::uint8_t message_type; // identifies message
-  [[rbe::length]] std::uint16_t length; // total message size
+  [[rbe::frame_length]] std::uint16_t length; // total message size
   std::uint32_t order_id; // order identifier
   std::uint16_t quantity; // order quantity
   std::uint32_t price; // price (scaled)

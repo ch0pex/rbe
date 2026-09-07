@@ -100,7 +100,7 @@ struct [[=rbe::pack]] PacketHeader {
 };
 
 struct [[=rbe::little, =rbe::pack]] AddOrder {
-  [[=rbe::length]] std::uint8_t length;
+  [[=rbe::frame_length]] std::uint8_t length;
   [[=rbe::id]] std::uint8_t message_type;
   std::uint32_t time_offset;
   std::uint32_t order_id;
@@ -112,7 +112,7 @@ struct [[=rbe::little, =rbe::pack]] AddOrder {
 
 [[=rbe::little]]
 struct ReduceSize {
-  [[=rbe::length]] std::uint8_t length;
+  [[=rbe::frame_length]] std::uint8_t length;
   [[=rbe::id]] std::uint8_t message_type;
   std::uint32_t time_offset;
   std::uint64_t order_id;
@@ -333,7 +333,7 @@ struct[[=rbe::little]] TestLittle{};
 struct[[=rbe::big]]    TestBig{};
 struct[[=rbe::pack]]   TestPack{};
 struct[[=rbe::id]]     TestId{};
-struct[[=rbe::length]] TestLength{};
+struct[[=rbe::frame_length]] TestLength{};
 struct[[=rbe::debug]]  TestDebug{};
 
 inline constexpr struct {} annotation_a {};
@@ -424,12 +424,12 @@ struct [[=rbe::pack]] NestedPackParent {
 };
 
 struct LenghtAnnotatedTwice {
-  [[=rbe::length]] std::uint32_t length;
-  [[=rbe::length]] std::uint32_t length2;
+  [[=rbe::frame_length]] std::uint32_t length;
+  [[=rbe::frame_length]] std::uint32_t length2;
 };
 
 struct LenghtNotConvertible {
-  [[=rbe::length]] NestedPackLeaf length; // not convertible to std::size_t
+  [[=rbe::frame_length]] NestedPackLeaf length; // not convertible to std::size_t
 };
 
 struct IdAnnotatedTwice {

@@ -44,7 +44,7 @@ enum class dimension_kind : std::uint8_t {
 };
 ```
 
-`exclusive` is the current `alignment`/`endianness` rule (`[[=rbe::little, =rbe::big]]` conflicts). `unique` is the current `id`/`length` rule — `id` and `length` are *not* mutually exclusive with each other, but each must not repeat across the whole (possibly nested) message.
+`exclusive` is the current `alignment`/`endianness` rule (`[[=rbe::little, =rbe::big]]` conflicts). `unique` is the current metadata rule — `id`, `frame_length`, `payload_length` and `header_length` are *not* mutually exclusive with each other, but each must not repeat across the whole (possibly nested) message.
 
 ### Adding an annotation to a dimension becomes one colocated block
 
@@ -482,7 +482,7 @@ While designing the above, the need for a `count(field_name)` annotation came up
 - With a `count`-driven member, the wire size of the type as a whole can only be known **at runtime**: for serialization, from the live object's `.size()`; for deserialization, only after the count-source field has actually been read off the buffer (which is why it must appear *before* the variable-length field on the wire — a natural consequence of REQ-051/052, fixed field order).
 - This means such types need a second, explicitly runtime code path: `wire_size_of(value)` (taking the actual object, not just `<T>()`), and `srl::serialize`/`dsrl::deserialize` walking members with a *running byte cursor* that accumulates as it goes, instead of looking up a precomputed static offset per member. `dsrl::msg<T>::field<Index>()` (today true random access, since offsets are constant) would also need to become effectively sequential for any field positioned after a variable-length one.
 
-This is a self-contained follow-up design (touching the `wirable`/`trivially_wirable` concept hierarchy, `core/memory_layout.hpp`, `srl/serialize.hpp`, `dsrl/deserialize.hpp`, and `dsrl/msg.hpp`), deliberately **out of scope** for the annotation-system redesign described in this document. `count` should be declared (dimension + `member_only` scope) alongside the other annotations when the system above is implemented, but left without a consumer — the same state `id`/`length` are in today.
+This is a self-contained follow-up design (touching the `wirable`/`trivially_wirable` concept hierarchy, `core/memory_layout.hpp`, `srl/serialize.hpp`, `dsrl/deserialize.hpp`, and `dsrl/msg.hpp`), deliberately **out of scope** for the annotation-system redesign described in this document. `count` should be declared (dimension + `member_only` scope) alongside the other annotations when the system above is implemented, but left without a consumer — the same state `id` and the `*_length` annotations are in today.
 
 ## Summary of files touched (when this is implemented)
 

@@ -348,7 +348,7 @@ struct[[= rbe::pack_be]] BlockHeader {
 // (Administrative messages carry a separate `msg_data_length` field
 // inside the message body); message length is derived from the
 // (category, msg_indicator) tuple per §5. As a result no
-// `[[= rbe::length]]` is applied here.
+// `[[= rbe::frame_length]]` is applied here.
 // ─────────────────────────────────────────────────────────────────────
 
 struct[[= rbe::pack_be]] Header {

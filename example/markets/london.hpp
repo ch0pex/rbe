@@ -17,7 +17,7 @@
  * by one or more back-to-back messages. Every message starts with a
  * 3-byte header carrying its 2-byte length and 1-byte type code. It is
  * expressed here as a nested `Header` field so that `rbe::id` and
- * `rbe::length` are declared once and dispatch/framing work through
+ * `rbe::frame_length` are declared once and dispatch/framing work through
  * introspection of the nested struct.
  */
 #pragma once
@@ -372,10 +372,10 @@ struct[[= rbe::pack_le]] UnitHeader {
 ///
 /// Each message struct embeds this as its first member and default-
 /// initializes `length` and `msg_type` to its own compile-time values.
-/// The `rbe::id` and `rbe::length` annotations live here so they are
+/// The `rbe::id` and `rbe::frame_length` annotations live here so they are
 /// declared exactly once for the whole protocol.
 struct[[= rbe::pack_le]] Header {
-  [[= rbe::length]] std::uint16_t length {};
+  [[= rbe::frame_length]] std::uint16_t length {};
   [[= rbe::id]] message_type_t msg_type {};
 };
 

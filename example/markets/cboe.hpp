@@ -23,7 +23,7 @@
  *    the wire size is fixed per message type.
  *
  * Each message struct embeds a protocol-specific `Header` as its
- * first member so `rbe::id` (and `rbe::length` where applicable) are
+ * first member so `rbe::id` (and `rbe::frame_length` where applicable) are
  * declared once per protocol.
  */
 #pragma once
@@ -250,10 +250,10 @@ struct[[=rbe::pack_le]] SequencedUnitHeader {
 /// 2-byte header prefix of every PITCH / GRP / Spin message. Cboe puts
 /// `length` FIRST (offset 0), then the message type (offset 1). Each
 /// message struct embeds this as its first member and defaults both
-/// fields to its compile-time values; `rbe::id` and `rbe::length` are
+/// fields to its compile-time values; `rbe::id` and `rbe::frame_length` are
 /// declared exactly once for the whole protocol here.
 struct[[=rbe::pack_le]] Header {
-  [[= rbe::length]] std::uint8_t length {};
+  [[= rbe::frame_length]] std::uint8_t length {};
   [[= rbe::id]] message_type_t msg_type {};
 };
 

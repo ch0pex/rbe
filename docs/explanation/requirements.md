@@ -7,7 +7,7 @@
 - **REQ-001**: The library must support declaring binary protocols using plain C++ structs
 - **REQ-002**: Layout must be expressed through the type system, not annotations
 - **REQ-003**: The library must provide struct-level annotations: `=rbe::little`, `=rbe::big`, `=rbe::pack`
-- **REQ-004**: The library must provide field-level annotations: `=rbe::id`, `=rbe::length`, and per-field endianness overrides
+- **REQ-004**: The library must provide field-level annotations: `=rbe::id`, the length annotations (`=rbe::frame_length`, `=rbe::payload_length`, `=rbe::header_length`), and per-field endianness overrides
 - **REQ-005**: The library must provide non-standard layout types: `rbe::uint24_t`, `rbe::uint48_t`, `rbe::padding<N>`, `rbe::string<N>`, `rbe::vector<T, N>`
 
 ### Serialization

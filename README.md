@@ -43,7 +43,7 @@ struct [[=rbe::pack_le]] PacketHeader {
 };
 
 struct [[=rbe::pack_le]] AddOrder {
-    [[=rbe::length]] std::uint8_t  length;
+    [[=rbe::frame_length]] std::uint8_t  length;
     [[=rbe::id]]     std::uint8_t  message_type;
     std::uint32_t time_offset;
     std::uint32_t order_id;
@@ -54,7 +54,7 @@ struct [[=rbe::pack_le]] AddOrder {
 };
 
 struct [[=rbe::pack_le]] ReduceSize {
-    [[=rbe::length]] std::uint8_t  length;
+    [[=rbe::frame_length]] std::uint8_t  length;
     [[=rbe::id]]     std::uint8_t  message_type;
     std::uint32_t time_offset;
     std::uint64_t order_id;
@@ -89,12 +89,14 @@ rbe::serialize(buffer, cboe::AddOrder{});
 | `=rbe::big` | struct, member | Big-endian byte order |
 | `=rbe::pack` | struct, member | Fields are packed without padding |
 | `=rbe::align` | struct, member | Explicit standard C++ alignment (the implicit default) |
-| `=rbe::length` | member | Marks the field that encodes the message length |
+| `=rbe::frame_length` | member | Marks the field that encodes the total frame length (header + payload) |
+| `=rbe::payload_length` | member | Marks the field that encodes the payload length |
+| `=rbe::header_length` | member | Marks the field that encodes the header length |
 | `=rbe::id` | member | Marks the field that encodes the message type ID |
 | `=rbe::fmt` | struct | Opts the type into RBE's `std::format`/`std::ostream` debug formatter |
 | `=rbe::derive<...>` | struct, member | Groups several annotations under one `=` clause; `rbe::pack_le`, `rbe::pack_be`, and `rbe::debug` are built-in presets |
 
-`little`/`big` and `pack`/`align` are each mutually exclusive within the same scope; `id`/`length` may each appear once per (possibly nested) type. See [`docs/reference/annotations.md`](docs/reference/annotations.md) for the full inheritance and conflict rules.
+`little`/`big` and `pack`/`align` are each mutually exclusive within the same scope; `id` and the three `*_length` annotations may each appear once per (possibly nested) type. See [`docs/reference/annotations.md`](docs/reference/annotations.md) for the full inheritance and conflict rules.
 
 ## Building
 

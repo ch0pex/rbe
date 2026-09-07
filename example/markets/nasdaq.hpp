@@ -317,10 +317,10 @@ enum class open_eligibility_status_t : std::uint8_t {
 ///   [5..7)  tracking_number — Nasdaq internal tracking number
 ///   [7..13) timestamp      — nanoseconds since midnight (Eastern Time)
 ///
-/// The `rbe::id` and `rbe::length` annotations live here so they are
+/// The `rbe::id` and `rbe::frame_length` annotations live here so they are
 /// declared exactly once for the whole protocol.
 struct[[= rbe::pack_be]] Header {
-  [[= rbe::length]] std::uint16_t length {};
+  [[= rbe::frame_length]] std::uint16_t length {};
   [[= rbe::id]] message_type_t msg_type {};
   stock_locate_t stock_locate {};
   tracking_number_t tracking_number {};
