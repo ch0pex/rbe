@@ -23,12 +23,13 @@ Layout is expressed through the type system rather than annotations. Field sizes
 | `=rbe::little` | All fields in the struct are little-endian on the wire. |
 | `=rbe::big` | All fields in the struct are big-endian on the wire. |
 | `=rbe::pack` | The struct is packed — no padding between fields. |
+| `=rbe::id(value)` | Declares the id the message type is dispatched under. Reserved for `any_msg` type-erased dispatch (🚧 **Planned**, see below). |
 
 ### Field-level annotations
 
 | Annotation | Description |
 |---|---|
-| `=rbe::id` | Marks the field that identifies the message type. Reserved for `any_msg` type-erased dispatch (🚧 **Planned**, see below). |
+| `=rbe::id` | Marks the field the id is read from on the wire. Reserved for `any_msg` type-erased dispatch (🚧 **Planned**, see below). |
 | `=rbe::frame_length` | Marks the field that encodes the total frame length (header + payload). Not yet read by serialization/deserialization. |
 | `=rbe::payload_length` | Marks the field that encodes the payload length (frame minus header). Not yet read by serialization/deserialization. |
 | `=rbe::header_length` | Marks the field that encodes the header length. Not yet read by serialization/deserialization. |

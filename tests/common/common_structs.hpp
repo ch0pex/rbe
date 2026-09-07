@@ -446,4 +446,35 @@ struct IdNotEqualityComparable {
   [[=rbe::id]] NoEqualityComparable id; // not equality comparable
 };
 
+struct AllLengths {
+  [[=rbe::frame_length]]   std::uint16_t frame;
+  [[=rbe::payload_length]] std::uint16_t payload;
+  [[=rbe::header_length]]  std::uint8_t  header;
+};
+
+struct LengthsInOneRange {
+  [[=rbe::frame_length, =rbe::payload_length]] std::uint16_t length; // a field encodes exactly one length
+};
+
+enum class test_msg_type_t : std::uint8_t { heartbeat = 25, add_order = 26 };
+
+struct IdHeader {
+  [[=rbe::id]] test_msg_type_t type;
+};
+
+struct [[=rbe::id(test_msg_type_t::heartbeat)]] MsgWithIdValue { // marker lives in the nested header
+  IdHeader      header;
+  std::uint32_t timestamp;
+};
+
+struct [[=rbe::id(test_msg_type_t::heartbeat), =rbe::id]] IdValueAndMarker {
+  bool operator==(IdValueAndMarker const&) const = default; // so only the exclusivity rule can fail
+};
+
+struct [[=rbe::id(test_msg_type_t::heartbeat), =rbe::id(test_msg_type_t::add_order)]] TwoIdValues { };
+
+struct IdValueOnScalar {
+  [[=rbe::id(test_msg_type_t::heartbeat)]] std::uint8_t x; // id(value) is struct-level
+};
+
 // clang-format on

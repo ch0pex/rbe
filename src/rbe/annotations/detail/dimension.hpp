@@ -17,16 +17,31 @@
 #include <cstdint>
 #include <meta>
 #include <optional>
+#include <utility>
 
 namespace rbe::detail {
 
 /**
- * @brief The kind of correctness rule a dimension enforces across an annotated type.
+ * @brief The set of correctness rules a dimension enforces across an annotated type.
+ *
+ * The rules are independent and combinable with `|`: a dimension whose annotations are both mutually
+ * exclusive locally and non-repeatable globally (e.g. the id dimension, where `id` and `id(value)`
+ * may not share an annotation range and neither may repeat across the message) declares
+ * `exclusive | unique`.
  */
 enum class dimension_kind : std::uint8_t {
-  exclusive, ///< at most one annotation of the dimension may appear within a single annotation range
-  unique, ///< each annotation of the dimension may independently appear at most once across the whole (deep) type
+  exclusive = 1 << 0, ///< at most one annotation of the dimension may appear within a single annotation range
+  unique    = 1 << 1, ///< each annotation of the dimension may independently appear at most once across the whole (deep) type
 };
+
+consteval auto operator|(dimension_kind const lhs, dimension_kind const rhs) -> dimension_kind {
+  return static_cast<dimension_kind>(std::to_underlying(lhs) | std::to_underlying(rhs));
+}
+
+/// Whether `kind` includes the given `rule`.
+consteval auto enforces(dimension_kind const kind, dimension_kind const rule) -> bool {
+  return (std::to_underlying(kind) & std::to_underlying(rule)) != 0;
+}
 
 /**
  * @brief The dimension tag type `type` belongs to, or a null reflection if it belongs to none.

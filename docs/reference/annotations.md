@@ -17,8 +17,8 @@ Annotations are grouped into orthogonal **dimensions**. At most one annotation f
 |---|---|---|
 | Endianness | `little`, `big`, `bits` (native is the implicit default, no explicit spelling) | at most one per annotation range |
 | Alignment | `pack`, `align` | at most one per annotation range |
-| Id | `id` | may appear at most once across the whole (possibly nested) type |
-| Length | `frame_length`, `payload_length`, `header_length` | each may appear at most once across the whole (possibly nested) type |
+| Id | `id`, `id(value)` | at most one per annotation range, and each may appear at most once across the whole (possibly nested) type |
+| Length | `frame_length`, `payload_length`, `header_length` | at most one per annotation range, and each may appear at most once across the whole (possibly nested) type |
 | — (unconstrained) | `fmt` | none — freely repeatable/combinable |
 
 Struct-level annotations are inherited by every member; a member's own annotations (or its type's annotations, for nested structs) take precedence and fully replace the inherited ones on a per-dimension basis.
@@ -52,9 +52,17 @@ Header: `rbe/annotations/id.hpp`
 
 | Annotation | Scope | Description |
 |---|---|---|
-| `=rbe::id` | member | Marks the field that identifies the message type. Reserved for the type-erased dispatch mechanism (`any_msg`) described in the design overview — **dispatch is not implemented yet**; today the annotation only participates in the id dimension's uniqueness check. |
+| `=rbe::id` | member | Marks the field the id is read from on the wire. The annotated field must be equality comparable. |
+| `=rbe::id(value)` | struct | Declares the id the annotated message type is dispatched under. The value's type must be equality comparable, and is preserved as-is (`rbe::id(msg_type_t::heartbeat)` carries a `msg_type_t`, not an `int`). |
 
-The annotated field must be equality comparable.
+```cpp
+struct hdr { [[=rbe::id]] msg_type_t type; [[=rbe::frame_length]] std::uint16_t len; };
+struct [[=rbe::id(msg_type_t::heartbeat)]] Heartbeat { hdr h; std::uint32_t timestamp; };
+```
+
+The two are the halves of message identity — where the id lives on the wire, and which id a type answers to — so they share one dimension: they may not appear in the same annotation range, and neither may repeat across the whole (possibly nested) type. Nested messages keep their own `id(value)`, as in the example above.
+
+Both are reserved for the type-erased dispatch mechanism (`any_msg`) described in the design overview — **dispatch is not implemented yet**; today they only participate in their dimension's correctness checks.
 
 ## Length
 

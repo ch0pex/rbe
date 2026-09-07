@@ -82,11 +82,14 @@ consteval auto dimensions_used_in(std::meta::info const type) -> std::vector<std
 }
 
 consteval auto verify_dimension(std::meta::info const type, std::meta::info const dim) -> bool {
-  switch (kind_of(dim)) { // clang-format off
-    case dimension_kind::exclusive: return verify_dimension_correctness(type, dim);
-    case dimension_kind::unique:    return verify_global_unique_dimension(type, dim);
-  } // clang-format on
-  throw std::meta::exception("unhandled dimension_kind", dim);
+  auto const kind = kind_of(dim);
+  if (enforces(kind, dimension_kind::exclusive) and not verify_dimension_correctness(type, dim)) {
+    return false;
+  }
+  if (enforces(kind, dimension_kind::unique) and not verify_global_unique_dimension(type, dim)) {
+    return false;
+  }
+  return true;
 }
 
 // --- Local constraints : verify that every annotation found in `type` satisfies its own correctness rule

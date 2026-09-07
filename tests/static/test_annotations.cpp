@@ -36,6 +36,9 @@ static_assert(rbe::detail::is_rbe_annotation(^^rbe::big));
 static_assert(rbe::detail::is_rbe_annotation(^^rbe::bits));
 static_assert(rbe::detail::is_rbe_annotation(^^rbe::id));
 static_assert(rbe::detail::is_rbe_annotation(^^rbe::frame_length));
+static_assert(rbe::detail::is_rbe_annotation(^^rbe::payload_length));
+static_assert(rbe::detail::is_rbe_annotation(^^rbe::header_length));
+static_assert(rbe::detail::is_rbe_annotation(^^decltype(rbe::id(test_msg_type_t::heartbeat))));
 static_assert(rbe::detail::is_rbe_annotation(^^annotation_a));
 static_assert(not rbe::detail::is_rbe_annotation(^^annotation_b));
 static_assert(not rbe::detail::is_rbe_annotation(^^int));
@@ -102,10 +105,18 @@ static_assert(not rbe::well_annotated<BadParent>);
 static_assert(rbe::well_annotated<AddOrder>); // length annotation is correct
 static_assert(not rbe::well_annotated<LenghtAnnotatedTwice>); // length is annotated twice, fails dimension check
 static_assert(not rbe::well_annotated<LenghtNotConvertible>); // length is annotated on a non covertible type to std::size_t, fails check
+static_assert(rbe::well_annotated<AllLengths>); // the three lengths are independent, one per field
+static_assert(not rbe::well_annotated<LengthsInOneRange>); // two lengths in one annotation range, fails dimension check
 
 // --- id annotation correctness ---
 static_assert(rbe::well_annotated<AddOrder>); // id annotation is correct
 static_assert(not rbe::well_annotated<IdAnnotatedTwice>); // id is annotated twice, fails dimension check
 static_assert(not rbe::well_annotated<IdNotEqualityComparable>); // id is annotated on a non equality comparable type, fails check
+
+// --- id(value) annotation correctness ---
+static_assert(rbe::well_annotated<MsgWithIdValue>); // id(value) on the type, marker on the nested header
+static_assert(not rbe::well_annotated<IdValueAndMarker>); // marker and value share an annotation range, fails dimension check
+static_assert(not rbe::well_annotated<TwoIdValues>); // two id values in one annotation range, fails dimension check
+static_assert(not rbe::well_annotated<IdValueOnScalar>); // id(value) on a non class type, fails check
 
 } // namespace

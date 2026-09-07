@@ -39,12 +39,14 @@ The same specialization optionally carries additional members, each answered by 
 
 ```cpp
 enum class dimension_kind : std::uint8_t {
-  exclusive, ///< at most one annotation of the dimension may appear within a single annotation range
-  unique,    ///< each annotation of the dimension may independently appear at most once across the whole (deep) type
+  exclusive = 1 << 0, ///< at most one annotation of the dimension may appear within a single annotation range
+  unique    = 1 << 1, ///< each annotation of the dimension may independently appear at most once across the whole (deep) type
 };
 ```
 
-`exclusive` is the current `alignment`/`endianness` rule (`[[=rbe::little, =rbe::big]]` conflicts). `unique` is the current `id`/length rule — `id`, `frame_length`, `payload_length` and `header_length` are *not* mutually exclusive with each other, but each must not repeat across the whole (possibly nested) message.
+The rules are independent and combinable with `|`; `verify_dimension` runs whichever ones the dimension declares.
+
+`exclusive` alone is the `alignment`/`endianness` rule (`[[=rbe::little, =rbe::big]]` conflicts). The `id` and `length` dimensions declare `exclusive | unique`: within one annotation range they are mutually exclusive (a field encodes one length, and is either the id field or a type's id value, never both), and across the whole (possibly nested) message none of them may repeat. Annotations from *different* dimensions stay freely combinable — a field may be `[[=rbe::id]]` and a message may carry an id plus any of the lengths.
 
 ### Adding an annotation to a dimension becomes one colocated block
 

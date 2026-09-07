@@ -93,10 +93,11 @@ rbe::serialize(buffer, cboe::AddOrder{});
 | `=rbe::payload_length` | member | Marks the field that encodes the payload length |
 | `=rbe::header_length` | member | Marks the field that encodes the header length |
 | `=rbe::id` | member | Marks the field that encodes the message type ID |
+| `=rbe::id(value)` | struct | Declares the id the message type is dispatched under |
 | `=rbe::fmt` | struct | Opts the type into RBE's `std::format`/`std::ostream` debug formatter |
 | `=rbe::derive<...>` | struct, member | Groups several annotations under one `=` clause; `rbe::pack_le`, `rbe::pack_be`, and `rbe::debug` are built-in presets |
 
-`little`/`big` and `pack`/`align` are each mutually exclusive within the same scope; `id` and the three `*_length` annotations may each appear once per (possibly nested) type. See [`docs/reference/annotations.md`](docs/reference/annotations.md) for the full inheritance and conflict rules.
+`little`/`big` and `pack`/`align` are each mutually exclusive within the same scope; the id annotations (`id`, `id(value)`) and the three `*_length` annotations are exclusive within one scope and may each appear once per (possibly nested) type. See [`docs/reference/annotations.md`](docs/reference/annotations.md) for the full inheritance and conflict rules.
 
 ## Building
 
