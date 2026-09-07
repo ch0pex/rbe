@@ -179,9 +179,9 @@ consteval auto get_wire_layout(std::meta::info const info) -> struct_layout {
   return get_wire_layout(info, detail::context {});
 }
 
-template<wirable T>
+template<wirable T, detail::context Ctx = detail::context {}>
 consteval auto wire_size_of() -> std::size_t {
-  return wire_size_of(^^T);
+  return wire_size_of(^^T, Ctx);
 }
 
 template<wirable_class T>

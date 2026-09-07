@@ -27,6 +27,9 @@ namespace rbe::dsrl {
 template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
   requires(not custom_wirable<T>)
 class proxy {
+  static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
+  static constexpr auto wire  = get_wire_layout<T, local>();
+
 public:
   // --- Type traits ---
 
@@ -46,8 +49,6 @@ public:
   template<std::size_t Index>
   constexpr auto field() const {
     using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
-    static constexpr auto local         = rbe::detail::merge_context(Ctx, ^^T);
-    static constexpr auto wire          = get_wire_layout<T, local>();
     static constexpr auto member_layout = wire.members[Index];
     static constexpr auto member_ctx    = rbe::detail::merge_context(local, rbe::detail::nsdm(^^value_type, Index));
 
@@ -56,9 +57,11 @@ public:
     );
   }
 
-  [[nodiscard]] constexpr auto value() const -> value_type { return rbe::detail::deserialize<value_type>(data_); }
+  [[nodiscard]] constexpr auto value() const -> value_type {
+    return rbe::detail::deserialize<value_type, local>(data_);
+  }
 
-  [[nodiscard]] constexpr auto length() const -> size_type { return wire_size_of<value_type>(); }
+  [[nodiscard]] constexpr auto length() const -> size_type { return wire_size_of<value_type, local>(); }
 
   [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(length()); }
 
