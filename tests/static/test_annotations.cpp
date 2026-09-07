@@ -90,6 +90,7 @@ static_assert(std::ranges::equal(rbe::detail::deep_annotations(^^WrongAnnotatedS
 static_assert(rbe::detail::deep_annotations(^^AnnotatedStructD).size() == 3);
 static_assert(std::ranges::equal(rbe::detail::deep_annotations(^^AnnotatedStructD), rbe::detail::types_list(^^annotation_a, ^^annotation_c, ^^annotation_a)));
 static_assert(std::ranges::equal(rbe::detail::deep_annotations(^^AnnotatedStructD), rbe::detail::deep_annotations(^^AnnotatedStructWithList)));
+static_assert(rbe::detail::deep_annotations(^^LenghtAnnotatedTwiceNested).size() == 2); // recursion descends past the first level of members
 
 // --- well_annotated ---
 
@@ -104,6 +105,7 @@ static_assert(not rbe::well_annotated<BadParent>);
 
 static_assert(rbe::well_annotated<AddOrder>); // length annotation is correct
 static_assert(not rbe::well_annotated<LenghtAnnotatedTwice>); // length is annotated twice, fails dimension check
+static_assert(not rbe::well_annotated<LenghtAnnotatedTwiceNested>); // uniqueness is global: the duplicate sits two levels down
 static_assert(not rbe::well_annotated<LenghtNotConvertible>); // length is annotated on a non covertible type to std::size_t, fails check
 static_assert(rbe::well_annotated<AllLengths>); // the three lengths are independent, one per field
 static_assert(not rbe::well_annotated<LengthsInOneRange>); // two lengths in one annotation range, fails dimension check

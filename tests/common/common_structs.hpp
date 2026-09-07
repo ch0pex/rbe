@@ -429,6 +429,15 @@ struct LenghtAnnotatedTwice {
   [[=rbe::frame_length]] std::uint32_t length2;
 };
 
+struct NestedLengthLeaf {
+  [[=rbe::frame_length]] std::uint16_t length;
+};
+
+struct LenghtAnnotatedTwiceNested {
+  NestedLengthLeaf       leaf;
+  [[=rbe::frame_length]] std::uint16_t length; // duplicated two levels down
+};
+
 struct LenghtNotConvertible {
   [[=rbe::frame_length]] NestedPackLeaf length; // not convertible to std::size_t
 };

@@ -52,16 +52,21 @@ consteval auto annotation_range(std::meta::info const info) -> std::vector<std::
 /**
  * @brief annotation_range(entity), recursively unioned with every nested non-static data member's.
  *
- * @param info reflection of the type to inspect recursively
+ * Recursion is driven by the entity's *type*, so it descends through members of class type at any
+ * depth -- a member is not a leaf, its type's members are visited too. Non-class types stop it.
+ *
+ * @param info reflection of the type (or member) to inspect recursively
  * @return a vector with all the annotations found within the type
  */
 consteval auto deep_annotations(std::meta::info const info) -> std::vector<std::meta::info> {
   std::vector<std::meta::info> result = annotation_range(info);
-  if ((is_type(info) and not is_class_type(info)) or is_nonstatic_data_member(info)) {
+
+  auto const type = normalize_type(info);
+  if (not is_class_type(type)) {
     return result;
   }
 
-  std::ranges::for_each(nsdm(info), [&](std::meta::info const member) {
+  std::ranges::for_each(nsdm(type), [&](std::meta::info const member) {
     result.append_range(deep_annotations(member));
   });
 
