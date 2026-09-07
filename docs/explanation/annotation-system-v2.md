@@ -247,11 +247,11 @@ defaulting to `any` so no existing annotation needs to change. Verified feasible
 
 ## N-level annotation propagation — ✅ Implemented
 
-> Originally written up here as an open problem; the section below is kept as-is for the reasoning and the `parent_of` dead-end, since both remain the reason the codebase looks the way it does. The `context`/`merge_context` mechanism described here is now real, shipped code — see `core/detail/context.hpp`, the four-overload split in `srl/serialize.hpp` and `dsrl/deserialize.hpp`, and `dsrl/msg.hpp`. Regression coverage: `tests/runtime/test_serde.cpp`'s `"N-level propagation: unannotated nested structs inherit an ancestor's endianness"` test case, using the `NestedParent`/`NestedMiddle`/`NestedLeaf` structs in `tests/common/common_structs.hpp`.
+> Originally written up here as an open problem; the section below is kept as-is for the reasoning and the `parent_of` dead-end, since both remain the reason the codebase looks the way it does. The `context`/`merge_context` mechanism described here is now real, shipped code — see `core/detail/context.hpp`, the four-overload split in `srl/serialize.hpp` and `dsrl/deserialize.hpp`, and `dsrl/proxy.hpp`. Regression coverage: `tests/runtime/test_serde.cpp`'s `"N-level propagation: unannotated nested structs inherit an ancestor's endianness"` test case, using the `NestedParent`/`NestedMiddle`/`NestedLeaf` structs in `tests/common/common_structs.hpp`.
 >
 > Two real bugs turned up only once this was wired into actual serialize/deserialize code, both fixed:
 > 1. `detail::normalize_endianness<Ctx.endianness>(value)` (one explicit template argument) silently binds to `normalize_endianness`'s *identity-forwarder* overload (`template<endian::order Order> auto normalize_endianness(auto const&)`) instead of the byte-swapping one (`template<T, Order> auto normalize_endianness(T const)`) — with one explicit argument, it binds to the first template parameter of whichever overload's parameter list makes that argument's *position* valid, and the forwarder's abbreviated `auto` parameter happily accepts it. Both `T` and `Order` must be given explicitly at the call site.
-> 2. `dsrl::msg<T, Ctx>` computed its own `context` from `^^value_type` (a member type alias, `using value_type = T;`) instead of `^^T` directly — `std::meta::annotations_of` does not see through a type alias to the annotations on the type it names, so the alias-based lookup silently found nothing. Reflect the template parameter directly, never a same-named alias, when the reflection feeds into annotation lookup.
+> 2. `dsrl::proxy<T, Ctx>` computed its own `context` from `^^value_type` (a member type alias, `using value_type = T;`) instead of `^^T` directly — `std::meta::annotations_of` does not see through a type alias to the annotations on the type it names, so the alias-based lookup silently found nothing. Reflect the template parameter directly, never a same-named alias, when the reflection feeds into annotation lookup.
 >
 > `resolve<T>(parent, member, dim)` (below) only looked one level up: the member's own scope, then its *immediate* containing struct, then the dimension's default. [REQ-066](requirements.md#nested-structure-handling)–[070](requirements.md#nested-structure-handling) require full transitive propagation through arbitrarily deep nesting — `example/annotations.cpp`'s own worked example spells out the intent explicitly:
 
@@ -358,7 +358,7 @@ The point that generalizes beyond endianness: every recursive step resolves its 
 
 The point specific to lazy deserialization: a `lazy_view` is constructed once and then queried across possibly many separate `field(name)` calls, so its context has to be resolved once and stored as part of the view itself at construction time — recomputing it fresh on every field access would be wasteful and, if the recursion state weren't captured anywhere, impossible to do correctly for fields reached through a struct-typed field's own nested fields.
 
-This pseudocode's shape is now real, shipped code (`core/detail/context.hpp`, `srl/serialize.hpp`, `dsrl/deserialize.hpp`, `dsrl/msg.hpp`) — see the "✅ Implemented" note at the top of this section for exactly where, plus the two real bugs that only surfaced once it was actually wired in. `context` now threads **two** dimensions the same way: `endianness` and `alignment` (`context::alignment`, an `alignment_mode`) — an unannotated nested aggregate inherits its ambient packing exactly like it inherits ambient endianness, resolved via `resolve_in_scope<alignment_mode>` exactly like endianness (not a bespoke presence check), now that `pack`/`align` are `alignment_mode` values rather than distinct anonymous tag types. Adding `pack` surfaced a third bug, distinct from the two documented above: `wire_size_of`'s packed-recursion assumed every nested type was a genuine aggregate reachable via `nsdm`, which broke the moment packing (previously only ever a per-type presence check, never inherited) started reaching `std::array` members — recursing one hop further into `std::array`'s own internal raw-C-array member and calling `nsdm` on a non-class array type threw. Fixed the same way `is_wirable_class_type` already handled this: check `is_trivially_wirable_primitive(remove_all_extents(info))` as a potential leaf *before* assuming a type has reflectable members to recurse into, since an array of primitives has no inter-element padding to strip regardless of packing and no `nsdm` to walk in the first place.
+This pseudocode's shape is now real, shipped code (`core/detail/context.hpp`, `srl/serialize.hpp`, `dsrl/deserialize.hpp`, `dsrl/proxy.hpp`) — see the "✅ Implemented" note at the top of this section for exactly where, plus the two real bugs that only surfaced once it was actually wired in. `context` now threads **two** dimensions the same way: `endianness` and `alignment` (`context::alignment`, an `alignment_mode`) — an unannotated nested aggregate inherits its ambient packing exactly like it inherits ambient endianness, resolved via `resolve_in_scope<alignment_mode>` exactly like endianness (not a bespoke presence check), now that `pack`/`align` are `alignment_mode` values rather than distinct anonymous tag types. Adding `pack` surfaced a third bug, distinct from the two documented above: `wire_size_of`'s packed-recursion assumed every nested type was a genuine aggregate reachable via `nsdm`, which broke the moment packing (previously only ever a per-type presence check, never inherited) started reaching `std::array` members — recursing one hop further into `std::array`'s own internal raw-C-array member and calling `nsdm` on a non-class array type threw. Fixed the same way `is_wirable_class_type` already handled this: check `is_trivially_wirable_primitive(remove_all_extents(info))` as a potential leaf *before* assuming a type has reflectable members to recurse into, since an array of primitives has no inter-element padding to strip regardless of packing and no `nsdm` to walk in the first place.
 
 The same shape, closer to real C++ syntax (illustrative — element/offset computation, `find_member`/`index_of`, and the `serialize_primitive`/`deserialize_primitive` helpers are elided or simplified; only the `context`/`merge_context` declaration itself, not the functions built on top of it, was what actually got compiled):
 
@@ -435,12 +435,12 @@ constexpr auto deserialize(std::span<std::byte const> const in, dsrl::eager_t) -
 
 // ── deserialize (lazy): the view has to REMEMBER its resolved context, not just pass it through ──
 template<wirable T, context Ctx = context{}>
-class msg {
-  static constexpr auto local = merge_context(Ctx, ^^T); // resolved once, baked into msg<T, Ctx>'s own type
+class proxy {
+  static constexpr auto local = merge_context(Ctx, ^^T); // resolved once, baked into proxy<T, Ctx>'s own type
   std::span<std::byte const> data_;
 
 public:
-  constexpr explicit msg(std::span<std::byte const> const data) : data_(data) {}
+  constexpr explicit proxy(std::span<std::byte const> const data) : data_(data) {}
 
   template<static_string Name>
   constexpr auto field() const {
@@ -449,7 +449,7 @@ public:
     using member_type = typename[:type_of(member):];
 
     // today's code already collapses nested-struct fields to an eager recursive call
-    // (deserialize_member -> deserialize<T>(..., eager)) rather than a nested msg<T> -- keep that
+    // (deserialize_member -> deserialize<T>(..., eager)) rather than a nested proxy<T> -- keep that
     // shape. This calls the SAME overloaded deserialize(..., eager) as above; field() never
     // branches on member_type either, leaf or aggregate is resolved by overload resolution alone.
     return deserialize<member_type, merge_context(local, member)>(
@@ -458,8 +458,8 @@ public:
 };
 
 template<wirable T, context Ctx = context{}>
-constexpr auto deserialize(std::span<std::byte const> const in, dsrl::lazy_t) -> msg<T, Ctx> {
-  return msg<T, Ctx>{in}; // Ctx passed through unresolved -- msg<T, Ctx> resolves `local` itself, once
+constexpr auto deserialize(std::span<std::byte const> const in, dsrl::lazy_t) -> proxy<T, Ctx> {
+  return proxy<T, Ctx>{in}; // Ctx passed through unresolved -- proxy<T, Ctx> resolves `local` itself, once
 }
 
 // ── in_place: context still decides WHETHER T qualifies, but never touches the actual read ──
@@ -482,9 +482,9 @@ While designing the above, the need for a `count(field_name)` annotation came up
 
 - `core/memory_layout.hpp`'s `struct_layout`/`member_layout`/`wire_size_of<T>()` are all `consteval`, computed once per *type* and cached as a static table of `{offset, size, endianness}` triples. This is only valid when every member's size is knowable from its type alone.
 - With a `count`-driven member, the wire size of the type as a whole can only be known **at runtime**: for serialization, from the live object's `.size()`; for deserialization, only after the count-source field has actually been read off the buffer (which is why it must appear *before* the variable-length field on the wire — a natural consequence of REQ-051/052, fixed field order).
-- This means such types need a second, explicitly runtime code path: `wire_size_of(value)` (taking the actual object, not just `<T>()`), and `srl::serialize`/`dsrl::deserialize` walking members with a *running byte cursor* that accumulates as it goes, instead of looking up a precomputed static offset per member. `dsrl::msg<T>::field<Index>()` (today true random access, since offsets are constant) would also need to become effectively sequential for any field positioned after a variable-length one.
+- This means such types need a second, explicitly runtime code path: `wire_size_of(value)` (taking the actual object, not just `<T>()`), and `srl::serialize`/`dsrl::deserialize` walking members with a *running byte cursor* that accumulates as it goes, instead of looking up a precomputed static offset per member. `dsrl::proxy<T>::field<Index>()` (today true random access, since offsets are constant) would also need to become effectively sequential for any field positioned after a variable-length one.
 
-This is a self-contained follow-up design (touching the `wirable`/`trivially_wirable` concept hierarchy, `core/memory_layout.hpp`, `srl/serialize.hpp`, `dsrl/deserialize.hpp`, and `dsrl/msg.hpp`), deliberately **out of scope** for the annotation-system redesign described in this document. `count` should be declared (dimension + `member_only` scope) alongside the other annotations when the system above is implemented, but left without a consumer — the same state `id` and the `*_length` annotations are in today.
+This is a self-contained follow-up design (touching the `wirable`/`trivially_wirable` concept hierarchy, `core/memory_layout.hpp`, `srl/serialize.hpp`, `dsrl/deserialize.hpp`, and `dsrl/proxy.hpp`), deliberately **out of scope** for the annotation-system redesign described in this document. `count` should be declared (dimension + `member_only` scope) alongside the other annotations when the system above is implemented, but left without a consumer — the same state `id` and the `*_length` annotations are in today.
 
 ## Summary of files touched (when this is implemented)
 

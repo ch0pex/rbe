@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file msg.hpp
+ * @file proxy.hpp
  * @date 24/06/2026
  * @brief Lazy deserialization proxy providing field-by-field access into a byte buffer
  */
@@ -26,9 +26,9 @@ namespace rbe::dsrl {
 
 template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
   requires(not custom_wirable<T>)
-class msg {
+class proxy {
   // Resolved once, at construction type: T's own annotations override whatever ambient context was
-  // inherited, so a msg<T> nested arbitrarily deep still propagates correctly instead of resetting.
+  // inherited, so a proxy<T> nested arbitrarily deep still propagates correctly instead of resetting.
   // NOTE: must reflect ^^T directly, not ^^value_type -- std::meta::annotations_of does not see
   // through a type alias to the annotations on the type it names.
   static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
@@ -43,7 +43,7 @@ public:
 
   // --- Constructors ---
 
-  constexpr explicit msg(std::span<std::byte const> const data) : data_(data) { }
+  constexpr explicit proxy(std::span<std::byte const> const data) : data_(data) { }
 
   template<static_string Name>
   constexpr auto field() const {

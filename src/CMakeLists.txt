@@ -4,7 +4,7 @@ project(rbe VERSION 0.0.1 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-add_library(rbe INTERFACE rbe/dsrl/msg.hpp)
+add_library(rbe INTERFACE rbe/dsrl/proxy.hpp)
 
 target_sources(
         rbe
@@ -50,7 +50,7 @@ target_sources(
         rbe/dsrl/detail/deserialize_member.hpp
         rbe/dsrl/detail/return_type_impl.hpp
         rbe/dsrl/deserialize.hpp
-        rbe/dsrl/msg.hpp
+        rbe/dsrl/proxy.hpp
         rbe/dsrl/return_type.hpp
         rbe/dsrl/tags.hpp
 

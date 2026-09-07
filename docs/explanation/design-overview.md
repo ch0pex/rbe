@@ -73,7 +73,7 @@ auto& inplace  = rbe::deserialize<cboe::AddOrder>(buffer, rbe::dsrl::in_place); 
 ```
 
 - **Eager** materializes the entire object upfront; works for any wirable, default-constructible type.
-- **Lazy** returns a lightweight view (`rbe::dsrl::msg<T>`) over the buffer and reads/converts each field on demand — no full copy is made:
+- **Lazy** returns a lightweight view (`rbe::dsrl::proxy<T>`) over the buffer and reads/converts each field on demand — no full copy is made:
   ```cpp
   auto length = lazy_msg.field("length"); // compile-time error if the field does not exist
   ```
@@ -96,8 +96,8 @@ When a struct carries an `=rbe::id` annotation, it is meant to participate in ty
 ```cpp
 rbe::any_msg<cboe::msgs> msg = receive(buffer);
 msg.match(
-  [](dsrl::msg<cboe::AddOrder> msg)  { /* ... */ },
-  [](dsrl::msg<cboe::ReduceSize> msg) { /* ... */ }
+  [](dsrl::proxy<cboe::AddOrder> msg)  { /* ... */ },
+  [](dsrl::proxy<cboe::ReduceSize> msg) { /* ... */ }
 );
 ```
 

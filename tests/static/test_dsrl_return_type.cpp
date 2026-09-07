@@ -22,7 +22,7 @@ using rbe::dsrl::return_type;
 
 // clang-format off
 static_assert(std::same_as<return_type<rbe::dsrl::eager_t, Message>::type, Message>);
-static_assert(std::same_as<return_type<rbe::dsrl::lazy_t, Message>::type, rbe::dsrl::msg<Message>>);
+static_assert(std::same_as<return_type<rbe::dsrl::lazy_t, Message>::type, rbe::dsrl::proxy<Message>>);
 static_assert(std::same_as<return_type<rbe::dsrl::in_place_t, Message>::type, Message const&>);
 static_assert(std::same_as<return_type<rbe::dsrl::in_place_mut_t, Message>::type, Message&>);
 // clang-format on

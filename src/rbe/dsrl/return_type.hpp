@@ -23,7 +23,7 @@ namespace rbe::dsrl {
  *
  * `type` is:
  * - `T` for `eager_t`.
- * - `dsrl::msg<T>` for `lazy_t`.
+ * - `dsrl::proxy<T>` for `lazy_t`.
  * - `T const&` for `in_place_t`.
  * - `T&` for `in_place_mut_t`.
  *

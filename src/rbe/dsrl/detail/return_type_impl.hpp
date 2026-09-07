@@ -12,7 +12,7 @@
 
 // --- Includes ---
 #include <rbe/core/wirable_concepts.hpp>
-#include <rbe/dsrl/msg.hpp>
+#include <rbe/dsrl/proxy.hpp>
 #include <rbe/dsrl/tags.hpp>
 
 // --- STD ---
@@ -29,7 +29,7 @@ struct return_type<eager_t, T> {
 
 template<wirable T>
 struct return_type<lazy_t, T> {
-  using type = dsrl::msg<T>;
+  using type = dsrl::proxy<T>;
 };
 
 template<wirable T>

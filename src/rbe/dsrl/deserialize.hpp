@@ -19,7 +19,7 @@
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
-#include <rbe/dsrl/msg.hpp>
+#include <rbe/dsrl/proxy.hpp>
 #include <rbe/dsrl/tags.hpp>
 
 // --- STD ---
@@ -100,18 +100,18 @@ constexpr auto deserialize(std::span<std::byte> const input, dsrl::in_place_mut_
 /**
  * @brief Deserializes a buffer into an object lazily.
  *
- * The function takes a span of bytes as input and deserializes it into an object of type dsrl::msg<T>.
+ * The function takes a span of bytes as input and deserializes it into an object of type dsrl::proxy<T>.
  * The deserialization is performed lazily, meaning that the members of the object are deserialized on-demand when
  * accessed.
  *
  * @tparam T The type of the object to deserialize. Must be introspectable.
  * @param input A span of bytes containing the serialized data.
  * @param lazy A tag indicating that the deserialization should be performed lazily.
- * @return A `dsrl::msg<T>` proxy that deserializes fields on-demand when accessed.
+ * @return A `dsrl::proxy<T>` that deserializes fields on-demand when accessed.
  */
 template<wirable T>
-constexpr auto deserialize(std::span<std::byte const> const input, dsrl::lazy_t /*lazy*/) -> dsrl::msg<T> {
-  return dsrl::msg<T> {input};
+constexpr auto deserialize(std::span<std::byte const> const input, dsrl::lazy_t /*lazy*/) -> dsrl::proxy<T> {
+  return dsrl::proxy<T> {input};
 }
 
 } // namespace rbe

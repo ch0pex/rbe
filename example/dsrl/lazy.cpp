@@ -2,7 +2,7 @@
  * @file lazy.cpp
  * @brief Demonstrates lazy deserialization strategy.
  *
- * Lazy deserialization returns a lightweight proxy (dsrl::msg<T>) that reads fields
+ * Lazy deserialization returns a lightweight proxy (dsrl::proxy<T>) that reads fields
  * on-demand from the buffer without creating a full copy. Fields are accessed one
  * at a time using the proxy's field<>() methods.
  *
@@ -60,7 +60,7 @@ int main() {
   // LAZY DESERIALIZATION: On-demand field access
   // ─────────────────────────────────────────────────────────────────
   //
-  // deserialize<T>(buffer, rbe::lazy) returns dsrl::msg<T>, a proxy
+  // deserialize<T>(buffer, rbe::lazy) returns dsrl::proxy<T>, a proxy
   // that reads fields on-demand without copying. Use field<Index>()
   // or field<"name">() to access individual fields.
   //
