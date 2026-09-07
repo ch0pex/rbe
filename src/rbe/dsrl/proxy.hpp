@@ -15,35 +15,28 @@
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
+#include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
 
 // --- STD ---
 
 // --- System ---
 
-
 namespace rbe::dsrl {
 
 template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
   requires(not custom_wirable<T>)
 class proxy {
-  // Resolved once, at construction type: T's own annotations override whatever ambient context was
-  // inherited, so a proxy<T> nested arbitrarily deep still propagates correctly instead of resetting.
-  // NOTE: must reflect ^^T directly, not ^^value_type -- std::meta::annotations_of does not see
-  // through a type alias to the annotations on the type it names.
-  static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
-  static constexpr auto wire  = get_wire_layout<T, local>();
-
 public:
   // --- Type traits ---
 
-  using value_type = T;
-  using size_type  = std::size_t;
-
+  using value_type  = T;
+  using size_type   = std::size_t;
+  using buffer_type = std::span<std::byte const>;
 
   // --- Constructors ---
 
-  constexpr explicit proxy(std::span<std::byte const> const data) : data_(data) { }
+  constexpr explicit proxy(buffer_type const data) : data_(data) { }
 
   template<static_string Name>
   constexpr auto field() const {
@@ -53,6 +46,8 @@ public:
   template<std::size_t Index>
   constexpr auto field() const {
     using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
+    static constexpr auto local         = rbe::detail::merge_context(Ctx, ^^T);
+    static constexpr auto wire          = get_wire_layout<T, local>();
     static constexpr auto member_layout = wire.members[Index];
     static constexpr auto member_ctx    = rbe::detail::merge_context(local, rbe::detail::nsdm(^^value_type, Index));
 
@@ -60,6 +55,18 @@ public:
         data_.subspan<member_layout.offset.bytes, member_layout.size>()
     );
   }
+
+  [[nodiscard]] constexpr auto value() const -> value_type { return rbe::detail::deserialize<value_type>(data_); }
+
+  [[nodiscard]] constexpr auto length() const -> size_type { return wire_size_of<value_type>(); }
+
+  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(length()); }
+
+  [[nodiscard]] constexpr auto size() const -> size_type { return data_.size(); }
+
+  [[nodiscard]] constexpr auto size_bytes() const -> size_type { return data_.size(); }
+
+  [[nodiscard]] constexpr auto data() const -> buffer_type { return data_; }
 
 private:
   std::span<std::byte const> data_;
