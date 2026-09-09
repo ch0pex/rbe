@@ -138,19 +138,4 @@ consteval auto resolve_in_scope(std::meta::info const entity) -> std::optional<T
   return std::nullopt;
 }
 
-/**
- * Replaces the endianness-specific `endiannes_from_annotation`/`has_endianness_annotation`/
- * `get_member_endianness` chain with one function, generically, for ANY value-bearing dimension.
- */
-template<typename T>
-consteval auto resolve(std::meta::info const parent, std::meta::info const member, std::meta::info const dim) -> T {
-  if (auto v = resolve_in_scope<T>(member)) {
-    return *v;
-  }
-  if (auto v = resolve_in_scope<T>(parent)) {
-    return *v;
-  }
-  return default_value_of<T>(dim);
-}
-
 } // namespace rbe::detail
