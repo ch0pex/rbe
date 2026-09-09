@@ -13,6 +13,7 @@ target_sources(
         FILES
 
         # annotations
+        rbe/annotations/detail/annotated_nsdm.hpp
         rbe/annotations/detail/base.hpp
         rbe/annotations/detail/correctness.hpp
         rbe/annotations/detail/dimension.hpp
