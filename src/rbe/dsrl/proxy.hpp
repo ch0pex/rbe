@@ -11,8 +11,8 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/detail/base.hpp>
 #include <rbe/annotations/detail/annotated_nsdm.hpp>
+#include <rbe/annotations/detail/base.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
@@ -26,7 +26,7 @@
 
 namespace rbe::dsrl {
 
-template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
+template<wirable_class T, rbe::detail::context Ctx = rbe::detail::context {}>
   requires(not custom_wirable<T>)
 class proxy {
   static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
@@ -71,11 +71,11 @@ public:
 
   [[nodiscard]] constexpr auto length() const -> size_type { return wire_size_of<value_type, local>(); }
 
-  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(length()); }
-
   [[nodiscard]] constexpr auto size() const -> size_type { return data_.size(); }
 
   [[nodiscard]] constexpr auto size_bytes() const -> size_type { return data_.size(); }
+
+  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(length()); }
 
   [[nodiscard]] constexpr auto data() const -> buffer_type { return data_; }
 
