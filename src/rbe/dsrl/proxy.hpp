@@ -11,6 +11,8 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/annotations/detail/base.hpp>
+#include <rbe/annotations/detail/annotated_nsdm.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
@@ -55,6 +57,12 @@ public:
     return rbe::detail::deserialize_member<member_type, member_ctx>(
         data_.subspan<member_layout.offset.bytes, member_layout.size>()
     );
+  }
+
+  template<rbe::detail::unique_annotation auto Annotation>
+  constexpr auto field() const {
+    static constexpr auto member = rbe::detail::annotated_nsdm(^^T, Annotation);
+    return field<identifier_of(member)>();
   }
 
   [[nodiscard]] constexpr auto value() const -> value_type {

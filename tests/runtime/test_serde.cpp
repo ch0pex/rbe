@@ -11,6 +11,7 @@
 // --- Includes ---
 #include "common_serde.hpp"
 #include "common_structs.hpp"
+#include "rbe/annotations/length.hpp"
 
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/introspection.hpp>
@@ -196,6 +197,21 @@ TEST_CASE("serde - proxy accessors honor the ambient context") {
   CHECK(view.size() == wire.size()); // size is the buffer's, not the message's
   CHECK(view.size_bytes() == wire.size());
   CHECK(std::ranges::equal(view.data(), wire));
+}
+
+TEST_CASE("serde - proxy unique annotation accessor") {
+  static constexpr auto wire = bytes(
+      0xDD, 0xDD, // frame length
+      0xAA, 0xAA, // payload length
+      0xBB, // header_length
+      pad // padding
+  );
+
+  rbe::dsrl::proxy<AllLengths> const view {wire};
+
+  CHECK(view.field<rbe::frame_length>() == 0xDDDD);
+  CHECK(view.field<rbe::payload_length>() == 0xAAAA);
+  CHECK(view.field<rbe::header_length>() == 0xBB);
 }
 
 TEST_SUITE_END();
