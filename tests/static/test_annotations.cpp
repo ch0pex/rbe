@@ -11,6 +11,7 @@
 // --- Includes ---
 #include "common_structs.hpp"
 #include "rbe/annotations/detail/base.hpp"
+#include "rbe/annotations/detail/annotated_nsdm.hpp"
 
 #include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/derive.hpp>
@@ -129,5 +130,11 @@ static_assert(rbe::well_annotated<MsgWithIdValue>); // id(value) on the type, ma
 static_assert(not rbe::well_annotated<IdValueAndMarker>); // marker and value share an annotation range, fails dimension check
 static_assert(not rbe::well_annotated<TwoIdValues>); // two id values in one annotation range, fails dimension check
 static_assert(not rbe::well_annotated<IdValueOnScalar>); // id(value) on a non class type, fails check
+                                                         //
+
+// --- annotated_nsdm ---
+static_assert(rbe::detail::annotated_nsdm(^^AllLengths, rbe::frame_length) == ^^AllLengths::frame);
+static_assert(rbe::detail::annotated_nsdm(^^AllLengths, rbe::payload_length) == ^^AllLengths::payload);
+static_assert(rbe::detail::annotated_nsdm(^^AllLengths, rbe::header_length) == ^^AllLengths::header);
 
 } // namespace
