@@ -90,7 +90,7 @@ struct WithStaticFns {
 };
 
 struct WithConstMember {
-  const int x;
+  int const x;
   int& y;
 };
 
@@ -122,6 +122,13 @@ catch (std::meta::exception const& e) {
   return false;
 }
 
+consteval bool test_nsdm_index(std::meta::info info, std::meta::info member, std::size_t expected_index) try {
+  return rbe::detail::nsdm_index(info, member) == expected_index;
+}
+catch (std::meta::exception const& e) {
+  return false;
+}
+
 
 // ============================================================
 // TestStruct
@@ -141,9 +148,9 @@ static_assert(test_nsdm_idx(^^TestStruct, 1, 1));
 static_assert(test_nsdm_idx(^^TestStruct, 2, 2));
 static_assert(not test_nsdm_idx(^^TestStruct, 3, 0)); // Out of bounds
 
-static_assert(test_nsdm_index(^^TestStruct, "a", 0));
-static_assert(test_nsdm_index(^^TestStruct, "b", 1));
-static_assert(test_nsdm_index(^^TestStruct, "c", 2));
+static_assert(test_nsdm_index(^^TestStruct, ^^TestStruct::a, 0));
+static_assert(test_nsdm_index(^^TestStruct, ^^TestStruct::b, 1));
+static_assert(test_nsdm_index(^^TestStruct, ^^TestStruct::c, 2));
 static_assert(not test_nsdm_index(^^TestStruct, "d", 0)); // No such member
 
 // ============================================================
@@ -257,7 +264,7 @@ static_assert(not rbe::detail::specialization_of(^^TestStruct, ^^std::vector)); 
 static_assert(rbe::detail::bases_of(^^EmptyStruct).empty());
 static_assert(rbe::detail::bases_of(^^TestStruct).empty());
 static_assert(rbe::detail::bases_of(^^Derived).size() == 1);
-static_assert(type_of(rbe::detail::bases_of(^^Derived)[0]) == ^^Base);
+static_assert(type_of(rbe::detail::bases_of (^^Derived)[0]) == ^^Base);
 
 // ============================================================
 // static_member_functions_of

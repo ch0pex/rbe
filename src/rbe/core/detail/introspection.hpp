@@ -55,16 +55,25 @@ consteval auto nsdm(
   throw std::meta::exception("invalid member index", ^^nsdm_by_index);
 }
 
-consteval std::size_t nsdm_index( //
+consteval auto nsdm_index( //
   std::meta::info const info,  //
   std::string_view const identifier, //
   std::meta::access_context ctx = default_context //
-) {
+) -> std::size_t {
   for (auto [idx, field]: nsdm(info, ctx) | std::views::enumerate) {
     if (has_identifier(field) and identifier_of(field) == identifier)
       return static_cast<std::size_t>(idx);
   }
-  throw std::meta::exception("invalid member identifier, no such nonstatic data member", ^^nsdm_index);
+  static constexpr auto nsdm_index = [] { };
+  throw std::meta::exception("invalid member, no such nonstatic data member", ^^nsdm_index);
+}
+
+consteval auto nsdm_index( //
+  std::meta::info const info,  //
+  std::meta::info const member,
+  std::meta::access_context ctx = default_context //
+) -> std::size_t {
+  return nsdm_index(info, identifier_of(member), ctx);
 }
 
 consteval std::size_t nsdm_count(std::meta::info const info, std::meta::access_context ctx = default_context) {
