@@ -14,8 +14,8 @@ This has three concrete problems:
 
 Two more requirements surfaced while designing the fix:
 
-4. **Some dimensions have a default value when nothing is explicitly annotated** (e.g. endianness defaults to native byte order). Today that default is hard-coded inside `core/memory_layout.hpp`, not declared anywhere near the dimension itself.
-5. **Some annotations only make sense in one syntactic position** — e.g. a hypothetical `count(...)` annotation (see [Open problem: variable-length fields](#open-problem-variable-length-fields) below) only makes sense on a struct member, never on a type declaration.
+1. **Some dimensions have a default value when nothing is explicitly annotated** (e.g. endianness defaults to native byte order). Today that default is hard-coded inside `core/memory_layout.hpp`, not declared anywhere near the dimension itself.
+2. **Some annotations only make sense in one syntactic position** — e.g. a hypothetical `count(...)` annotation (see [Open problem: variable-length fields](#open-problem-variable-length-fields) below) only makes sense on a struct member, never on a type declaration.
 
 ## Core mechanism: `annotation_traits<T>`
 
@@ -31,7 +31,7 @@ A type `T` is a first-class RBE annotation **iff `annotation_traits<T>` has been
 The same specialization optionally carries additional members, each answered by a small reflection-based accessor:
 
 | Member (optional) | Meaning | Accessor |
-|---|---|---|
+| --- | --- | --- |
 | `using dimension = SomeDimTag;` | Which dimension `T` belongs to. Absent ⇒ a "free" annotation with zero correctness ceremony (e.g. `fmt`). | `dimension_of(type) -> std::meta::info` |
 | — (on the dimension tag itself) `static constexpr dimension_kind kind` | How the dimension is enforced (see below). Mandatory on every dimension tag. | `kind_of(dim) -> dimension_kind` |
 | — (on the dimension tag itself) `static constexpr auto default_value` | The value assumed when no annotation of this dimension is present anywhere in scope. Optional; only meaningful for value-bearing dimensions. | `default_value_of<T>(dim) -> T` |
@@ -195,7 +195,7 @@ Every correctness check and value-resolution step is then genuinely one expressi
 
 ```cpp
 // has_annotation: single code path for a scalar annotation OR a derive<...> list
-consteval auto has_annotation(std::meta::info const entity, auto const value) -> bool
+consteval auto has_annotations(std::meta::info const entity, auto const value) -> bool
   requires annotation<decltype(value)> or annotation_list<decltype(value)>
 {
   auto const haystack = annotation_range(entity);
@@ -250,6 +250,7 @@ defaulting to `any` so no existing annotation needs to change. Verified feasible
 > Originally written up here as an open problem; the section below is kept as-is for the reasoning and the `parent_of` dead-end, since both remain the reason the codebase looks the way it does. The `context`/`merge_context` mechanism described here is now real, shipped code — see `core/detail/context.hpp`, the four-overload split in `srl/serialize.hpp` and `dsrl/deserialize.hpp`, and `dsrl/proxy.hpp`. Regression coverage: `tests/runtime/test_serde.cpp`'s `"N-level propagation: unannotated nested structs inherit an ancestor's endianness"` test case, using the `NestedParent`/`NestedMiddle`/`NestedLeaf` structs in `tests/common/common_structs.hpp`.
 >
 > Two real bugs turned up only once this was wired into actual serialize/deserialize code, both fixed:
+>
 > 1. `detail::normalize_endianness<Ctx.endianness>(value)` (one explicit template argument) silently binds to `normalize_endianness`'s *identity-forwarder* overload (`template<endian::order Order> auto normalize_endianness(auto const&)`) instead of the byte-swapping one (`template<T, Order> auto normalize_endianness(T const)`) — with one explicit argument, it binds to the first template parameter of whichever overload's parameter list makes that argument's *position* valid, and the forwarder's abbreviated `auto` parameter happily accepts it. Both `T` and `Order` must be given explicitly at the call site.
 > 2. `dsrl::proxy<T, Ctx>` computed its own `context` from `^^value_type` (a member type alias, `using value_type = T;`) instead of `^^T` directly — `std::meta::annotations_of` does not see through a type alias to the annotations on the type it names, so the alias-based lookup silently found nothing. Reflect the template parameter directly, never a same-named alias, when the reflection feeds into annotation lookup.
 >
@@ -489,7 +490,7 @@ This is a self-contained follow-up design (touching the `wirable`/`trivially_wir
 ## Summary of files touched (when this is implemented)
 
 | File | Change |
-|---|---|
+| --- | --- |
 | `annotations/detail/dimension.hpp` | **New.** `annotation_traits<T>`, `dimension_kind`, `is_marked_annotation`, `dimension_of`, `kind_of`, `default_value_of`, `value_of`, `resolve_in_scope`, `resolve`. |
 | `annotations/detail/base.hpp` | `base_annotation` removed; `is_rbe_annotation` becomes trait-completeness-based instead of `bases_of`-walking. |
 | `annotations/detail/view.hpp`, `detail/utils.hpp` | Unchanged in shape; `has_annotation` collapses to one overload. |

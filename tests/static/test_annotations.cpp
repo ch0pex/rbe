@@ -49,16 +49,16 @@ static_assert(not rbe::detail::is_annotation_list(^^rbe::id));
 static_assert(not rbe::detail::is_annotation_list(^^rbe::bits));
 
 // --- has_annotation ---
-static_assert(rbe::detail::has_annotation(^^TestLittle, rbe::little));
-static_assert(rbe::detail::has_annotation(^^TestBig, rbe::big));
-static_assert(rbe::detail::has_annotation(^^TestPack, rbe::pack));
-static_assert(rbe::detail::has_annotation(^^TestId, rbe::id));
-static_assert(rbe::detail::has_annotation(^^TestDebug, rbe::debug));
-static_assert(rbe::detail::has_annotation(^^TestLength, rbe::frame_length));
-static_assert(rbe::detail::has_annotation(^^TestDebug, rbe::fmt));
-static_assert(rbe::detail::has_annotation(^^AnnotatedStructA, annotation_a));
-static_assert(rbe::detail::has_annotation(^^AnnotatedStructB, annotation_a));
-static_assert(not rbe::detail::has_annotation(^^WrongAnnotatedStruct, annotation_a));
+static_assert(rbe::detail::has_annotations(^^TestLittle, rbe::little));
+static_assert(rbe::detail::has_annotations(^^TestBig, rbe::big));
+static_assert(rbe::detail::has_annotations(^^TestPack, rbe::pack));
+static_assert(rbe::detail::has_annotations(^^TestId, rbe::id));
+static_assert(rbe::detail::has_annotations(^^TestDebug, rbe::debug));
+static_assert(rbe::detail::has_annotations(^^TestLength, rbe::frame_length));
+static_assert(rbe::detail::has_annotations(^^TestDebug, rbe::fmt));
+static_assert(rbe::detail::has_annotations(^^AnnotatedStructA, annotation_a));
+static_assert(rbe::detail::has_annotations(^^AnnotatedStructB, annotation_a));
+static_assert(not rbe::detail::has_annotations(^^WrongAnnotatedStruct, annotation_a));
 
 // --- views::rbe_annotations ---
 inline constexpr std::array rbe_annotations = rbe::detail::types_list(^^annotation_a, ^^annotation_c);

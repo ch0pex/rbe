@@ -81,11 +81,11 @@ struct std::formatter<std::endian> {
 };
 
 template<rbe::introspectable T>
-  requires(rbe::detail::has_annotation(^^T, rbe::fmt))
+  requires(rbe::detail::has_annotations(^^T, rbe::fmt))
 struct std::formatter<T> : universal_formatter { };
 
 template<rbe::introspectable T>
-  requires(rbe::detail::has_annotation(^^T, rbe::fmt))
+  requires(rbe::detail::has_annotations(^^T, rbe::fmt))
 std::ostream& operator<<(std::ostream& os, T const& val) {
   auto const formatted = std::format("{}", val);
   os.write(formatted.data(), static_cast<std::streamsize>(formatted.size()));

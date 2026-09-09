@@ -77,7 +77,15 @@ consteval auto deep_annotations(std::meta::info const info) -> std::vector<std::
   return result;
 }
 
-consteval auto has_annotation(std::ranges::range auto const& annotations, auto value) {
+/**
+ * @param annotations The range of annotations to search within.
+ * @param value The annotations to find.
+ *
+ * @return true if all annotations are found in the range of annotations.
+ */
+consteval auto has_annotations(std::ranges::range auto const& annotations, auto value) -> bool
+  requires annotation<decltype(value)> or annotation_list<decltype(value)>
+{
   return std::ranges::all_of(views::rbe_annotations(value), [&](std::meta::info const needle) {
     return std::ranges::contains(annotations, needle);
   });
@@ -87,11 +95,11 @@ consteval auto has_annotation(std::ranges::range auto const& annotations, auto v
  * Single entry point: `value` may be a plain annotation OR a `derive<...>` list -- both normalize
  * through the same `views::rbe_annotations` range, so there is exactly one code path.
  */
-consteval auto has_annotation(std::meta::info const info, auto value) -> bool
+consteval auto has_annotations(std::meta::info const info, auto value) -> bool
   requires annotation<decltype(value)> or annotation_list<decltype(value)>
 {
   auto const haystack = annotation_range(info);
-  return has_annotation(haystack, value);
+  return has_annotations(haystack, value);
 }
 
 /**
