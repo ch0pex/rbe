@@ -10,6 +10,7 @@
 
 // --- Includes ---
 #include "common_structs.hpp"
+#include "rbe/annotations/detail/base.hpp"
 
 #include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/derive.hpp>
@@ -47,6 +48,14 @@ static_assert(not rbe::detail::is_rbe_annotation(^^int));
 static_assert(rbe::detail::is_annotation_list(^^ rbe::debug));
 static_assert(not rbe::detail::is_annotation_list(^^rbe::id));
 static_assert(not rbe::detail::is_annotation_list(^^rbe::bits));
+
+// --- is_unique_annotation ---
+static_assert(rbe::detail::unique_annotation<decltype(rbe::id)>);
+static_assert(rbe::detail::unique_annotation<decltype(rbe::header_length)>);
+static_assert(rbe::detail::unique_annotation<decltype(rbe::payload_length)>);
+static_assert(rbe::detail::unique_annotation<decltype(rbe::frame_length)>);
+static_assert(not rbe::detail::unique_annotation<decltype(rbe::big)>);
+static_assert(not rbe::detail::unique_annotation<decltype(rbe::little)>);
 
 // --- has_annotation ---
 static_assert(rbe::detail::has_annotations(^^TestLittle, rbe::little));

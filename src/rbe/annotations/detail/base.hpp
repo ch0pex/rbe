@@ -17,6 +17,7 @@
 // --- STD ---
 #include <meta>
 #include <ranges>
+#include "rbe/annotations/detail/traits.hpp"
 
 namespace rbe::detail {
 
@@ -42,5 +43,9 @@ concept annotation = is_rbe_annotation(^^T) and not is_annotation_list(^^T);
 
 template<typename T>
 concept annotation_list = is_rbe_annotation(^^T) and is_annotation_list(^^T);
+
+template<typename T>
+concept unique_annotation =
+    annotation<T> and enforces(annotation_traits<std::remove_cvref_t<T>>::dimension::kind, dimension_kind::unique);
 
 } // namespace rbe::detail
