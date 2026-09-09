@@ -68,9 +68,9 @@ reaches further: OPRA's second discriminant (`msg_indicator`, see Scope) and any
 needs a header field are the same shape, not new rules.
 
 | Shape | Spelled as | Accessor |
-|---|---|---|
-| One wirable | `frame<H, LoginRequest>` | `payload(S) -> return_type<S, LoginRequest>` |
+| --- | --- | --- |
 | Candidate set | `frame<H, any<AddOrder, ReduceSize, Trade>>` | `match(overload)`, `as_variant()` |
+| One wirable | `frame<H, LoginRequest>` | `payload(S) -> return_type<S, LoginRequest>` |
 | Nested frame | `frame<UnitHeader, frame<H, any<A, B>>>` | `payload() -> frame<H, any<A, B>>` |
 | Repeated frames | `frame<UnitHeader, many<frame<H, any<A, B>>>>` | `payload()` -> range of `frame<H, any<A, B>>` |
 | Anything over bytes | `frame<H, std::span<std::byte const>>`, `frame<H, YourType>` | `payload() -> T` |
@@ -317,7 +317,7 @@ which is what OPRA needs (see Scope). That requires relaxing the `unique` rule t
 ## Files touched
 
 | File | Change |
-|---|---|
+| --- | --- |
 | `rbe/core/message_list.hpp` | `msg_list<T...>` replaced by `any<T...>` (no per-candidate header, no cross-candidate checks). |
 | `rbe/core/message_concepts.hpp` | Cross-candidate comparison dropped; `frame_header`/`frame_payload` concepts for the five shapes. |
 | `rbe/dsrl/any_msg.hpp` | Renamed `any.hpp`; keeps `match`/`as_variant`/`is`/`as` but takes the id as a constructor input, drops the framing accessors, and loses the `explicit_length`/`implicit_length` split. |
