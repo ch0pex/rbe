@@ -104,12 +104,12 @@ constexpr auto deserialize(std::span<std::byte> const input, dsrl::in_place_mut_
  * The deserialization is performed lazily, meaning that the members of the object are deserialized on-demand when
  * accessed.
  *
- * @tparam T The type of the object to deserialize. Must be introspectable.
+ * @tparam T The type of the object to deserialize. Must be a wirable_class.
  * @param input A span of bytes containing the serialized data.
  * @param lazy A tag indicating that the deserialization should be performed lazily.
  * @return A `dsrl::proxy<T>` that deserializes fields on-demand when accessed.
  */
-template<wirable T>
+template<wirable_class T>
 constexpr auto deserialize(std::span<std::byte const> const input, dsrl::lazy_t /*lazy*/) -> dsrl::proxy<T> {
   return dsrl::proxy<T> {input};
 }
