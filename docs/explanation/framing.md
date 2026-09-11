@@ -68,9 +68,9 @@ reaches further: OPRA's second discriminant (`msg_indicator`, see Scope) and any
 needs a header field are the same shape, not new rules.
 
 | Shape | Spelled as | Accessor |
-|---|---|---|
-| One wirable | `frame<H, LoginRequest>` | `payload(S) -> return_type<S, LoginRequest>` |
+| --- | --- | --- |
 | Candidate set | `frame<H, any<AddOrder, ReduceSize, Trade>>` | `match(overload)`, `as_variant()` |
+| One wirable | `frame<H, LoginRequest>` | `payload(S) -> return_type<S, LoginRequest>` |
 | Nested frame | `frame<UnitHeader, frame<H, any<A, B>>>` | `payload() -> frame<H, any<A, B>>` |
 | Repeated frames | `frame<UnitHeader, many<frame<H, any<A, B>>>>` | `payload()` -> range of `frame<H, any<A, B>>` |
 | Anything over bytes | `frame<H, std::span<std::byte const>>`, `frame<H, YourType>` | `payload() -> T` |
@@ -146,6 +146,27 @@ using packet = rbe::frame<
     >
   >
 >;
+
+rbe::deserialize<packet>(buffer, lazy) -> packet::dsrl_type;
+
+rbe::deserialize<packet>(buffer, eager) -> packet::value_type;
+
+rbe::serialize<packet>(buffer, packet::value_type {
+  .header = {},
+  .payload = {
+    {hdr, msg1},
+    {hdr, msg2},
+    {hdr, msg3},
+  },
+});
+
+packet::srl_type builder{buffer}
+  .header(unit_header)
+  .payload()
+    .append(hdr1, msg1) // maybe we can assert here that hdr1 id and msg id_value match 
+    .append(hdr2, msg2)
+    .append(hdr3, msg3)
+
 ```
 
 ### Header requirements
@@ -169,7 +190,7 @@ A length field says nothing until it says *what it counts*, so the single `rbe::
 three annotations, one per quantity:
 
 | Annotation | The field counts |
-|---|---|
+| --- | --- |
 | `[[= rbe::header_length]]` | the header's own bytes |
 | `[[= rbe::payload_length]]` | the payload's bytes, header excluded |
 | `[[= rbe::frame_length]]` | header + payload — the frame's whole extent |
@@ -317,7 +338,7 @@ which is what OPRA needs (see Scope). That requires relaxing the `unique` rule t
 ## Files touched
 
 | File | Change |
-|---|---|
+| --- | --- |
 | `rbe/core/message_list.hpp` | `msg_list<T...>` replaced by `any<T...>` (no per-candidate header, no cross-candidate checks). |
 | `rbe/core/message_concepts.hpp` | Cross-candidate comparison dropped; `frame_header`/`frame_payload` concepts for the five shapes. |
 | `rbe/dsrl/any_msg.hpp` | Renamed `any.hpp`; keeps `match`/`as_variant`/`is`/`as` but takes the id as a constructor input, drops the framing accessors, and loses the `explicit_length`/`implicit_length` split. |
