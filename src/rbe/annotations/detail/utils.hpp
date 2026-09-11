@@ -10,14 +10,15 @@
  */
 #pragma once
 
+#include <optional>
 #include <rbe/annotations/detail/dimension.hpp>
 #include <rbe/annotations/detail/view.hpp>
 
 namespace rbe::detail {
 
 /**
- * NOTE: most annotations are variables with anonymous types, however those annotations that require arguments are
- * types so we need to normalize them into a list of types to define dimensions
+ * NOTE: most are constant expressions with a type and a value, however so we need to normalize them into
+ * a list of types to define dimensions
  */
 consteval auto types_list(auto... args) {
   return std::array<std::meta::info, sizeof...(args)> {normalize_type(args)...};
