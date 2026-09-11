@@ -59,7 +59,7 @@ static_assert(rbe::detail::unique_annotation<decltype(rbe::frame_length)>);
 static_assert(not rbe::detail::unique_annotation<decltype(rbe::big)>);
 static_assert(not rbe::detail::unique_annotation<decltype(rbe::little)>);
 
-// --- has_annotation ---
+// --- has_annotations ---
 static_assert(rbe::detail::has_annotations(^^TestLittle, rbe::little));
 static_assert(rbe::detail::has_annotations(^^TestBig, rbe::big));
 static_assert(rbe::detail::has_annotations(^^TestPack, rbe::pack));
@@ -70,6 +70,16 @@ static_assert(rbe::detail::has_annotations(^^TestDebug, rbe::fmt));
 static_assert(rbe::detail::has_annotations(^^AnnotatedStructA, annotation_a));
 static_assert(rbe::detail::has_annotations(^^AnnotatedStructB, annotation_a));
 static_assert(not rbe::detail::has_annotations(^^WrongAnnotatedStruct, annotation_a));
+static_assert(rbe::detail::has_annotations(^^NestedParent, rbe::big));
+static_assert(not rbe::detail::has_annotations(^^NestedParent, rbe::frame_length));
+static_assert(not rbe::detail::has_annotations(^^NestedParent, rbe::id));
+static_assert(not rbe::detail::has_annotations(^^NestedParent, rbe::header_length));
+// --- has_annotations_deep ---
+static_assert(rbe::detail::has_annotations_deep(^^NestedParent, rbe::big));
+static_assert(rbe::detail::has_annotations_deep(^^NestedParent, rbe::frame_length));
+static_assert(rbe::detail::has_annotations_deep(^^NestedParent, rbe::id));
+static_assert(rbe::detail::has_annotations_deep(^^NestedParent, rbe::header_length));
+static_assert(not rbe::detail::has_annotations_deep(^^NestedParent, rbe::payload_length));
 
 // --- views::rbe_annotations ---
 inline constexpr std::array rbe_annotations = rbe::detail::types_list(^^annotation_a, ^^annotation_c);
