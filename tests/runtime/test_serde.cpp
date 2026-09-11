@@ -214,6 +214,24 @@ TEST_CASE("serde - proxy unique annotation accessor") {
   CHECK(view.field<rbe::header_length>() == 0xBB);
 }
 
+
+TEST_CASE("serde - proxy unique deep annotation accessor") {
+
+  auto view = rbe::deserialize<NestedParent>(nested_propagation_test.wire, rbe::dsrl::lazy);
+
+  CHECK(view.field<rbe::frame_length>() == 0x55667788);
+  CHECK(view.field<rbe::id>() == 0xAABBCCDD);
+  CHECK(view.field<rbe::header_length>() == 0x11223344);
+}
+
+TEST_CASE("serde - deep field accessor by identifier") {
+  auto view = rbe::deserialize<NestedParent>(nested_propagation_test.wire, rbe::dsrl::lazy);
+
+  CHECK(view.field<"node", "leaf">() == nested_propagation_test.structure.node.leaf);
+  CHECK(view.field<"node", "leaf", "valor">() == nested_propagation_test.structure.node.leaf.valor);
+  CHECK(view.field<"node", "valor2">() == nested_propagation_test.structure.node.valor2);
+}
+
 TEST_SUITE_END();
 
 } // namespace
