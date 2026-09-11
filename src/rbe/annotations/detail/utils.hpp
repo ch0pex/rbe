@@ -104,6 +104,12 @@ consteval auto has_annotations(std::meta::info const info, auto value) -> bool
   return has_annotations(haystack, value);
 }
 
+consteval auto has_annotations_deep(std::meta::info const info, auto value) -> bool
+  requires annotation<decltype(value)> or annotation_list<decltype(value)>
+{
+  return has_annotations(rbe::detail::deep_annotations(info), value);
+}
+
 /**
  * Flattens a single raw attribute into the RBE annotation VALUES it denotes (a `derive<...>` list
  * expands into its filtered constituents, a plain annotation is itself, anything else vanishes).
