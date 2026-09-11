@@ -20,12 +20,13 @@
 
 namespace rbe::detail {
 
-consteval auto annotated_nsdm(std::meta::info type, unique_annotation auto const ann) -> std::meta::info {
+consteval auto annotated_nsdm(std::meta::info type, unique_annotation auto const ann) noexcept
+    -> std::optional<std::meta::info> {
   auto const members               = nsdm(type);
   auto const has_unique_annotation = [ann](auto member) { return has_annotations(member, ann); };
   auto const it                    = std::ranges::find_if(members, has_unique_annotation);
   if (it == std::ranges::end(members)) {
-    throw std::invalid_argument("There isn't a member annotated with such annotation");
+    return std::nullopt;
   }
   return *it;
 }
