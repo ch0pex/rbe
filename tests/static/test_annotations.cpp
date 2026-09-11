@@ -10,9 +10,10 @@
 
 // --- Includes ---
 #include "common_structs.hpp"
-#include "rbe/annotations/detail/base.hpp"
 #include "rbe/annotations/detail/annotated_nsdm.hpp"
+#include "rbe/annotations/detail/base.hpp"
 
+#include <optional>
 #include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/derive.hpp>
 #include <rbe/annotations/detail/correctness.hpp>
@@ -136,5 +137,6 @@ static_assert(not rbe::well_annotated<IdValueOnScalar>); // id(value) on a non c
 static_assert(rbe::detail::annotated_nsdm(^^AllLengths, rbe::frame_length) == ^^AllLengths::frame);
 static_assert(rbe::detail::annotated_nsdm(^^AllLengths, rbe::payload_length) == ^^AllLengths::payload);
 static_assert(rbe::detail::annotated_nsdm(^^AllLengths, rbe::header_length) == ^^AllLengths::header);
+static_assert(rbe::detail::annotated_nsdm(^^AllLengths, rbe::id) == std::nullopt);
 
 } // namespace

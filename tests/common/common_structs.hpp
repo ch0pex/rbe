@@ -393,19 +393,19 @@ struct BadParent { [[=rbe::little]] Child child; };
 // Neither NestedLeaf nor NestedMiddle carry any annotation of their own -- both must inherit
 // big-endian transitively from NestedParent, propagated through two levels of unannotated nesting.
 struct NestedLeaf {
-  std::uint32_t valor;
+  [[=rbe::header_length]] std::uint32_t valor;
   constexpr bool operator==(NestedLeaf const&) const = default;
 };
 
 struct NestedMiddle {
   NestedLeaf leaf;
-  std::uint32_t valor2;
+ [[=rbe::id]] std::uint32_t valor2;
   constexpr bool operator==(NestedMiddle const&) const = default;
 };
 
 struct [[=rbe::big]] NestedParent {
   NestedMiddle node;
-  std::uint32_t valor3;
+  [[=rbe::frame_length]] std::uint32_t valor3;
   constexpr bool operator==(NestedParent const&) const = default;
 };
 
