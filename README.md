@@ -1,4 +1,4 @@
-# RBE — Reflection Binary Encoding
+# RBE: Reflection Binary Encoding
 
 [![CI](https://github.com/ch0pex/rbe/actions/workflows/ci.yml/badge.svg)](https://github.com/ch0pex/rbe/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/ch0pex/rbe/branch/main/graph/badge.svg)](https://codecov.io/gh/ch0pex/rbe)
@@ -6,45 +6,34 @@
 [![GCC](https://img.shields.io/badge/GCC-16%2B-blue.svg)](https://gcc.gnu.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A header-only C++ library for declarative binary serialization and deserialization via reflection-based annotations. Define your wire protocol once as plain C++ structs; RBE handles the rest.
+## Overview
 
-## Motivation
+RBE (Reflection Binary Encoding) is a modern, header-only C++26 library that bridges the gap between plain C++ structs and raw binary protocols. By leveraging C++26 static reflection, RBE allows you to declaratively define byte order, packing, and message framing directly via struct attributes.
 
-Binary serialization in C++ typically forces a choice between two bad options:
+### Define the wire format using annotations
 
-| Approach | Problem |
-|---|---|
-| `#pragma pack` + type punning | Undefined behavior, not portable |
-| Manual serialization code | Massive boilerplate that diverges from the struct definition |
-
-RBE offers a third path: annotate your structs, and let the framework derive all serialization logic at compile time through reflection.
-
-Originally designed for high-frequency trading systems, RBE is suitable for any performance-critical application that requires correct, maintainable binary protocol handling.
-
-## Features
-
-- **Declarative protocol definitions** — describe wire formats with standard C++ structs
-- **Annotation-driven** — control endianness, packing, length, and message ID per field or per type
-- **Zero-boilerplate** — no hand-written serialize/deserialize functions
-- **Header-only** — single include, no link step
-
-## Quick Start
-
-### Define a protocol
+The library automatically generates highly optimized serialization and deserialization routines at compile time. Whether you are reading from a network socket, a memory-mapped file, or a ring buffer, your struct remains the strict single source of truth, eliminating boilerplate and guaranteeing zero runtime overhead.
 
 ```cpp
-namespace cboeu {
+#include <rbe/annotations.hpp>
 
-struct [[=rbe::pack_le]] PacketHeader {
+enum class msg_type : std::uint8_t { add_order = 0x21, reduce_size = 0x25, tick = 0x2A };
+
+// struct will travel packed and big-endian over the wire
+struct [[=rbe::pack, =rbe::big]] PacketHeader {
     std::uint16_t length;
     std::uint8_t  count;
     std::uint8_t  unit;
     std::uint32_t sequence;
 };
 
-struct [[=rbe::pack_le]] AddOrder {
-    [[=rbe::frame_length]] std::uint8_t  length;
-    [[=rbe::id]]     std::uint8_t  message_type;
+// =rbe::pack_be is a preset for `=rbe::pack, =rbe::big`
+struct [[=rbe::pack_be]] MessageHeader {
+    [[=rbe::frame_length]] std::uint8_t length;
+    [[=rbe::id]]           msg_type   message_type;
+};
+
+struct [[=rbe::pack_be, =rbe::id(msg_type::add_order)]] AddOrder {
     std::uint32_t time_offset;
     std::uint32_t order_id;
     std::uint8_t  side_indicator;
@@ -53,114 +42,132 @@ struct [[=rbe::pack_le]] AddOrder {
     std::uint32_t price;
 };
 
-struct [[=rbe::pack_le]] ReduceSize {
-    [[=rbe::frame_length]] std::uint8_t  length;
-    [[=rbe::id]]     std::uint8_t  message_type;
+struct [[=rbe::pack_be, =rbe::id(msg_type::reduce_size)]] ReduceSize {
     std::uint32_t time_offset;
     std::uint64_t order_id;
     std::uint32_t cancelled_shares;
 };
 
-} // namespace cboeu
-```
+// trivially_wirable example, wire and host representation are identical
+struct [[=rbe::id(msg_type::tick)]] Tick {
+    std::uint64_t timestamp;
+    std::uint32_t price;
+    std::uint32_t quantity;
+};
 
-> The `[[=...]]` annotation on a struct must sit right after the `struct`/`class` keyword, before the type name — that's what attaches it to the class-head so reflection can see it. Putting it on the line above (`[[=...]]\nstruct Foo {...}`) instead attaches it to the *declaration*, and the annotation is silently invisible to RBE. `rbe::pack_le` is shorthand for `rbe::derive<rbe::pack, rbe::little>` (see [Annotations reference](#annotations-reference)); field annotations go directly before the member.
+```
 
 ### Serialize and deserialize
 
+Serialization and deserialization are as easy as calling `rbe::serialize` and `rbe::deserialize`. The library supports different decoding strategies: eager, lazy and in-place to suit different use cases.
+
+- Eager: decode every field up front, get the struct back
+- Lazy: get a proxy over the buffer, each field decoded on access
+- In-place: type pun the buffer into a struct, no decoding at all (the type must be `trivially_wirable` and the buffer must be aligned)
+
 ```cpp
-namespace cboe = cboeu;
+#include <rbe/dsrl.hpp> // deserialization module
+#include <rbe/srl.hpp> // serialization module
 
-std::array<std::byte, 1500> buffer{};
-
-// Deserialize from raw buffer (lazy: reads fields on demand)
-auto msg    = rbe::deserialize<cboe::AddOrder>(buffer, rbe::dsrl::lazy);
-auto length = msg.field<"length">();
+alignas(Tick) std::array<std::byte, 1500> buffer{};
 
 // Serialize to raw buffer
-rbe::serialize(buffer, cboe::AddOrder{});
+auto size = rbe::serialize(buffer, AddOrder{});
+
+// Eager: decode every field up front, get the struct back
+auto order = rbe::deserialize<AddOrder>(buffer, rbe::dsrl::eager);
+auto price = order.price;
+
+// Lazy: get a proxy over the buffer, each field decoded on access
+auto view      = rbe::deserialize<AddOrder>(buffer, rbe::dsrl::lazy);
+auto timestamp = view.field<"time_offset">(); // ✅ correct
+// auto invalid    = view.field<"invalid">(); // ❌ compile-time error: no such field
+
+// In-place: type pun the buffer into a struct, no decoding at all.
+// The type must be `trivially_wirable` and the buffer must meet alignment requirements.
+auto& tick = rbe::deserialize<Tick>(buffer, rbe::dsrl::in_place); 
 ```
 
-### Annotations reference
+### Framing
 
-| Annotation | Scope | Effect |
-|---|---|---|
-| `=rbe::little` | struct, member | Little-endian byte order |
-| `=rbe::big` | struct, member | Big-endian byte order |
-| `=rbe::pack` | struct, member | Fields are packed without padding |
-| `=rbe::align` | struct, member | Explicit standard C++ alignment (the implicit default) |
-| `=rbe::frame_length` | member | Marks the field that encodes the total frame length (header + payload) |
-| `=rbe::payload_length` | member | Marks the field that encodes the payload length |
-| `=rbe::header_length` | member | Marks the field that encodes the header length |
-| `=rbe::id` | member | Marks the field that encodes the message type ID |
-| `=rbe::id(value)` | struct | Declares the id the message type is dispatched under |
-| `=rbe::fmt` | struct | Opts the type into RBE's `std::format`/`std::ostream` debug formatter |
-| `=rbe::derive<...>` | struct, member | Groups several annotations under one `=` clause; `rbe::pack_le`, `rbe::pack_be`, and `rbe::debug` are built-in presets |
+RBE provides a flexible and recursive message framing system. By defining a frame as a combination of a header and a payload, where payloads can be frames themselves, an entire protocol can be expressed as one unified type.
 
-`little`/`big` and `pack`/`align` are each mutually exclusive within the same scope; the id annotations (`id`, `id(value)`) and the three `*_length` annotations are exclusive within one scope and may each appear once per (possibly nested) type. See [`docs/reference/annotations.md`](docs/reference/annotations.md) for the full inheritance and conflict rules.
+- Header: any `wirable` type
+- Payload: one of
+  - a `wirable` type
+  - another `rbe::frame`
+  - `rbe::any<T...>`: one of several messages, picked by the header's `=rbe::id` field
+  - `rbe::many<T>`: a run of messages, each one walked using its own length field
 
-## Building
+```cpp
+#include <rbe/framing.hpp>
 
-RBE is packaged as a Conan recipe (`conanfile.py` at the repo root) that generates its own CMake presets — there is no hand-maintained `CMakePresets.json` and no separate `conan/` directory to `cd` into.
+using packet = rbe::frame<
+    PacketHeader,                                 // packet header
+    rbe::many<                                    // ...followed by a run of
+        rbe::frame<
+            MessageHeader,                        // message header
+            rbe::any<AddOrder, ReduceSize, Tick>  // one of these
+        >
+    >
+>;
 
-### Prerequisites
+// Read it back: the strategy picks the view, just like a plain struct
+auto packet_view = rbe::deserialize<packet>(buffer, rbe::dsrl::lazy);
+auto sequence    = packet_view.header().field<"sequence">();  
 
-| Tool | Minimum version |
+for (auto [hdr, payload] : packet_view.payload()) {
+  payload.match( // match supports both eager and lazy dispatch
+    [](AddOrder add_order) { /* ... */ },,
+    [](ReduceSize reduce_size) { /* ... */ },
+    [](rbe::proxy<Tick> tick) { /* ... */}, 
+    [](msg_type id) { /* unknown message type, handle error */ }
+  );
+}
+
+// Write it as one value, value_type is automatically generated from the frame's template parameters ...
+rbe::serialize<packet>(buffer, packet::value_type { 
+    .header  = packet_header,
+    .payload = {{msg_header0, add_order}, {msg_header1, reduce_size}},
+});
+
+// ...or message by message, straight into the buffer
+packet::srl_type {buffer} 
+    .header(packet_header)
+    .payload()
+        .append(msg_header, add_order)
+        .append(msg_header, reduce_size);
+```
+
+## Key Features
+
+- **Declarative**
+  - Describe your binary format with standard C++ structs
+  - Describe your frames with `rbe::frame`, `rbe::any` and `rbe::many`
+  - Use C++26 annotations to specify endianness, packing, field order, framing and more
+- **Safety**
+  - Annotations correctness is verified at compile time
+  - Proxy member access is verified at compile time during deserialization
+  - Frame composition correctness is verified at compile time
+- **Performance**
+  - Serialization and deserialization logic is generated at compile time, with zero runtime overhead compared to hand-written code
+  - Different decoding strategies, eager, lazy and in-place, for different use cases
+- **Low adoption cost**
+  - Header-only
+  - No external dependencies
+
+## Documentation
+
+Full documentation lives at **[ch0pex.github.io/rbe](https://ch0pex.github.io/rbe/)**:
+
+| Section | Start here |
 |---|---|
-| CMake | 3.31 |
-| Conan | 2.x |
-| Ninja | any recent (or another CMake generator) |
-| Compiler | GCC 16+ |
-| ccache *(optional)* | any |
+| Tutorials | [Getting started](https://ch0pex.github.io/rbe/tutorials/getting-started/) |
+| How-to guides | [Index](https://ch0pex.github.io/rbe/how-to/) |
+| Reference | [Annotations](https://ch0pex.github.io/rbe/reference/annotations/) · [Serialization](https://ch0pex.github.io/rbe/reference/serialization/) · [Deserialization](https://ch0pex.github.io/rbe/reference/deserialization/) · [Feature matrix](https://ch0pex.github.io/rbe/reference/features/) |
+| Explanation | [Design overview](https://ch0pex.github.io/rbe/explanation/design-overview/) · [Message framing](https://ch0pex.github.io/rbe/explanation/framing/) · [Type concepts](https://ch0pex.github.io/rbe/explanation/concepts/) · [Requirements](https://ch0pex.github.io/rbe/explanation/requirements/) |
 
-> **Compiler support:** RBE relies on C++26 static reflection, which today is only implemented by GCC ≥ 16. The Conan recipe's `validate()` rejects Clang and MSVC outright until they support it — there's no partial/experimental path yet.
+## Contributing
 
-### Build and test (one shot)
-
-This mirrors what CI runs — it builds the library, tests, and examples, then runs the test suite:
-
-```bash
-conan create . -b missing \
-    -s compiler=gcc -s compiler.version=16 -s compiler.cppstd=26 \
-    -c user.rbe.build:all=True
-```
-
-### Configure and build (iterating locally)
-
-```bash
-# Install dependencies and generate CMake presets. `user.rbe.build:all=True`
-# is required to build tests/examples (without it, only the header-only
-# package itself is configured).
-conan install . -b missing -c user.rbe.build:all=True \
-    -s compiler=gcc -s compiler.version=16 -s compiler.cppstd=26 -s build_type=Debug
-
-cmake --preset conan-default
-cmake --build --preset conan-debug
-```
-
-The preset names above (`conan-default` / `conan-debug`) come from Conan's `CMakeToolchain` and vary with `build_type` (e.g. `conan-release` for a Release build) — check the generated `CMakeUserPresets.json` at the repo root, or run `cmake --list-presets`, if unsure.
-
-### Run tests
-
-```bash
-ctest --preset conan-debug --output-on-failure
-```
-
-## Project Structure
-
-```
-rbe/
-├── src/rbe/rbe.hpp     # library (header-only)
-├── tests/              # doctest test suite
-├── example/            # standalone usage examples
-├── docs/               # reference and design documentation
-├── cmake/              # CMake modules
-├── conanfile.py        # Conan recipe
-└── CMakeLists.txt
-```
-
-## License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
-Copyright (c) 2026 Álvaro Cabrera Barrio
+Building RBE from source, running the test suite and the repository layout are covered in
+[CONTRIBUTING.md](CONTRIBUTING.md).
