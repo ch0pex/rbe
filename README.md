@@ -1,4 +1,4 @@
-# RBE: Reflection Binary Encoding
+# RBE: Reflection-Based Encoding
 
 [![CI](https://github.com/ch0pex/rbe/actions/workflows/ci.yml/badge.svg)](https://github.com/ch0pex/rbe/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/ch0pex/rbe/branch/main/graph/badge.svg)](https://codecov.io/gh/ch0pex/rbe)
@@ -8,7 +8,7 @@
 
 ## Overview
 
-RBE (Reflection Binary Encoding) is a modern, header-only C++26 library that bridges the gap between plain C++ structs and raw binary protocols. By leveraging C++26 static reflection, RBE allows you to declaratively define byte order, packing, and message framing directly via struct attributes.
+RBE (Reflection-Based Encoding) is a modern, header-only C++26 library that bridges the gap between plain C++ structs and raw binary protocols. By leveraging C++26 static reflection, RBE allows you to declaratively define byte order, packing, and message framing directly via struct attributes.
 
 ### Define the wire format using annotations
 

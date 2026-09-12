@@ -1,5 +1,5 @@
 
-# Reflective Binary Encoding (RBE)
+# Reflection-Based Encoding (RBE)
 
 A header-only C++ library for declarative binary serialization and deserialization via reflection-based annotations. Define your wire protocol once as plain C++ structs; RBE handles the rest.
 

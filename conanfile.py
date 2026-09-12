@@ -14,7 +14,7 @@ required_conan_version = ">=2.0.15"
 class MonoGameRecipe(ConanFile):
     name = "rbe"
     homepage = "https://github.com/ch0pex/rbe"
-    description = "Reflexion Based Encoding is a C++ library that provides a simple and efficient way to serialize and deserialize objects using reflection."
+    description = "Reflection-Based Encoding is a C++ library that provides a simple and efficient way to serialize and deserialize objects using reflection."
     package_type = "header-library"
     settings = "os", "compiler", "build_type", "arch"
 
