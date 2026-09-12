@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file no_throw.hpp
+ * @file throw_check.hpp
  * @date 05/09/2026
  * @brief Turns a throwing consteval diagnostic into a bool, so it can double as a concept's requirement
  */
@@ -29,6 +29,11 @@ constexpr auto no_throw(Diagnose&& diagnose, Args&&... args) noexcept -> bool tr
 }
 catch (...) {
   return false;
+}
+
+template<class Diagnose, class... Args>
+constexpr auto throws(Diagnose&& diagnose, Args&&... args) noexcept -> bool {
+  return not no_throw(std::forward<Diagnose>(diagnose), std::forward<Args>(args)...);
 }
 
 } // namespace rbe::detail

@@ -11,7 +11,7 @@
  */
 
 // --- Includes ---
-#include <rbe/core/detail/no_throw.hpp>
+#include <rbe/core/detail/throw_check.hpp>
 
 // --- External dependencies ---
 #include <doctest/doctest.h>
@@ -40,4 +40,15 @@ TEST_CASE("no throw - runtime") {
   static_assert(rbe::detail::no_throw(diagnose_throwing, false));
   static_assert(not rbe::detail::no_throw(diagnose_throwing, true));
   static_assert(not rbe::detail::no_throw(always_throws));
+}
+
+TEST_CASE("throws- runtime") {
+
+  CHECK_FALSE(rbe::detail::throws(diagnose_throwing, false));
+  CHECK(rbe::detail::throws(diagnose_throwing, true));
+  CHECK(rbe::detail::throws(always_throws));
+
+  static_assert(not rbe::detail::throws(diagnose_throwing, false));
+  static_assert(rbe::detail::throws(diagnose_throwing, true));
+  static_assert(rbe::detail::throws(always_throws));
 }
