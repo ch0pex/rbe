@@ -55,6 +55,26 @@ target_sources(
         rbe/dsrl/return_type.hpp
         rbe/dsrl/tags.hpp
 
+        # framing
+        rbe/framing/detail/to_dsrl_type.hpp
+        rbe/framing/detail/to_srl_type.hpp
+        rbe/framing/detail/to_value_type.hpp
+        rbe/framing/dsrl/detail/message_dispatcher_impl.hpp
+        rbe/framing/dsrl/any.hpp
+        rbe/framing/dsrl/frame.hpp
+        rbe/framing/dsrl/frame_concepts.hpp
+        rbe/framing/dsrl/many.hpp
+        rbe/framing/dsrl/message_dispatcher_concepts.hpp
+        rbe/framing/srl/any.hpp
+        rbe/framing/srl/frame.hpp
+        rbe/framing/srl/many.hpp
+        rbe/framing/any.hpp
+        rbe/framing/frame.hpp
+        rbe/framing/frame_concepts.hpp
+        rbe/framing/frame_traits.hpp
+        rbe/framing/many.hpp
+        rbe/framing/value_type.hpp
+
         # serialize
         rbe/srl/detail/serialize_impl.hpp
         rbe/srl/serialize.hpp
@@ -63,6 +83,7 @@ target_sources(
         rbe/annotations.hpp
         rbe/core.hpp
         rbe/srl.hpp
+        rbe/framing.hpp
         rbe/rbe.hpp
         rbe/dsrl.hpp
 )
