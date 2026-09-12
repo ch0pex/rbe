@@ -23,6 +23,10 @@ namespace rbe::detail {
 
 inline constexpr auto default_context = std::meta::access_context::unchecked();
 
+consteval auto normalize_type(std::meta::info const info) -> std::meta::info {
+  return not is_type(info) ? remove_cvref(type_of(info)) : remove_cvref(info);
+};
+
 consteval auto nsdm(std::meta::info info, std::meta::access_context ctx = default_context) {
   return nonstatic_data_members_of(info, ctx);
 }
@@ -99,8 +103,29 @@ consteval auto static_member_functions_of(std::meta::info const info, std::meta:
   return members_of(info, ctx) | std::views::filter(is_static_member_function) | std::ranges::to<std::vector>();
 }
 
-consteval auto normalize_type(std::meta::info const info) -> std::meta::info {
-  return not is_type(info) ? remove_cvref(type_of(info)) : remove_cvref(info);
-};
+consteval auto member_aliases_of(std::meta::info const info, std::meta::access_context ctx = default_context)
+    -> std::vector<std::meta::info> {
+  return members_of(info, ctx) //
+         | std::views::filter(std::meta::is_type_alias) //
+         | std::ranges::to<std::vector>();
+}
+
+consteval auto member_alias_of( //
+    std::meta::info const info,  //
+    std::string_view const identifier,  //
+    std::meta::access_context ctx = default_context //
+) -> std::meta::info {
+  auto const aliases = member_aliases_of(info, ctx);
+  auto it            = std::ranges::find_if(aliases, [&](std::meta::info const alias) {
+    return has_identifier(alias) and identifier_of(alias) == identifier;
+  });
+
+  if (it != aliases.end()) {
+    return *it;
+  }
+
+  throw std::meta::exception("invalid member alias, no such member alias", ^^member_alias_of);
+}
+
 
 } // namespace rbe::detail

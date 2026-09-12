@@ -15,6 +15,7 @@
 #include <array>
 #include <meta>
 #include <vector>
+#include "rbe/core/detail/throw_check.hpp"
 
 // --- System ---
 
@@ -92,6 +93,12 @@ struct WithStaticFns {
 struct WithConstMember {
   int const x;
   int& y;
+};
+
+struct WithTypeAlias {
+  using my_int      = int;
+  using number_type = int;
+  my_int a;
 };
 
 
@@ -264,7 +271,7 @@ static_assert(not rbe::detail::specialization_of(^^TestStruct, ^^std::vector)); 
 static_assert(rbe::detail::bases_of(^^EmptyStruct).empty());
 static_assert(rbe::detail::bases_of(^^TestStruct).empty());
 static_assert(rbe::detail::bases_of(^^Derived).size() == 1);
-static_assert(type_of(rbe::detail::bases_of (^^Derived)[0]) == ^^Base);
+static_assert(type_of(rbe::detail::bases_of(^^Derived)[0]) == ^^Base);
 
 // ============================================================
 // static_member_functions_of
@@ -287,6 +294,21 @@ static_assert(rbe::detail::normalize_type(rbe::detail::nsdm(^^TestStruct, "b")) 
 static_assert(rbe::detail::normalize_type(rbe::detail::nsdm(^^WithConstMember, "x")) == ^^int); // const stripped
 static_assert(rbe::detail::normalize_type(rbe::detail::nsdm(^^WithConstMember, "y")) == ^^int); // reference stripped
 
-// --- Annotation tests ---
+// ============================================================
+// member_aliases_of
+// ============================================================
+static_assert(rbe::detail::member_aliases_of(^^WithTypeAlias).size() == 2);
+static_assert(rbe::detail::member_alias_of(^^WithTypeAlias, "my_int") == ^^WithTypeAlias::my_int);
+static_assert(rbe::detail::member_alias_of(^^WithTypeAlias, "number_type") == ^^WithTypeAlias::number_type);
+static_assert(is_type_alias(rbe::detail::member_alias_of(^^WithTypeAlias, "my_int")));
+static_assert(is_type_alias(rbe::detail::member_alias_of(^^WithTypeAlias, "number_type")));
+static_assert(dealias(rbe::detail::member_alias_of(^^WithTypeAlias, "my_int")) == ^^int);
+static_assert(dealias(rbe::detail::member_alias_of(^^WithTypeAlias, "number_type")) == ^^int);
+static_assert(
+    rbe::detail::no_throw(rbe::detail::member_alias_of, ^^WithTypeAlias, "my_int", rbe::detail::default_context)
+);
+static_assert(
+    not rbe::detail::no_throw(rbe::detail::member_alias_of, ^^WithTypeAlias, "invented", rbe::detail::default_context)
+);
 
 } // namespace
