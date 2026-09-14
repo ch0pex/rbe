@@ -20,6 +20,7 @@
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
+#include "rbe/annotations/well_annotated_concepts.hpp"
 
 // --- STD ---
 
@@ -73,7 +74,7 @@ public:
   }
 
   template<rbe::detail::unique_annotation auto Annotation>
-    requires(wirable_class<value_type> and rbe::detail::has_annotations_deep(^^value_type, Annotation))
+    requires(wirable_class<value_type> and contains_annotation<value_type, Annotation>)
   [[nodiscard]] constexpr auto field() const {
     static constexpr auto direct_member = rbe::detail::annotated_nsdm(^^T, Annotation);
     if constexpr (direct_member) {
