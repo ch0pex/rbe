@@ -10,10 +10,10 @@
 
 // --- Includes ---
 #include "common_structs.hpp"
-#include "rbe/annotations/detail/annotated_nsdm.hpp"
-#include "rbe/annotations/detail/base.hpp"
 
-#include <optional>
+#include <rbe/annotations/detail/annotated_nsdm.hpp>
+#include <rbe/annotations/detail/base.hpp>
+
 #include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/derive.hpp>
 #include <rbe/annotations/detail/correctness.hpp>
@@ -24,8 +24,7 @@
 #include <rbe/annotations/well_annotated_concepts.hpp>
 
 // --- STD ---
-
-// --- System ---
+#include <optional>
 
 namespace {
 
@@ -80,6 +79,13 @@ static_assert(rbe::detail::has_annotations_deep(^^NestedParent, rbe::frame_lengt
 static_assert(rbe::detail::has_annotations_deep(^^NestedParent, rbe::id));
 static_assert(rbe::detail::has_annotations_deep(^^NestedParent, rbe::header_length));
 static_assert(not rbe::detail::has_annotations_deep(^^NestedParent, rbe::payload_length));
+
+// --- contains_annotations ---
+static_assert(rbe::contains_annotation<NestedParent, rbe::big>);
+static_assert(rbe::contains_annotation<NestedParent, rbe::frame_length>);
+static_assert(rbe::contains_annotation<NestedParent, rbe::id>);
+static_assert(rbe::contains_annotation<NestedParent, rbe::header_length>);
+static_assert(not rbe::contains_annotation<NestedParent, rbe::payload_length>);
 
 // --- views::rbe_annotations ---
 inline constexpr std::array rbe_annotations = rbe::detail::types_list(^^annotation_a, ^^annotation_c);

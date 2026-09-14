@@ -12,6 +12,7 @@
 
 // --- Includes ---
 #include <rbe/annotations/detail/correctness.hpp>
+#include "rbe/annotations/detail/utils.hpp"
 
 // --- STD ---
 
@@ -19,5 +20,8 @@ namespace rbe {
 
 template<typename T>
 concept well_annotated = detail::annotations::well_annotated(^^T);
+
+template<typename T, auto Annotation>
+concept contains_annotation = detail::has_annotations_deep(^^T, Annotation);
 
 } // namespace rbe
