@@ -30,7 +30,7 @@ namespace rbe::detail {
  * @param input Byte span containing the member's serialized data.
  */
 template<wirable T, context Ctx>
-auto deserialize_member(std::span<std::byte const> const input) -> T {
+constexpr auto deserialize_member(std::span<std::byte const> const input) -> T {
   return deserialize<T, Ctx>(input);
 }
 
@@ -42,18 +42,18 @@ auto deserialize_member(std::span<std::byte const> const input) -> T {
  * @param input Byte span containing the member's serialized data.
  */
 template<trivially_wirable_primitive T, context Ctx>
-auto deserialize_member(std::span<std::byte const> const input) -> T {
+constexpr auto deserialize_member(std::span<std::byte const> const input) -> T {
   return deserialize<T, Ctx>(input);
 }
 
 template<trivially_wirable_range T, context Ctx>
   requires(Ctx.endianness == endian::order::native or sizeof(std::ranges::range_value_t<T>) == 1)
-auto deserialize_member(std::span<std::byte const> input) -> T {
+constexpr auto deserialize_member(std::span<std::byte const> input) -> T {
   return load<T>(input);
 }
 
 template<wirable_range T, context Ctx>
-auto deserialize_member(std::span<std::byte const> input) -> T {
+constexpr auto deserialize_member(std::span<std::byte const> input) -> T {
   T array;
   using element_type = std::ranges::range_value_t<T>;
   for (auto& e: array) {
