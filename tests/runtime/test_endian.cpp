@@ -12,7 +12,7 @@
 #include <rbe/core/endian.hpp>
 
 // --- External dependencies ---
-#include <doctest/doctest.h>
+#include "test_macros.hpp"
 
 // --- STD ---
 #include <array>
@@ -209,7 +209,7 @@ TEST_CASE_TEMPLATE(
     std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
-  CHECK(endian::to_native<order::native>(tr::value) == tr::value);
+  RBE_CHECK(endian::to_native<order::native>(tr::value) == tr::value);
 }
 
 TEST_CASE_TEMPLATE(
@@ -217,8 +217,8 @@ TEST_CASE_TEMPLATE(
     std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
-  CHECK(endian::to_native<order::little>(endian::to_native<order::little>(tr::value)) == tr::value);
-  CHECK(endian::to_native<order::big>(endian::to_native<order::big>(tr::value)) == tr::value);
+  RBE_CHECK(endian::to_native<order::little>(endian::to_native<order::little>(tr::value)) == tr::value);
+  RBE_CHECK(endian::to_native<order::big>(endian::to_native<order::big>(tr::value)) == tr::value);
 }
 
 TEST_CASE_TEMPLATE(
@@ -227,12 +227,12 @@ TEST_CASE_TEMPLATE(
 ) {
   using tr = traits<T>;
   if constexpr (order::native == order::little) {
-    CHECK(endian::to_native<order::little>(tr::value) == tr::value);
-    CHECK(endian::to_native<order::big>(tr::value) == tr::bswapped);
+    RBE_CHECK(endian::to_native<order::little>(tr::value) == tr::value);
+    RBE_CHECK(endian::to_native<order::big>(tr::value) == tr::bswapped);
   }
   else {
-    CHECK(endian::to_native<order::big>(tr::value) == tr::value);
-    CHECK(endian::to_native<order::little>(tr::value) == tr::bswapped);
+    RBE_CHECK(endian::to_native<order::big>(tr::value) == tr::value);
+    RBE_CHECK(endian::to_native<order::little>(tr::value) == tr::bswapped);
   }
 }
 
@@ -241,9 +241,9 @@ TEST_CASE_TEMPLATE(
     std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
-  CHECK(endian::native_to<order::little>(tr::value) == endian::to_native<order::little>(tr::value));
-  CHECK(endian::native_to<order::big>(tr::value) == endian::to_native<order::big>(tr::value));
-  CHECK(endian::native_to<order::native>(tr::value) == endian::to_native<order::native>(tr::value));
+  RBE_CHECK(endian::native_to<order::little>(tr::value) == endian::to_native<order::little>(tr::value));
+  RBE_CHECK(endian::native_to<order::big>(tr::value) == endian::to_native<order::big>(tr::value));
+  RBE_CHECK(endian::native_to<order::native>(tr::value) == endian::to_native<order::native>(tr::value));
 }
 
 

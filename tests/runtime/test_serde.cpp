@@ -26,7 +26,7 @@
 #include <rbe/srl/serialize.hpp>
 
 // --- External dependencies ---
-#include <doctest/doctest.h>
+#include "test_macros.hpp"
 
 // --- STD ---
 #include <ranges>
@@ -45,13 +45,13 @@ namespace dsrl {
 template<rbe::wirable T>
 constexpr void test_eager(std::span<std::byte const> input, T const& expected) {
   T output = rbe::deserialize<T>(input, rbe::dsrl::eager);
-  CHECK(output == expected);
+  RBE_CHECK(output == expected);
 }
 
 template<rbe::trivially_wirable T>
 constexpr void test_inplace(std::span<std::byte const> input, T const& expected) {
   T const& output = rbe::deserialize<T>(input, rbe::dsrl::in_place);
-  CHECK(output == expected);
+  RBE_CHECK(output == expected);
 }
 
 template<rbe::wirable T>
@@ -59,15 +59,15 @@ constexpr void test_lazy(std::span<std::byte const> input, T const& expected) {
   auto msg = rbe::deserialize<T>(input, rbe::dsrl::lazy);
 
   template for (constexpr auto member: rbe::detail::nsdm(^^T) | std::ranges::to<rbe::static_array>()) {
-    CHECK(msg.template field<std::meta::identifier_of(member)>() == expected.[:member:]);
+    RBE_CHECK(msg.template field<std::meta::identifier_of(member)>() == expected.[:member:]);
   }
 
-  CHECK(msg.value() == expected);
-  CHECK(msg.length() == rbe::wire_size_of<T>());
-  CHECK(msg.size() == input.size());
-  CHECK(msg.size_bytes() == input.size());
-  CHECK(std::ranges::equal(msg.data(), input));
-  CHECK(std::ranges::equal(msg.as_span(), input.first(msg.length())));
+  RBE_CHECK(msg.value() == expected);
+  RBE_CHECK(msg.length() == rbe::wire_size_of<T>());
+  RBE_CHECK(msg.size() == input.size());
+  RBE_CHECK(msg.size_bytes() == input.size());
+  RBE_CHECK(std::ranges::equal(msg.data(), input));
+  RBE_CHECK(std::ranges::equal(msg.as_span(), input.first(msg.length())));
 }
 
 template<typename Test>
@@ -94,8 +94,8 @@ constexpr void test_case(Test const& test_case) {
   REQUIRE(test_case.wire.size() == rbe::wire_size_of<typename Test::structure_type>());
 
   auto bytes_written = rbe::serialize(buffer, test_case.structure);
-  CHECK(bytes_written == test_case.wire.size());
-  CHECK(std::ranges::equal(buffer, test_case.wire, ignore_padding));
+  RBE_CHECK(bytes_written == test_case.wire.size());
+  RBE_CHECK(std::ranges::equal(buffer, test_case.wire, ignore_padding));
 }
 
 } // namespace srl
@@ -110,8 +110,8 @@ constexpr auto test_eager(T const& value) -> void {
   auto bytes_written = rbe::serialize(buffer, value);
   T output           = rbe::deserialize<T>(buffer, rbe::dsrl::eager);
 
-  CHECK(bytes_written == buffer.size());
-  CHECK(output == value);
+  RBE_CHECK(bytes_written == buffer.size());
+  RBE_CHECK(output == value);
 }
 
 template<rbe::trivially_wirable T>
@@ -121,8 +121,8 @@ constexpr auto test_inplace(T const& value) -> void {
   auto bytes_written = rbe::serialize(buffer, value);
   T const& output    = rbe::deserialize<T>(buffer, rbe::dsrl::in_place);
 
-  CHECK(bytes_written == buffer.size());
-  CHECK(output == value);
+  RBE_CHECK(bytes_written == buffer.size());
+  RBE_CHECK(output == value);
 }
 
 template<rbe::wirable T>
@@ -132,10 +132,10 @@ constexpr auto test_lazy(T const& value) -> void {
   auto bytes_written = rbe::serialize(buffer, value);
   auto output        = rbe::deserialize<T>(buffer, rbe::dsrl::lazy);
 
-  CHECK(bytes_written == buffer.size());
-  CHECK(output.value() == value);
+  RBE_CHECK(bytes_written == buffer.size());
+  RBE_CHECK(output.value() == value);
   template for (constexpr auto member: rbe::detail::nsdm(^^T) | std::ranges::to<rbe::static_array>()) {
-    CHECK(output.template field<std::meta::identifier_of(member)>() == value.[:member:]);
+    RBE_CHECK(output.template field<std::meta::identifier_of(member)>() == value.[:member:]);
   }
 }
 
@@ -188,15 +188,15 @@ TEST_CASE("serde - proxy accessors honor the ambient context") {
 
   rbe::dsrl::proxy<NestedPackLeaf, big_packed> const view {wire};
 
-  CHECK(view.field<"a">() == 0x11);
-  CHECK(view.field<"b">() == 0x22334455);
-  CHECK(view.value() == NestedPackLeaf {.a = 0x11, .b = 0x22334455});
+  RBE_CHECK(view.field<"a">() == 0x11);
+  RBE_CHECK(view.field<"b">() == 0x22334455);
+  RBE_CHECK(view.value() == NestedPackLeaf {.a = 0x11, .b = 0x22334455});
 
-  CHECK(view.length() == 5); // packed: the 3 bytes of padding a native layout would add are gone
-  CHECK(view.as_span().size() == 5);
-  CHECK(view.size() == wire.size()); // size is the buffer's, not the message's
-  CHECK(view.size_bytes() == wire.size());
-  CHECK(std::ranges::equal(view.data(), wire));
+  RBE_CHECK(view.length() == 5); // packed: the 3 bytes of padding a native layout would add are gone
+  RBE_CHECK(view.as_span().size() == 5);
+  RBE_CHECK(view.size() == wire.size()); // size is the buffer's, not the message's
+  RBE_CHECK(view.size_bytes() == wire.size());
+  RBE_CHECK(std::ranges::equal(view.data(), wire));
 }
 
 TEST_CASE("serde - proxy unique annotation accessor") {
@@ -209,9 +209,9 @@ TEST_CASE("serde - proxy unique annotation accessor") {
 
   rbe::dsrl::proxy<AllLengths> const view {wire};
 
-  CHECK(view.field<rbe::frame_length>() == 0xDDDD);
-  CHECK(view.field<rbe::payload_length>() == 0xAAAA);
-  CHECK(view.field<rbe::header_length>() == 0xBB);
+  RBE_CHECK(view.field<rbe::frame_length>() == 0xDDDD);
+  RBE_CHECK(view.field<rbe::payload_length>() == 0xAAAA);
+  RBE_CHECK(view.field<rbe::header_length>() == 0xBB);
 }
 
 
@@ -219,17 +219,17 @@ TEST_CASE("serde - proxy unique deep annotation accessor") {
 
   auto view = rbe::deserialize<NestedParent>(nested_propagation_test.wire, rbe::dsrl::lazy);
 
-  CHECK(view.field<rbe::frame_length>() == 0x55667788);
-  CHECK(view.field<rbe::id>() == 0xAABBCCDD);
-  CHECK(view.field<rbe::header_length>() == 0x11223344);
+  RBE_CHECK(view.field<rbe::frame_length>() == 0x55667788);
+  RBE_CHECK(view.field<rbe::id>() == 0xAABBCCDD);
+  RBE_CHECK(view.field<rbe::header_length>() == 0x11223344);
 }
 
 TEST_CASE("serde - deep field accessor by identifier") {
   auto view = rbe::deserialize<NestedParent>(nested_propagation_test.wire, rbe::dsrl::lazy);
 
-  CHECK(view.field<"node", "leaf">() == nested_propagation_test.structure.node.leaf);
-  CHECK(view.field<"node", "leaf", "valor">() == nested_propagation_test.structure.node.leaf.valor);
-  CHECK(view.field<"node", "valor2">() == nested_propagation_test.structure.node.valor2);
+  RBE_CHECK(view.field<"node", "leaf">() == nested_propagation_test.structure.node.leaf);
+  RBE_CHECK(view.field<"node", "leaf", "valor">() == nested_propagation_test.structure.node.leaf.valor);
+  RBE_CHECK(view.field<"node", "valor2">() == nested_propagation_test.structure.node.valor2);
 }
 
 TEST_SUITE_END();

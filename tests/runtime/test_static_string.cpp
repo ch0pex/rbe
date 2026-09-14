@@ -12,7 +12,7 @@
 #include <rbe/core/detail/static_string.hpp>
 
 // --- External dependencies ---
-#include <doctest/doctest.h>
+#include "test_macros.hpp"
 
 // --- STD ---
 
@@ -51,7 +51,7 @@ static_assert(test());
 
 TEST_SUITE_BEGIN("static_string");
 
-TEST_CASE("static_string - equal literals yield the same NTTP type") { CHECK(test()); }
+TEST_CASE("static_string - equal literals yield the same NTTP type") { RBE_CHECK(test()); }
 
 
 TEST_SUITE_END();

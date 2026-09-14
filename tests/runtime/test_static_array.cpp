@@ -12,7 +12,7 @@
 #include <rbe/core/detail/static_array.hpp>
 
 // --- External dependencies ---
-#include <doctest/doctest.h>
+#include "test_macros.hpp"
 
 // --- STD ---
 #include <ranges>
@@ -180,40 +180,40 @@ TEST_SUITE_BEGIN("static_array");
 
 TEST_CASE("static_array - default construction") {
   static constexpr rbe::static_array<int> arr;
-  CHECK(arr.size() == 0);
-  CHECK(arr.empty());
+  RBE_CHECK(arr.size() == 0);
+  RBE_CHECK(arr.empty());
 }
 
 TEST_CASE("static_array - construct with vector") {
   constexpr std::array<int, 5> vec_data {1, 2, 3, 4, 5};
   static constexpr rbe::static_array<int> arr {std::from_range, vec_data};
-  CHECK(arr.size() == 5);
-  CHECK(arr[0] == 1);
-  CHECK(arr[1] == 2);
-  CHECK(arr[2] == 3);
-  CHECK(arr[3] == 4);
-  CHECK(arr[4] == 5);
+  RBE_CHECK(arr.size() == 5);
+  RBE_CHECK(arr[0] == 1);
+  RBE_CHECK(arr[1] == 2);
+  RBE_CHECK(arr[2] == 3);
+  RBE_CHECK(arr[3] == 4);
+  RBE_CHECK(arr[4] == 5);
 }
 
 TEST_CASE("static_array - construct with array") {
   constexpr std::array<int, 5> arr_data {1, 2, 3, 4, 5};
   static constexpr rbe::static_array arr {std::from_range, arr_data};
-  CHECK(arr.size() == 5);
-  CHECK(arr[0] == 1);
-  CHECK(arr[1] == 2);
-  CHECK(arr[2] == 3);
-  CHECK(arr[3] == 4);
-  CHECK(arr[4] == 5);
+  RBE_CHECK(arr.size() == 5);
+  RBE_CHECK(arr[0] == 1);
+  RBE_CHECK(arr[1] == 2);
+  RBE_CHECK(arr[2] == 3);
+  RBE_CHECK(arr[3] == 4);
+  RBE_CHECK(arr[4] == 5);
 }
 
 TEST_CASE("static_array - initializer list construction") {
   static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
-  CHECK(arr.size() == 5);
-  CHECK(arr[0] == 1);
-  CHECK(arr[1] == 2);
-  CHECK(arr[2] == 3);
-  CHECK(arr[3] == 4);
-  CHECK(arr[4] == 5);
+  RBE_CHECK(arr.size() == 5);
+  RBE_CHECK(arr[0] == 1);
+  RBE_CHECK(arr[1] == 2);
+  RBE_CHECK(arr[2] == 3);
+  RBE_CHECK(arr[3] == 4);
+  RBE_CHECK(arr[4] == 5);
 }
 
 TEST_CASE("static_array - initializer list deduces element type") {
@@ -221,11 +221,11 @@ TEST_CASE("static_array - initializer list deduces element type") {
     SomeData {.a = 1, .b = 'a'},
     SomeData {.a = 2, .b = 'b'},
   };
-  CHECK(arr.size() == 2);
-  CHECK(arr[0].a == 1);
-  CHECK(arr[0].b == 'a');
-  CHECK(arr[1].a == 2);
-  CHECK(arr[1].b == 'b');
+  RBE_CHECK(arr.size() == 2);
+  RBE_CHECK(arr[0].a == 1);
+  RBE_CHECK(arr[0].b == 'a');
+  RBE_CHECK(arr[1].a == 2);
+  RBE_CHECK(arr[1].b == 'b');
 }
 
 TEST_CASE("static_array - random access") {
@@ -234,24 +234,24 @@ TEST_CASE("static_array - random access") {
     SomeData {.a = 5, .b = 'e'}, SomeData {.a = 6, .b = 'f'}, SomeData {.a = 7, .b = 'g'},
   };
 
-  CHECK(arr.at(0).a == 1);
-  CHECK(arr.at(1).a == 2);
-  CHECK(arr.at(2).a == 3);
-  CHECK(arr.at(3).a == 4);
-  CHECK(arr.at(4).a == 5);
-  CHECK(arr.at(5).a == 6);
-  CHECK(arr.at(6).a == 7);
+  RBE_CHECK(arr.at(0).a == 1);
+  RBE_CHECK(arr.at(1).a == 2);
+  RBE_CHECK(arr.at(2).a == 3);
+  RBE_CHECK(arr.at(3).a == 4);
+  RBE_CHECK(arr.at(4).a == 5);
+  RBE_CHECK(arr.at(5).a == 6);
+  RBE_CHECK(arr.at(6).a == 7);
 
-  CHECK(arr[0].a == 1);
-  CHECK(arr[1].a == 2);
-  CHECK(arr[2].a == 3);
-  CHECK(arr[3].a == 4);
-  CHECK(arr[4].a == 5);
-  CHECK(arr[5].a == 6);
-  CHECK(arr[6].a == 7);
+  RBE_CHECK(arr[0].a == 1);
+  RBE_CHECK(arr[1].a == 2);
+  RBE_CHECK(arr[2].a == 3);
+  RBE_CHECK(arr[3].a == 4);
+  RBE_CHECK(arr[4].a == 5);
+  RBE_CHECK(arr[5].a == 6);
+  RBE_CHECK(arr[6].a == 7);
 
-  CHECK(arr.front().a == 1);
-  CHECK(arr.back().a == 7);
+  RBE_CHECK(arr.front().a == 1);
+  RBE_CHECK(arr.back().a == 7);
 }
 
 TEST_CASE("static_array - forward iteration") {
@@ -261,7 +261,7 @@ TEST_CASE("static_array - forward iteration") {
   };
 
   for (auto const& [idx, item]: arr | std::views::enumerate) {
-    CHECK(item.a == static_cast<int>(idx) + 1);
+    RBE_CHECK(item.a == static_cast<int>(idx) + 1);
   }
 }
 
@@ -272,7 +272,7 @@ TEST_CASE("static_array - reverse iteration") {
   };
 
   for (auto const& [idx, item]: arr | std::views::reverse | std::views::enumerate) {
-    CHECK(static_cast<std::size_t>(item.a) == arr.size() - static_cast<std::size_t>(idx));
+    RBE_CHECK(static_cast<std::size_t>(item.a) == arr.size() - static_cast<std::size_t>(idx));
   }
 }
 
@@ -288,6 +288,7 @@ TEST_CASE("static_array - iteration via template for") {
   constexpr static auto members = nonstatic_data_members_of(^^SomeNumbers, ctx) | std::ranges::to<rbe::static_array>();
 
   int counter = 0;
+  // NOTE: idk the reason yet but RBE_CHECK doesn't work withtin this template statement
   template for (constexpr auto member: members) { CHECK(data.[:member:] == counter++); }
 }
 
@@ -295,29 +296,29 @@ TEST_CASE("static_array - first(n)") {
   static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
   static constexpr auto first_three = arr.first(3);
 
-  CHECK(first_three.size() == 3);
-  CHECK(first_three[0] == 1);
-  CHECK(first_three[1] == 2);
-  CHECK(first_three[2] == 3);
+  RBE_CHECK(first_three.size() == 3);
+  RBE_CHECK(first_three[0] == 1);
+  RBE_CHECK(first_three[1] == 2);
+  RBE_CHECK(first_three[2] == 3);
 }
 
 TEST_CASE("static_array - last(n)") {
   static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
   static constexpr auto last_two = arr.last(2);
 
-  CHECK(last_two.size() == 2);
-  CHECK(last_two[0] == 4);
-  CHECK(last_two[1] == 5);
+  RBE_CHECK(last_two.size() == 2);
+  RBE_CHECK(last_two[0] == 4);
+  RBE_CHECK(last_two[1] == 5);
 }
 
 TEST_CASE("static_array - subspan(offset, count)") {
   static constexpr rbe::static_array arr {1, 2, 3, 4, 5};
   static constexpr auto subspan = arr.subspan(1, 3);
 
-  CHECK(subspan.size() == 3);
-  CHECK(subspan[0] == 2);
-  CHECK(subspan[1] == 3);
-  CHECK(subspan[2] == 4);
+  RBE_CHECK(subspan.size() == 3);
+  RBE_CHECK(subspan[0] == 2);
+  RBE_CHECK(subspan[1] == 3);
+  RBE_CHECK(subspan[2] == 4);
 }
 
 TEST_SUITE_END();

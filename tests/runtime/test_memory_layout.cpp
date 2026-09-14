@@ -16,7 +16,7 @@
 #include <rbe/core/trivially_wirable_concepts.hpp>
 
 // --- External dependencies ---
-#include <doctest/doctest.h>
+#include "test_macros.hpp"
 
 // --- STD ---
 
@@ -38,7 +38,7 @@ TEST_CASE("memory_layout - B layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - X layout") {
@@ -53,7 +53,7 @@ TEST_CASE("memory_layout - X layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - Y layout") {
@@ -68,7 +68,7 @@ TEST_CASE("memory_layout - Y layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - Inner layout") {
@@ -87,7 +87,7 @@ TEST_CASE("memory_layout - Inner layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - Outer layout") {
@@ -106,7 +106,7 @@ TEST_CASE("memory_layout - Outer layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - Deep layout") {
@@ -125,7 +125,7 @@ TEST_CASE("memory_layout - Deep layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - Base layout") {
@@ -148,7 +148,7 @@ TEST_CASE("memory_layout - Base layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - UnnamedMember layout") {
@@ -163,7 +163,7 @@ TEST_CASE("memory_layout - UnnamedMember layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - Bits layout") {
@@ -186,7 +186,7 @@ TEST_CASE("memory_layout - Bits layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - PacketHeader packed layout") {
@@ -213,7 +213,7 @@ TEST_CASE("memory_layout - PacketHeader packed layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - AddOrder packed layout") {
@@ -256,7 +256,7 @@ TEST_CASE("memory_layout - AddOrder packed layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - ReduceSize layout (no pack, has padding)") {
@@ -287,7 +287,7 @@ TEST_CASE("memory_layout - ReduceSize layout (no pack, has padding)") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - NoPack layout") {
@@ -306,7 +306,7 @@ TEST_CASE("memory_layout - NoPack layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - Packed layout") {
@@ -325,7 +325,7 @@ TEST_CASE("memory_layout - Packed layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - MixedEndian layout") {
@@ -351,7 +351,7 @@ TEST_CASE("memory_layout - MixedEndian layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - Complex packed layout") {
@@ -377,7 +377,7 @@ TEST_CASE("memory_layout - Complex packed layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - NonPaddedStruct2 layout") {
@@ -400,7 +400,7 @@ TEST_CASE("memory_layout - NonPaddedStruct2 layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - CommonHeader layout") {
@@ -427,7 +427,7 @@ TEST_CASE("memory_layout - CommonHeader layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - MessageWithHeader layout") {
@@ -454,7 +454,7 @@ TEST_CASE("memory_layout - MessageWithHeader layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - CommonHeaderPackBe layout") {
@@ -485,7 +485,7 @@ TEST_CASE("memory_layout - CommonHeaderPackBe layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - MessageWithHeaderPackBe layout") {
@@ -516,7 +516,7 @@ TEST_CASE("memory_layout - MessageWithHeaderPackBe layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - MessageWithEnum layout") {
@@ -539,7 +539,7 @@ TEST_CASE("memory_layout - MessageWithEnum layout") {
     }
   };
 
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - MessageWithArray nested struct layout") {
@@ -561,7 +561,7 @@ TEST_CASE("memory_layout - MessageWithArray nested struct layout") {
       },
     },
   };
-  CHECK(layout == layout_expected);
+  RBE_CHECK(layout == layout_expected);
 }
 
 TEST_CASE("memory_layout - MessageWithArrayBe big-endian array layout") {
@@ -603,8 +603,8 @@ TEST_CASE("memory_layout - MessageWithArrayBe big-endian array layout") {
       },
     },
   };
-  CHECK(layout == layout_expected);
-  CHECK(wire_layout == wire_layout_expected);
+  RBE_CHECK(layout == layout_expected);
+  RBE_CHECK(wire_layout == wire_layout_expected);
 }
 
 TEST_SUITE_END();
@@ -645,7 +645,7 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 //     }
 //   };
 //
-//   CHECK(layout == layout_expected);
+//   RBE_CHECK(layout == layout_expected);
 // }
 // TEST_CASE("Test NonPaddedStruct layout") {
 //   static constexpr rbe::struct_layout layout          = rbe::get_wire_layout<NonPaddedStruct>();
@@ -667,7 +667,7 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 //     }
 //   };
 //
-//   CHECK(layout == layout_expected);
+//   RBE_CHECK(layout == layout_expected);
 // }
 
 // TEST_CASE("Test NoAggregateCustomSerder layout") {
@@ -676,7 +676,7 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 //     .size = sizeof(NoAggregateCustomSerder), .members = rbe::static_array {}
 //   };
 //
-//   CHECK(layout == layout_expected);
+//   RBE_CHECK(layout == layout_expected);
 // }
 
 
@@ -696,7 +696,7 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 //     }
 //   };
 //
-//   CHECK(layout == layout_expected);
+//   RBE_CHECK(layout == layout_expected);
 // }
 
 // TODO: Derived
@@ -720,7 +720,7 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 //     }
 //   };
 //
-//   CHECK(layout == layout_expected);
+//   RBE_CHECK(layout == layout_expected);
 // }
 
 } // namespace

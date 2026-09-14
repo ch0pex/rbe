@@ -14,7 +14,7 @@
 #include <rbe/core/detail/memcpy_constexpr.hpp>
 
 // --- External dependencies ---
-#include <doctest/doctest.h>
+#include "test_macros.hpp"
 
 // --- STD ---
 #include <algorithm>

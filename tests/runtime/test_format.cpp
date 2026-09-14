@@ -14,7 +14,7 @@
 #include <rbe/core/fmt.hpp>
 
 // --- External dependencies ---
-#include <doctest/doctest.h>
+#include "test_macros.hpp"
 
 // --- STD ---
 #include <print>
@@ -28,25 +28,25 @@ TEST_SUITE_BEGIN("format");
 TEST_CASE("format - empty struct") {
   std::string const expected = "Empty {}";
   std::string const result   = std::format("{}", Empty {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - B struct") {
   std::string const expected = "B {\n  .m0 = 0,\n}";
   std::string const result   = std::format("{}", B {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - X struct") {
   std::string const expected = "X {\n  .m1 = 1,\n}";
   std::string const result   = std::format("{}", X {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - Y struct") {
   std::string const expected = "Y {\n  .m2 = 2,\n}";
   std::string const result   = std::format("{}", Y {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct with base classes (Z)") {
@@ -61,7 +61,7 @@ TEST_CASE("format - struct with base classes (Z)") {
   .m4 = 4,
 })";
   std::string const result   = std::format("{}", Z {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct with nested struct member") {
@@ -73,7 +73,7 @@ TEST_CASE("format - struct with nested struct member") {
   .z = 30,
 })";
   std::string const result   = std::format("{}", Outer {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct with deeply nested struct members") {
@@ -88,7 +88,7 @@ TEST_CASE("format - struct with deeply nested struct members") {
   .w = 40,
 })";
   std::string const result   = std::format("{}", Deep {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct with range member") {
@@ -97,7 +97,7 @@ TEST_CASE("format - struct with range member") {
   .extra = 42,
 })";
   std::string const result   = std::format("{}", WithVector {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct with array member") {
@@ -106,7 +106,7 @@ TEST_CASE("format - struct with array member") {
   .extra = 42,
 })";
   std::string const result   = std::format("{}", WithArray {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct with span member") {
@@ -121,7 +121,7 @@ TEST_CASE("format - struct with span member") {
 })";
 
   std::string const result = std::format("{}", ws);
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct derived from empty base class") {
@@ -130,7 +130,7 @@ TEST_CASE("format - struct derived from empty base class") {
   .m0 = 0,
 })";
   std::string const result   = std::format("{}", DerivedFromEmpty {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct with unnamed member") {
@@ -138,7 +138,7 @@ TEST_CASE("format - struct with unnamed member") {
   ._ = 42,
 })";
   std::string const result   = std::format("{}", UnnamedMember {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct derived from non-empty base class") {
@@ -150,7 +150,7 @@ TEST_CASE("format - struct derived from non-empty base class") {
   },
 })";
   std::string const result   = std::format("{}", EmptyDerived {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_CASE("format - struct with bit-fields") {
@@ -160,7 +160,7 @@ TEST_CASE("format - struct with bit-fields") {
   .c:8 = 0,
 })";
   std::string const result   = std::format("{}", Bits {});
-  CHECK_EQ(expected, result);
+  RBE_CHECK_EQ(expected, result);
 }
 
 TEST_SUITE_END();

@@ -14,7 +14,7 @@
 #include <rbe/core/detail/throw_check.hpp>
 
 // --- External dependencies ---
-#include <doctest/doctest.h>
+#include "test_macros.hpp"
 
 // --- STD ---
 #include <stdexcept>
@@ -33,9 +33,9 @@ constexpr void always_throws() { throw std::runtime_error("throwing an error"); 
 
 TEST_CASE("no throw - runtime") {
 
-  CHECK(rbe::detail::no_throw(diagnose_throwing, false));
-  CHECK_FALSE(rbe::detail::no_throw(diagnose_throwing, true));
-  CHECK_FALSE(rbe::detail::no_throw(always_throws));
+  RBE_CHECK(rbe::detail::no_throw(diagnose_throwing, false));
+  RBE_CHECK_FALSE(rbe::detail::no_throw(diagnose_throwing, true));
+  RBE_CHECK_FALSE(rbe::detail::no_throw(always_throws));
 
   static_assert(rbe::detail::no_throw(diagnose_throwing, false));
   static_assert(not rbe::detail::no_throw(diagnose_throwing, true));
@@ -44,9 +44,9 @@ TEST_CASE("no throw - runtime") {
 
 TEST_CASE("throws- runtime") {
 
-  CHECK_FALSE(rbe::detail::throws(diagnose_throwing, false));
-  CHECK(rbe::detail::throws(diagnose_throwing, true));
-  CHECK(rbe::detail::throws(always_throws));
+  RBE_CHECK_FALSE(rbe::detail::throws(diagnose_throwing, false));
+  RBE_CHECK(rbe::detail::throws(diagnose_throwing, true));
+  RBE_CHECK(rbe::detail::throws(always_throws));
 
   static_assert(not rbe::detail::throws(diagnose_throwing, false));
   static_assert(rbe::detail::throws(diagnose_throwing, true));
