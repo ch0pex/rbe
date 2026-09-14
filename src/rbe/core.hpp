@@ -14,7 +14,6 @@
 #include <rbe/core/endian.hpp>
 #include <rbe/core/fmt.hpp>
 #include <rbe/core/memory_layout.hpp>
-#include <rbe/core/message_list.hpp>
 #include <rbe/core/trivially_wirable_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/core/wirable_primitives.hpp>

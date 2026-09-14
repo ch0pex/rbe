@@ -41,7 +41,6 @@ target_sources(
         rbe/core/endian.hpp
         rbe/core/fmt.hpp
         rbe/core/memory_layout.hpp
-        rbe/core/message_list.hpp
         rbe/core/trivially_wirable_concepts.hpp
         rbe/core/wirable_concepts.hpp
         rbe/core/wirable_primitives.hpp
@@ -56,6 +55,7 @@ target_sources(
         rbe/dsrl/tags.hpp
 
         # framing
+        rbe/framing/detail/message_list.hpp
         rbe/framing/detail/to_dsrl_type.hpp
         rbe/framing/detail/to_srl_type.hpp
         rbe/framing/detail/to_value_type.hpp

@@ -561,7 +561,7 @@ struct[[= rbe::pack_be]] UnderlyingValueBidOffer {
 // Type-erased dispatch — use with rbe::any_msg<opra::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = rbe::msg_list<
+using messages = rbe::any<
     EquityIndexLastSale, OpenInterest, EquityIndexEodSummary, LongQuote, ShortQuote, Administrative, Control,
     SeriesMapping, UnderlyingValueLastSale, UnderlyingValueBidOffer>;
 

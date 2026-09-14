@@ -993,7 +993,7 @@ struct [[=rbe::pack_le]] TradingStatus {
 // Type-erased dispatch — use with rbe::any_msg<cboe::top::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = rbe::msg_list<
+using messages = rbe::any<
     Logon, LogonAccepted, LogonRejected, ExpandedSpin, ExtendedSpin, SpinDone, ServerHeartbeat, ClientHeartbeat,
     Seconds, Milliseconds, ExtendedBidUpdate, ExpandedBidUpdate, LongBidUpdate, ShortBidUpdate, ExtendedAskUpdate,
     ExpandedAskUpdate, LongAskUpdate, ShortAskUpdate, ExpandedTwoSidedUpdate, LongTwoSidedUpdate, ShortTwoSidedUpdate,

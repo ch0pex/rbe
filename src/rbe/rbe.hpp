@@ -13,4 +13,5 @@
 #include <rbe/annotations.hpp>
 #include <rbe/core.hpp>
 #include <rbe/dsrl.hpp>
+#include <rbe/framing.hpp>
 #include <rbe/srl.hpp>

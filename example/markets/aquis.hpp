@@ -392,7 +392,7 @@ struct [[=rbe::pack_le]] ReplayResponse {
 // Type-erased dispatch — use with rbe::any_msg<aquis::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = rbe::msg_list<
+using messages = rbe::any<
     Heartbeat, OrderAdd, OrderCancel, OrderModify, QuoteAddReplace, QuoteCancel, Trade, TradeReport, TradeReportModify,
     TradeReportCancel, TradeBust, SecurityStatistics, TraderDefinition, TickTableData, SecurityDefinition,
     SecurityStatus, AoDUpdate, SnapshotStart, BookStatus, BookEntry, Login, ReplayRequest, ReplayResponse>;

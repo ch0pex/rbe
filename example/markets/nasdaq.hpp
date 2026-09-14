@@ -29,7 +29,6 @@
 
 #include <cstdint>
 #include <tuple>
-#include "rbe/core/message_list.hpp"
 
 namespace nasdaq {
 
@@ -577,7 +576,7 @@ struct [[=rbe::pack_be]] DLCR {
 // Type-erased dispatch — use with rbe::any_msg<nasdaq::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = rbe::msg_list<
+using messages = rbe::any<
     SystemEvent, StockDirectory, StockTradingAction, RegSHORestriction, MarketParticipantPosition, MWCBDeclineLevel,
     MWCBStatus, IPOQuotingPeriodUpdate, LULDAuctionCollar, OperationalHalt, AddOrder, AddOrderMPID, OrderExecuted,
     OrderExecutedWithPrice, OrderCancel, OrderDelete, OrderReplace, Trade, CrossTrade, BrokenTrade, NOII, RPII, DLCR>;

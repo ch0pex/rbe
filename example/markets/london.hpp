@@ -856,7 +856,7 @@ struct [[=rbe::pack_le]] Analytics {
 // Type-erased dispatch — use with rbe::any_msg<lse::messages>
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = rbe::msg_list<
+using messages = rbe::any<
     LoginRequest, LoginResponse, ReplayRequest, ReplayResponse, RecoveryRequest, RecoveryResponse,
     ReplayAndRecoveryComplete, SystemEvent, InstrumentDirectory, InstrumentDirectoryEquities, InstrumentStatus,
     AddOrderMBO, AddOrderShortMBO, AddOrderMBP, AddOrderShortMBP, AddOrderIncremental, OrderModify, OrderDelete,
