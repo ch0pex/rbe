@@ -35,6 +35,6 @@ namespace rbe::dsrl {
  * @tparam T The wirable type being deserialized.
  */
 template<strategy Tag, wirable T>
-using return_type = detail::return_type<Tag, T>;
+using return_type = detail::return_type<Tag, T>::type;
 
 } // namespace rbe::dsrl

@@ -21,10 +21,10 @@ namespace {
 using rbe::dsrl::return_type;
 
 // clang-format off
-static_assert(std::same_as<return_type<rbe::dsrl::eager_t, Message>::type, Message>);
-static_assert(std::same_as<return_type<rbe::dsrl::lazy_t, Message>::type, rbe::dsrl::proxy<Message>>);
-static_assert(std::same_as<return_type<rbe::dsrl::in_place_t, Message>::type, Message const&>);
-static_assert(std::same_as<return_type<rbe::dsrl::in_place_mut_t, Message>::type, Message&>);
+static_assert(std::same_as<return_type<rbe::dsrl::eager_t, Message>, Message>);
+static_assert(std::same_as<return_type<rbe::dsrl::lazy_t, Message>, rbe::dsrl::proxy<Message>>);
+static_assert(std::same_as<return_type<rbe::dsrl::in_place_t, Message>, Message const&>);
+static_assert(std::same_as<return_type<rbe::dsrl::in_place_mut_t, Message>, Message&>);
 // clang-format on
 
 } // namespace
