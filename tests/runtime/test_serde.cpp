@@ -11,8 +11,8 @@
 // --- Includes ---
 #include "common_serde.hpp"
 #include "common_structs.hpp"
-#include "rbe/annotations/length.hpp"
 
+#include <rbe/annotations/length.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/introspection.hpp>
 #include <rbe/core/detail/static_array.hpp>
@@ -44,7 +44,7 @@ namespace dsrl {
 
 template<rbe::wirable T>
 constexpr void test_eager(std::span<std::byte const> input, T const& expected) {
-  T output = rbe::deserialize<T>(input, rbe::dsrl::eager);
+  T const output = rbe::deserialize<T>(input, rbe::dsrl::eager);
   RBE_CHECK(output == expected);
 }
 
@@ -56,7 +56,7 @@ constexpr void test_inplace(std::span<std::byte const> input, T const& expected)
 
 template<rbe::wirable T>
 constexpr void test_lazy(std::span<std::byte const> input, T const& expected) {
-  auto msg = rbe::deserialize<T>(input, rbe::dsrl::lazy);
+  auto const msg = rbe::deserialize<T>(input, rbe::dsrl::lazy);
 
   template for (constexpr auto member: rbe::detail::nsdm(^^T) | std::ranges::to<rbe::static_array>()) {
     RBE_CHECK(msg.template field<std::meta::identifier_of(member)>() == expected.[:member:]);
@@ -107,8 +107,8 @@ template<rbe::wirable T>
 constexpr auto test_eager(T const& value) -> void {
   auto buffer = testing_buffer<T>();
 
-  auto bytes_written = rbe::serialize(buffer, value);
-  T output           = rbe::deserialize<T>(buffer, rbe::dsrl::eager);
+  auto const bytes_written = rbe::serialize(buffer, value);
+  T const output           = rbe::deserialize<T>(buffer, rbe::dsrl::eager);
 
   RBE_CHECK(bytes_written == buffer.size());
   RBE_CHECK(output == value);
@@ -118,8 +118,8 @@ template<rbe::trivially_wirable T>
 constexpr auto test_inplace(T const& value) -> void {
   auto buffer = testing_buffer<T>();
 
-  auto bytes_written = rbe::serialize(buffer, value);
-  T const& output    = rbe::deserialize<T>(buffer, rbe::dsrl::in_place);
+  auto const bytes_written = rbe::serialize(buffer, value);
+  T const& output          = rbe::deserialize<T>(buffer, rbe::dsrl::in_place);
 
   RBE_CHECK(bytes_written == buffer.size());
   RBE_CHECK(output == value);
@@ -129,8 +129,8 @@ template<rbe::wirable T>
 constexpr auto test_lazy(T const& value) -> void {
   auto buffer = testing_buffer<T>();
 
-  auto bytes_written = rbe::serialize(buffer, value);
-  auto output        = rbe::deserialize<T>(buffer, rbe::dsrl::lazy);
+  auto const bytes_written = rbe::serialize(buffer, value);
+  auto const output        = rbe::deserialize<T>(buffer, rbe::dsrl::lazy);
 
   RBE_CHECK(bytes_written == buffer.size());
   RBE_CHECK(output.value() == value);
@@ -164,6 +164,7 @@ TEST_SUITE_BEGIN("serde");
 
 SERDE_TEST_CASE(trivially_wirable_no_padding);
 SERDE_TEST_CASE(trivially_wirable_with_paddings);
+SERDE_TEST_CASE(padded_struct_test);
 SERDE_TEST_CASE(wirable_custom_serder);
 SERDE_TEST_CASE(packed_test);
 SERDE_TEST_CASE(mixed_endian_test);
@@ -230,6 +231,28 @@ TEST_CASE("serde - deep field accessor by identifier") {
   RBE_CHECK(view.field<"node", "leaf">() == nested_propagation_test.structure.node.leaf);
   RBE_CHECK(view.field<"node", "leaf", "valor">() == nested_propagation_test.structure.node.leaf.valor);
   RBE_CHECK(view.field<"node", "valor2">() == nested_propagation_test.structure.node.valor2);
+}
+
+TEST_CASE("serde - proxy equality comparison is value-based") {
+  auto const diff                          = std::byte {0xEE};
+  auto const buffer_with_different_padding = bytes(
+      0x01, 0x00, 0x00, 0x00, // a
+      diff, diff, diff, diff, // padding
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // b
+      0x63, // c
+      diff, diff, diff, diff, diff, diff, diff // padding
+  );
+
+  auto const view  = rbe::deserialize<PaddedStruct>(padded_struct_test.wire, rbe::dsrl::lazy);
+  auto const view2 = rbe::deserialize<PaddedStruct>(padded_struct_test.wire, rbe::dsrl::lazy);
+  auto const view3 = rbe::deserialize<PaddedStruct>(buffer_with_different_padding, rbe::dsrl::lazy);
+
+  RBE_CHECK(view == padded_struct_test.structure);
+  RBE_CHECK(view2 == padded_struct_test.structure);
+  RBE_CHECK(view3 == padded_struct_test.structure);
+  RBE_CHECK(view == view2);
+  RBE_CHECK(view == view3);
+  RBE_CHECK(view2 == view3);
 }
 
 TEST_SUITE_END();

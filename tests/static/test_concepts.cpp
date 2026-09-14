@@ -65,14 +65,14 @@ static_assert(not test_concept(^^rbe::wirable_primitive, std::array{^^std::strin
 
 // --- Wirable
 constexpr auto wirable_structs = std::array{
-  // ^^PaddedStruct, ^^NonPaddedStruct, (doubles not supported yet)
-  ^^PacketHeader, ^^AddOrder, ^^ReduceSize,  ^^NoPack, ^^Packed, ^^MixedEndian, ^^Complex,
+  // ^^NonPaddedStruct, (doubles not supported yet)
+  ^^PaddedStruct, ^^PacketHeader, ^^AddOrder, ^^ReduceSize,  ^^NoPack, ^^Packed, ^^MixedEndian, ^^Complex,
   ^^NonPaddedStruct2, ^^CommonHeader, ^^MessageWithHeader, ^^NoAggregateCustomSerder,
   ^^Message, ^^MessageWithEnum
 };
 
 constexpr auto no_wirable_structs = std::array{
-  ^^PaddedStruct, ^^NonPaddedStruct, // (doubles not supported yet)
+  ^^NonPaddedStruct, // (doubles not supported yet)
   ^^NoAggregate, ^^AggregateWithPtr, ^^AggregateWithRef
 };
 

@@ -14,15 +14,17 @@
 #include <rbe/annotations/detail/annotated_nsdm.hpp>
 #include <rbe/annotations/detail/base.hpp>
 #include <rbe/annotations/detail/utils.hpp>
+#include <rbe/annotations/well_annotated_concepts.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
-#include "rbe/annotations/well_annotated_concepts.hpp"
 
 // --- STD ---
+#include <concepts>
+#include <type_traits>
 
 // --- System ---
 
@@ -43,23 +45,6 @@ public:
   // --- Constructors ---
 
   constexpr explicit proxy(buffer_type const data) : data_(data) { }
-
-  template<std::size_t Index>
-    requires(wirable_class<value_type>)
-  [[nodiscard]] constexpr auto field() const {
-    using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
-    static constexpr auto wire          = get_wire_layout<T, local>();
-    static constexpr auto member_layout = wire.members[Index];
-    static constexpr auto member_ctx    = rbe::detail::merge_context(local, rbe::detail::nsdm(^^value_type, Index));
-
-    auto const member_data = data_.subspan<member_layout.offset.bytes, member_layout.size>();
-    if constexpr (wirable_class<member_type>) {
-      return proxy<member_type, member_ctx>(member_data);
-    }
-    else {
-      return rbe::detail::deserialize_member<member_type, member_ctx>(member_data);
-    }
-  }
 
   template<static_string First, static_string... Rest>
     requires(wirable_class<value_type>)
@@ -89,6 +74,24 @@ public:
     }
   }
 
+  template<std::size_t Index>
+    requires(wirable_class<value_type>)
+  [[nodiscard]] constexpr auto field() const {
+    using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
+    static constexpr auto wire          = get_wire_layout<T, local>();
+    static constexpr auto member_layout = wire.members[Index];
+    static constexpr auto member_ctx    = rbe::detail::merge_context(local, rbe::detail::nsdm(^^value_type, Index));
+
+    auto const member_data = data_.subspan<member_layout.offset.bytes, member_layout.size>();
+    if constexpr (wirable_class<member_type>) {
+      return proxy<member_type, member_ctx>(member_data);
+    }
+    else {
+      return rbe::detail::deserialize_member<member_type, member_ctx>(member_data);
+    }
+  }
+
+
   [[nodiscard]] constexpr auto value() const -> value_type {
     return rbe::detail::deserialize<value_type, local>(data_);
   }
@@ -105,7 +108,17 @@ public:
 
   [[nodiscard]] constexpr auto data() const -> buffer_type { return data_; }
 
-  constexpr auto operator==(value_type const& rhs) const -> bool { return value() == rhs; }
+  [[nodiscard]] friend constexpr auto operator==(proxy const lhs, value_type const& rhs) -> bool
+    requires(std::equality_comparable<value_type>)
+  {
+    return lhs.value() == rhs;
+  }
+
+  [[nodiscard]] friend constexpr auto operator==(proxy const lhs, proxy const rhs) -> bool
+    requires(std::equality_comparable<value_type>)
+  {
+    return lhs.value() == rhs.value();
+  }
 
 private:
   std::span<std::byte const> data_;

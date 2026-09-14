@@ -150,7 +150,7 @@ struct [[=rbe::pack]] Complex {
 
 struct PaddedStruct {
   int a;
-  double b;
+  std::int64_t b;
   char c;
   bool operator==(PaddedStruct const&) const = default;
 };

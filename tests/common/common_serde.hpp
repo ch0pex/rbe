@@ -43,6 +43,18 @@ constexpr TestCase trivially_wirable_no_padding {
   ),
 };
 
+
+constexpr TestCase padded_struct_test {
+  .structure = PaddedStruct {.a = 1, .b = 2, .c = 'c'},
+  .wire      = bytes(
+      0x01, 0x00, 0x00, 0x00, // a
+      pad, pad, pad, pad, // padding
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // b
+      0x63, // c
+      pad, pad, pad, pad, pad, pad, pad // padding
+  ),
+};
+
 constexpr TestCase trivially_wirable_with_paddings {
   .structure =
       ReduceSize {

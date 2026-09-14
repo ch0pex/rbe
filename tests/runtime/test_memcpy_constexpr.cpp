@@ -97,7 +97,7 @@ TEST_CASE("memcpy_constexpr - handles empty structs") {
 
 TEST_CASE("memcpy_constexpr - copies field bytes correctly for padded types") {
   using B = std::byte;
-  PaddedStruct src {.a = 1, .b = 2.0, .c = 'c'};
+  PaddedStruct src {.a = 1, .b = 2, .c = 'c'};
   std::array<B, sizeof(PaddedStruct)> dst {};
   memcpy_constexpr(dst, src);
 
@@ -114,8 +114,8 @@ TEST_CASE("memcpy_constexpr - copies field bytes correctly for padded types") {
   REQUIRE(a_bytes == std::array {B {0x01}, B {0x00}, B {0x00}, B {0x00}}); // a = 1
   REQUIRE(
       b_bytes == std::array {
-                   B {0x00}, B {0x00}, B {0x00}, B {0x00}, // b = 2.0
-                   B {0x00}, B {0x00}, B {0x00}, B {0x40}
+                   B {0x02}, B {0x00}, B {0x00}, B {0x00}, // b = 2
+                   B {0x00}, B {0x00}, B {0x00}, B {0x00}
                  }
   );
   REQUIRE(dst[c_off] == B {0x63}); // c = 'c'
