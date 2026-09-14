@@ -109,7 +109,7 @@ constexpr auto deserialize(std::span<std::byte> const input, dsrl::in_place_mut_
  * @param lazy A tag indicating that the deserialization should be performed lazily.
  * @return A `dsrl::proxy<T>` that deserializes fields on-demand when accessed.
  */
-template<wirable_class T>
+template<wirable T>
 constexpr auto deserialize(std::span<std::byte const> const input, dsrl::lazy_t /*lazy*/) -> dsrl::proxy<T> {
   return dsrl::proxy<T> {input};
 }

@@ -184,6 +184,11 @@ consteval auto wire_size_of() -> std::size_t {
   return wire_size_of(^^T, Ctx);
 }
 
+template<wirable_primitive T, detail::context Ctx = detail::context {}>
+consteval auto wire_size_of() -> std::size_t {
+  return sizeof(T);
+}
+
 template<wirable_class T>
 consteval auto get_struct_layout() -> struct_layout {
   return get_struct_layout(^^T);

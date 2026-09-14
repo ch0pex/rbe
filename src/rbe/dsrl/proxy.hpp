@@ -32,7 +32,6 @@ template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
   requires(not custom_wirable<T>)
 class proxy {
   static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
-  static constexpr auto wire  = get_wire_layout<T, local>();
 
 public:
   // --- Type traits ---
@@ -49,6 +48,7 @@ public:
     requires(wirable_class<value_type>)
   [[nodiscard]] constexpr auto field() const {
     using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
+    static constexpr auto wire          = get_wire_layout<T, local>();
     static constexpr auto member_layout = wire.members[Index];
     static constexpr auto member_ctx    = rbe::detail::merge_context(local, rbe::detail::nsdm(^^value_type, Index));
 
