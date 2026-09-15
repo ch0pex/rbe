@@ -14,6 +14,7 @@
 
 // --- Includes ---
 #include <rbe/core/wirable_concepts.hpp>
+#include <rbe/framing/detail/payload_extent.hpp>
 #include <rbe/framing/dsrl/frame_concepts.hpp>
 
 // --- STD ---
@@ -49,8 +50,8 @@ template<typename T>
 concept frame_payload = wirable<T> or frame_serder<T>;
 
 /// Verifies wether a header and a payload ar compatible to conform a frame
-template<typename HeaderType, typename PayloadType>
 // TODO: and rbe::detail::is_compatible<HeaderType, PayloadType>
+template<typename HeaderType, typename PayloadType>
 concept frame_compatible = frame_header<HeaderType> and frame_payload<PayloadType>;
 
 
@@ -65,5 +66,26 @@ concept is_frame = requires(T const ct) {
   // requires srl::is_frame<typeanme T::srl_type>;
   // requires value_type_of<typename T::value_type, T>;
 };
+
+/**
+ * @brief A frame whose length can be resolved without looking at the size of the buffer
+ *
+ * The length comes from a header field (payload_length, frame_length), from static sizes, or from a nested
+ * self-delimiting frame (see rbe::detail::payload_extent). Such a frame may be read from a larger buffer,
+ * trailing bytes being padding, which is what allows a sequence of frames to share a single buffer.
+ */
+template<typename T>
+concept self_delimiting_frame = is_frame<T> and detail::is_self_delimiting<T>();
+
+/**
+ * @brief A frame whose payload extends to the end of the buffer it is read from
+ *
+ * The buffer size is the frame length, so the buffer must cover exactly the frame: trailing bytes are
+ * taken as payload, never as padding. Such a frame can only be the last one in a buffer.
+ *
+ * @note these frames are not iterable: a sequence of them cannot be split without an external length
+ */
+template<typename T>
+concept buffer_delimited_frame = is_frame<T> and not detail::is_self_delimiting<T>();
 
 } // namespace rbe
