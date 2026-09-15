@@ -10,6 +10,7 @@
 
 // --- Includes ---
 #include "common_structs.hpp"
+#include "rbe/framing/frame_concepts.hpp"
 
 #include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/endianness.hpp>
@@ -152,6 +153,26 @@ static_assert(not rbe::self_delimiting_frame<MessageWithHeader>);
 static_assert(not rbe::buffer_delimited_frame<blob_frame::dsrl_type>);
 static_assert(not rbe::buffer_delimited_frame<MessageWithHeader>);
 
+// ============================================================
+// explicitly_delimited_frame vs implicitly_delimited_frame
+// ============================================================
+static_assert(rbe::self_delimiting_frame<msg_frame>);
+static_assert(rbe::self_delimiting_frame<rbe::frame<WithHeaderLength, MessageWithHeader>>);
+static_assert(rbe::self_delimiting_frame<rbe::frame<WithFrameLength, rbe::blob>>);
+static_assert(rbe::self_delimiting_frame<rbe::frame<WithPayloadLength, rbe::blob>>);
+
+static_assert(not rbe::explicitly_delimited_frame<msg_frame>);
+static_assert(not rbe::explicitly_delimited_frame<rbe::frame<WithHeaderLength, MessageWithHeader>>);
+static_assert(rbe::explicitly_delimited_frame<rbe::frame<WithFrameLength, rbe::blob>>);
+static_assert(rbe::explicitly_delimited_frame<rbe::frame<WithPayloadLength, rbe::blob>>);
+
+static_assert(rbe::implicitly_delimited_frame<msg_frame>);
+static_assert(rbe::implicitly_delimited_frame<rbe::frame<WithHeaderLength, MessageWithHeader>>);
+static_assert(not rbe::implicitly_delimited_frame<rbe::frame<WithFrameLength, rbe::blob>>);
+static_assert(not rbe::implicitly_delimited_frame<rbe::frame<WithPayloadLength, rbe::blob>>);
+
+static_assert(not rbe::implicitly_delimited_frame<rbe::frame<CommonHeader, blob_frame>>);
+static_assert(not rbe::explicitly_delimited_frame<rbe::frame<CommonHeader, blob_frame>>);
 
 // ============================================================
 // frame member types

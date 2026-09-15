@@ -19,6 +19,8 @@
 
 // --- STD ---
 #include <concepts>
+#include "rbe/annotations/length.hpp"
+#include "rbe/annotations/well_annotated_concepts.hpp"
 
 namespace rbe {
 
@@ -87,5 +89,38 @@ concept self_delimiting_frame = is_frame<T> and detail::is_self_delimiting<T>();
  */
 template<typename T>
 concept buffer_delimited_frame = is_frame<T> and not detail::is_self_delimiting<T>();
+
+/**
+ * @brief A frame whose length is explicitly resolved by reading a wire field.
+ *
+ * This concept requires the frame to be self-delimiting and checks if its
+ * header contains an explicit annotation for either the total frame length
+ * (`rbe::frame_length`) or the payload length (`rbe::payload_length`).
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+concept explicitly_delimited_frame = //
+    self_delimiting_frame<T> //
+    and (contains_annotation<typename T::header_type, rbe::frame_length> or
+         contains_annotation<typename T::header_type, rbe::payload_length>);
+
+/**
+ * @brief A frame whose length is resolved by the implicit size of its underlying types.
+ *
+ * This concept applies to self-delimiting frames that lack explicit length
+ * annotations in their header.
+ *
+ * @note Determining the length of this kind of frame might be slower when the
+ * payload is arbitrary (e.g., `std::any`), as it requires dynamic type
+ * dispatching to calculate the total size.
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+concept implicitly_delimited_frame = //
+    self_delimiting_frame<T> //
+    and not(contains_annotation<typename T::header_type, rbe::frame_length> or
+            contains_annotation<typename T::header_type, rbe::payload_length>);
 
 } // namespace rbe
