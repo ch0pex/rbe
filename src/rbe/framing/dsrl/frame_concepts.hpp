@@ -52,6 +52,7 @@ concept is_frame = requires(T const ct) {
   typename T::buffer_type;
   typename T::size_type;
 
+  { ct.header() } -> std::same_as<return_type<lazy_t, typename T::header_type>>;
   { ct.header(lazy) } -> std::same_as<return_type<lazy_t, typename T::header_type>>;
   { ct.header(eager) } -> std::same_as<return_type<eager_t, typename T::header_type>>;
   { ct.header(in_place) } -> std::same_as<return_type<in_place_t, typename T::header_type>>;
@@ -60,10 +61,11 @@ concept is_frame = requires(T const ct) {
   { ct.header_span() } -> std::same_as<typename T::buffer_type>;
   { ct.payload_span() } -> std::same_as<typename T::buffer_type>;
   { ct.length() } -> std::same_as<typename T::size_type>;
+  { T::length_of(ct.as_span()) } -> std::same_as<typename T::size_type>;
   { ct.header_length() } -> std::same_as<typename T::size_type>;
   { ct.payload_length() } -> std::same_as<typename T::size_type>;
   { ct.as_span() } -> std::same_as<typename T::buffer_type>;
-  { ct.data() } -> std::same_as<typename T::buffer_type>;
+  { ct.data() } -> std::same_as<std::byte const*>;
 
 
   requires std::constructible_from<T, typename T::buffer_type>;

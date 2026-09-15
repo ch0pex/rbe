@@ -62,6 +62,7 @@ target_sources(
         rbe/framing/detail/to_value_type.hpp
         rbe/framing/dsrl/detail/message_dispatcher_impl.hpp
         rbe/framing/dsrl/any.hpp
+        rbe/framing/dsrl/flatten.hpp
         rbe/framing/dsrl/frame.hpp
         rbe/framing/dsrl/frame_concepts.hpp
         rbe/framing/dsrl/many.hpp
