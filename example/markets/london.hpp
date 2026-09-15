@@ -15,10 +15,11 @@
  *
  * Each UDP packet begins with an 8-byte Unit Header (spec §3.8) followed
  * by one or more back-to-back messages. Every message starts with a
- * 3-byte header carrying its 2-byte length and 1-byte type code. It is
- * expressed here as a nested `Header` field so that `rbe::id` and
- * `rbe::frame_length` are declared once and dispatch/framing work through
- * introspection of the nested struct.
+ * 3-byte header carrying its 2-byte length and 1-byte type code. The
+ * header is declared once as `Header` and composed with the message set
+ * through `rbe::frame`: `rbe::id` on the header field selects the message
+ * annotated with the matching `rbe::id(value)`, and `rbe::frame_length`
+ * bounds it. See `message` and `packet` at the end.
  */
 #pragma once
 
@@ -358,7 +359,7 @@ using pt_flag_t             = std::array<char, 4>; ///< Post-trade 4-byte alpha 
 /// application or administrative messages. A Unit Header with
 /// `message_count == 0` is the server's heartbeat (§3.10.1).
 struct[[= rbe::pack_le]] UnitHeader {
-  std::uint16_t length {}; ///< Total packet size incl. this header and payload.
+  [[= rbe::frame_length]] std::uint16_t length {}; ///< Total packet size incl. this header and payload.
   std::uint8_t message_count {}; ///< Number of payload messages that follow.
   std::uint8_t market_data_group {}; ///< Identity of the market data group (Byte).
   sequence_number_t sequence_number {}; ///< Sequence number of the first payload message.
@@ -370,10 +371,9 @@ struct[[= rbe::pack_le]] UnitHeader {
 
 /// 3-byte header prefix of every LSE GTP message.
 ///
-/// Each message struct embeds this as its first member and default-
-/// initializes `length` and `msg_type` to its own compile-time values.
-/// The `rbe::id` and `rbe::frame_length` annotations live here so they are
-/// declared exactly once for the whole protocol.
+/// Declared once for the whole protocol and composed with the message set
+/// in `message`: `msg_type` selects the message whose `rbe::id(value)`
+/// matches, and `length` covers the header plus the message.
 struct[[= rbe::pack_le]] Header {
   [[= rbe::frame_length]] std::uint16_t length {};
   [[= rbe::id]] message_type_t msg_type {};
@@ -386,37 +386,36 @@ struct[[= rbe::pack_le]] Header {
 // clang-format off
 
 /// Client → server: log in to replay or recovery channel (§3.9.1).
-struct [[=rbe::pack_le]] LoginRequest {
-  Header     header {.length = 11, .msg_type = message_type_t::login_request};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::login_request)]] LoginRequest {
   comp_id_t  username;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<LoginRequest>() == 11);
 
 /// Server → client: response to a login request (§3.10.2).
-struct [[=rbe::pack_le]] LoginResponse {
-  Header         header {.length = 4, .msg_type = message_type_t::login_response};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::login_response)]] LoginResponse {
   login_status_t status;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<LoginResponse>() == 4);
 
 /// Client → server: request retransmission on the replay channel (§3.9.2).
-struct [[=rbe::pack_le]] ReplayRequest {
-  Header        header {.length = 15, .msg_type = message_type_t::replay_request};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::replay_request)]] ReplayRequest {
   std::uint32_t first_message;   ///< Sequence number of first message in range.
   std::uint32_t count;           ///< Number of messages to be resent.
   request_id_t  request_id;      ///< Echoed back in the Replay Response.
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ReplayRequest>() == 15);
 
 /// Server → client: response to a replay request (§3.10.3).
-struct [[=rbe::pack_le]] ReplayResponse {
-  Header          header {.length = 16, .msg_type = message_type_t::replay_response};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::replay_response)]] ReplayResponse {
   std::uint32_t   first_message; ///< Zero if status != accepted.
   std::uint32_t   count;         ///< Number of messages to follow (excl. completion).
   replay_status_t status;
   request_id_t    request_id;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ReplayResponse>() == 16);
 
 /// Client → server: request a snapshot/reference data set (§3.9.3).
-struct [[=rbe::pack_le]] RecoveryRequest {
-  Header            header {.length = 30, .msg_type = message_type_t::recovery_request};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::recovery_request)]] RecoveryRequest {
   request_level_t   request_level;
   instrument_id_t   instrument;     ///< Only used when request_level == instrument.
   group_id_t        group_id;       ///< Only used when request_level == group.
@@ -426,38 +425,38 @@ struct [[=rbe::pack_le]] RecoveryRequest {
   sequence_number_t sequence_number;///< Only valid if recovery_type == all_trades.
   request_id_t      request_id;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<RecoveryRequest>() == 30);
 
 /// Server → client: response to a recovery request (§3.10.4).
-struct [[=rbe::pack_le]] RecoveryResponse {
-  Header            header {.length = 16, .msg_type = message_type_t::recovery_response};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::recovery_response)]] RecoveryResponse {
   sequence_number_t sequence_number; ///< Snapshot sync point on real-time channel.
   std::uint32_t     count;           ///< Number of messages to follow (excl. completion).
   recovery_status_t status;
   request_id_t      request_id;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<RecoveryResponse>() == 16);
 
 /// Server → client: marks the end of a replay or recovery session (§3.10.5).
-struct [[=rbe::pack_le]] ReplayAndRecoveryComplete {
-  Header           header {.length = 8, .msg_type = message_type_t::replay_and_recovery_complete};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::replay_and_recovery_complete)]] ReplayAndRecoveryComplete {
   request_id_t     request_id;
   trading_status_t trading_status;   ///< Populated only at end of individual order-book snapshot.
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ReplayAndRecoveryComplete>() == 8);
 
 // ─────────────────────────────────────────────────────────────────────
 // Application messages (spec §3.11)
 // ─────────────────────────────────────────────────────────────────────
 
 /// Start and end-of-day marker (§3.11.1).
-struct [[=rbe::pack_le]] SystemEvent {
-  Header         header {.length = 14, .msg_type = message_type_t::system_event};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::system_event)]] SystemEvent {
   timestamp_t    timestamp;
   event_code_t   event_code;
   source_venue_t source_venue;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<SystemEvent>() == 14);
 
 /// Instrument reference data — common set (§3.11.2).
-struct [[=rbe::pack_le]] InstrumentDirectory {
-  Header              header {.length = 141, .msg_type = message_type_t::instrument_directory};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::instrument_directory)]] InstrumentDirectory {
   timestamp_t         timestamp;
   instrument_id_t     instrument;
   isin_t              isin;
@@ -480,10 +479,10 @@ struct [[=rbe::pack_le]] InstrumentDirectory {
   price_t             reserved_field_7;
   price_t             reserved_field_8;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<InstrumentDirectory>() == 141);
 
 /// Instrument reference data — equity-specific (§3.11.3).
-struct [[=rbe::pack_le]] InstrumentDirectoryEquities {
-  Header                  header {.length = 313, .msg_type = message_type_t::instrument_directory_equities};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::instrument_directory_equities)]] InstrumentDirectoryEquities {
   timestamp_t             timestamp;
   instrument_id_t         instrument;
   isin_t                  isin;
@@ -530,10 +529,10 @@ struct [[=rbe::pack_le]] InstrumentDirectoryEquities {
   symbol_t                symbol;
   description_t           description;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<InstrumentDirectoryEquities>() == 313);
 
 /// Scheduled / unscheduled trading-status change (§3.11.4).
-struct [[=rbe::pack_le]] InstrumentStatus {
-  Header                  header {.length = 30, .msg_type = message_type_t::instrument_status};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::instrument_status)]] InstrumentStatus {
   timestamp_t             timestamp;
   instrument_id_t         instrument;
   source_venue_t          source_venue;
@@ -542,10 +541,10 @@ struct [[=rbe::pack_le]] InstrumentStatus {
   time_ascii_t            new_end_time;           ///< Local time (not UTC); spaces if no change.
   order_book_type_t       order_book_type;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<InstrumentStatus>() == 30);
 
 /// First order of an MBO snapshot side (§3.11.5).
-struct [[=rbe::pack_le]] AddOrderMBO {
-  Header            header {.length = 67, .msg_type = message_type_t::add_order_mbo};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::add_order_mbo)]] AddOrderMBO {
   timestamp_t       timestamp;
   order_id_t        order_id;
   side_t            side;
@@ -558,20 +557,20 @@ struct [[=rbe::pack_le]] AddOrderMBO {
   participant_t     participant;
   std::uint8_t      depth;                        ///< Total orders on this side.
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AddOrderMBO>() == 67);
 
 /// Subsequent order of an MBO snapshot side (§3.11.6).
-struct [[=rbe::pack_le]] AddOrderShortMBO {
-  Header        header {.length = 46, .msg_type = message_type_t::add_order_short_mbo};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::add_order_short_mbo)]] AddOrderShortMBO {
   order_id_t    order_id;
   size_t_       size;
   price_t       price;
   price_t       reserved_field;
   participant_t participant;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AddOrderShortMBO>() == 46);
 
 /// First price point of an MBP snapshot side (§3.11.7).
-struct [[=rbe::pack_le]] AddOrderMBP {
-  Header            header {.length = 50, .msg_type = message_type_t::add_order_mbp};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::add_order_mbp)]] AddOrderMBP {
   timestamp_t       timestamp;
   side_t            side;
   size_t_           size;
@@ -583,19 +582,19 @@ struct [[=rbe::pack_le]] AddOrderMBP {
   std::uint16_t     splits;                       ///< Number of orders at this price point.
   std::uint8_t      depth;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AddOrderMBP>() == 50);
 
 /// Subsequent price point of an MBP snapshot side (§3.11.8).
-struct [[=rbe::pack_le]] AddOrderShortMBP {
-  Header        header {.length = 29, .msg_type = message_type_t::add_order_short_mbp};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::add_order_short_mbp)]] AddOrderShortMBP {
   size_t_       size;
   price_t       price;
   price_t       reserved_field;
   std::uint16_t splits;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AddOrderShortMBP>() == 29);
 
 /// New displayable order in the retrospective order book (§3.11.9).
-struct [[=rbe::pack_le]] AddOrderIncremental {
-  Header            header {.length = 77, .msg_type = message_type_t::add_order_incremental};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::add_order_incremental)]] AddOrderIncremental {
   timestamp_t       timestamp;
   order_id_t        order_id;
   side_t            side;
@@ -609,10 +608,10 @@ struct [[=rbe::pack_le]] AddOrderIncremental {
   order_type_t      order_type;
   rfq_id_t          rfq_id;                       ///< Populated only for Private RFQ.
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AddOrderIncremental>() == 77);
 
 /// Order price/size modification (§3.11.10).
-struct [[=rbe::pack_le]] OrderModify {
-  Header            header {.length = 80, .msg_type = message_type_t::order_modify};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::order_modify)]] OrderModify {
   timestamp_t       timestamp;
   order_id_t        order_id;
   instrument_id_t   instrument;
@@ -627,10 +626,10 @@ struct [[=rbe::pack_le]] OrderModify {
   size_t_           previous_quantity;
   timestamp_t       transaction_time;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<OrderModify>() == 80);
 
 /// Order removal from the retrospective order book (§3.11.11).
-struct [[=rbe::pack_le]] OrderDelete {
-  Header            header {.length = 55, .msg_type = message_type_t::order_delete};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::order_delete)]] OrderDelete {
   timestamp_t       timestamp;
   order_id_t        order_id;
   instrument_id_t   instrument;
@@ -641,10 +640,10 @@ struct [[=rbe::pack_le]] OrderDelete {
   size_t_           previous_quantity;
   timestamp_t       transaction_time;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<OrderDelete>() == 55);
 
 /// Level-1 top-of-book update (§3.11.12).
-struct [[=rbe::pack_le]] TopOfBook {
-  Header            header {.length = 87, .msg_type = message_type_t::top_of_book};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::top_of_book)]] TopOfBook {
   timestamp_t       timestamp;
   instrument_id_t   instrument;
   source_venue_t    source_venue;
@@ -659,19 +658,19 @@ struct [[=rbe::pack_le]] TopOfBook {
   order_book_type_t order_book_type;
   std::uint8_t      flags;                        ///< Bit 0 – Bid depth, bit 1 – Offer depth.
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TopOfBook>() == 87);
 
 /// Remove all orders from an instrument's book (§3.11.13).
-struct [[=rbe::pack_le]] OrderBookClear {
-  Header            header {.length = 22, .msg_type = message_type_t::order_book_clear};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::order_book_clear)]] OrderBookClear {
   timestamp_t       timestamp;
   source_venue_t    source_venue;
   instrument_id_t   instrument;
   order_book_type_t order_book_type;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<OrderBookClear>() == 22);
 
 /// Executed trade (§3.11.14).
-struct [[=rbe::pack_le]] Trade {
-  Header                       header {.length = 66, .msg_type = message_type_t::trade};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade)]] Trade {
   timestamp_t                  timestamp;
   timestamp_t                  transaction_time;
   source_venue_t               source_venue;
@@ -686,10 +685,10 @@ struct [[=rbe::pack_le]] Trade {
   hidden_execution_indicator_t hidden_execution_indicator;
   trade_qualifier_t            trade_qualifier;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Trade>() == 66);
 
 /// Frequently-updated derived statistics (§3.11.15).
-struct [[=rbe::pack_le]] Statistics {
-  Header          header {.length = 77, .msg_type = message_type_t::statistics};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::statistics)]] Statistics {
   timestamp_t     timestamp;
   instrument_id_t instrument;
   source_venue_t  source_venue;
@@ -702,10 +701,10 @@ struct [[=rbe::pack_le]] Statistics {
   price4_t        turnover;
   price4_t        turnover_on_book;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Statistics>() == 77);
 
 /// Infrequently-updated derived statistics (§3.11.16).
-struct [[=rbe::pack_le]] StatisticsUpdate {
-  Header             header {.length = 50, .msg_type = message_type_t::statistics_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::statistics_update)]] StatisticsUpdate {
   timestamp_t        timestamp;
   instrument_id_t    instrument;
   source_venue_t     source_venue;
@@ -717,10 +716,10 @@ struct [[=rbe::pack_le]] StatisticsUpdate {
   auction_info_t     auction_info;                ///< Populated if statistic_type == indicative_auction_uncrossing.
   price_indicator_t  opening_closing_price_indicator; ///< Populated if statistic_type == official_opening/closing_price.
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<StatisticsUpdate>() == 50);
 
 /// Full statistics snapshot for recovery (§3.11.17).
-struct [[=rbe::pack_le]] StatisticsSnapshot {
-  Header                header {.length = 273, .msg_type = message_type_t::statistics_snapshot};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::statistics_snapshot)]] StatisticsSnapshot {
   timestamp_t           timestamp;
   instrument_id_t       instrument;
   source_venue_t        source_venue;
@@ -761,10 +760,10 @@ struct [[=rbe::pack_le]] StatisticsSnapshot {
   price_t               static_reference_price;
   price_t               dynamic_reference_price;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<StatisticsSnapshot>() == 273);
 
 /// MiFID II compliant trade (§3.11.18).
-struct [[=rbe::pack_le]] MiFIDTrade {
-  Header              header {.length = 286, .msg_type = message_type_t::mifid_trade};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::mifid_trade)]] MiFIDTrade {
   timestamp_t         timestamp;
   source_venue_t      source_venue;
   instrument_id_t     instrument;
@@ -808,10 +807,10 @@ struct [[=rbe::pack_le]] MiFIDTrade {
   std::uint8_t        deferral_enrichment_type;   ///< '-' Not Applicable.
   std::uint8_t        duplicative_indicator;      ///< '-' Unique Trade Report.
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<MiFIDTrade>() == 286);
 
 /// Aggregated multi- and single-fill trade summary (§3.11.19).
-struct [[=rbe::pack_le]] TradeSummary {
-  Header          header {.length = 94, .msg_type = message_type_t::trade_summary};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_summary)]] TradeSummary {
   timestamp_t     timestamp;
   instrument_id_t instrument;
   source_venue_t  source_venue;
@@ -826,10 +825,10 @@ struct [[=rbe::pack_le]] TradeSummary {
   int_size_t      best_offer_size;
   price_t         best_offer_price;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeSummary>() == 94);
 
 /// Order-book activity statistics (§3.11.20).
-struct [[=rbe::pack_le]] Analytics {
-  Header          header {.length = 109, .msg_type = message_type_t::analytics};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::analytics)]] Analytics {
   timestamp_t     timestamp;
   instrument_id_t instrument;
   source_venue_t  source_venue;
@@ -849,11 +848,12 @@ struct [[=rbe::pack_le]] Analytics {
   price_t         vwap_buy;
   price_t         vwap_sell;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Analytics>() == 109);
 
 // clang-format on
 
 // ─────────────────────────────────────────────────────────────────────
-// Type-erased dispatch — use with rbe::any_msg<lse::messages>
+// Framing
 // ─────────────────────────────────────────────────────────────────────
 
 using messages = rbe::any<
@@ -862,5 +862,12 @@ using messages = rbe::any<
     AddOrderMBO, AddOrderShortMBO, AddOrderMBP, AddOrderShortMBP, AddOrderIncremental, OrderModify, OrderDelete,
     TopOfBook, OrderBookClear, Trade, Statistics, StatisticsUpdate, StatisticsSnapshot, MiFIDTrade, TradeSummary,
     Analytics>;
+
+/// One GTP message: `Header` followed by the message selected by `msg_type`.
+using message = rbe::frame<Header, messages>;
+
+/// One UDP packet: `UnitHeader` followed by `message_count` back-to-back messages
+/// (a `message_count` of zero is a heartbeat).
+using packet = rbe::frame<UnitHeader, rbe::many<message>>;
 
 } // namespace lse

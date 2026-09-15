@@ -14,9 +14,10 @@
  *
  * Every market data message starts with a 6-byte header carrying the
  * message type, its total wire length, and the stream sequence number.
- * It is expressed as a nested `Header` field so that `rbe::id` and
- * `rbe::frame_length` are declared once and dispatch/framing work through
- * introspection of the nested struct.
+ * The header is declared once as `Header` and composed with the message
+ * set through `rbe::frame`: `rbe::id` on the header field selects the
+ * message annotated with the matching `rbe::id(value)`, and
+ * `rbe::frame_length` bounds it. See `message` and `packet` at the end.
  */
 #pragma once
 
@@ -130,10 +131,9 @@ struct[[= rbe::pack_le]] PacketHeader {
 
 /// 6-byte header prefix of every market data message.
 ///
-/// Each message struct embeds this as its first member and default-
-/// initializes `msg_type` and `length` to its own compile-time values.
-/// The `rbe::id` and `rbe::frame_length` annotations live here so they are
-/// declared exactly once for the whole protocol.
+/// Declared once for the whole protocol and composed with the message set
+/// in `message`: `msg_type` selects the message whose `rbe::id(value)`
+/// matches, and `length` covers the header plus the message.
 struct[[= rbe::pack_le]] Header {
   [[= rbe::id]] message_type_t msg_type {};
   [[= rbe::frame_length]] std::uint8_t length {};
@@ -146,12 +146,10 @@ struct[[= rbe::pack_le]] Header {
 
 // clang-format off
 
-struct [[=rbe::pack_le]] Heartbeat {
-  Header header {.msg_type = message_type_t::heartbeat, .length = 6};
-};
+// TODO: header-only message: empty payloads are not wirable yet, so it is left out of `messages`.
+struct [[=rbe::pack_le, =rbe::id(message_type_t::heartbeat)]] Heartbeat {};
 
-struct [[=rbe::pack_le]] OrderAdd {
-  Header        header {.msg_type = message_type_t::order_add, .length = 33};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::order_add)]] OrderAdd {
   security_id_t security_id;
   side_t        side;
   std::uint32_t quantity;
@@ -159,25 +157,25 @@ struct [[=rbe::pack_le]] OrderAdd {
   order_ref_t   order_ref;
   timestamp_t   timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<OrderAdd>() == 33);
 
-struct [[=rbe::pack_le]] OrderCancel {
-  Header        header {.msg_type = message_type_t::order_cancel, .length = 20};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::order_cancel)]] OrderCancel {
   security_id_t security_id;
   order_ref_t   order_ref;
   timestamp_t   timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<OrderCancel>() == 20);
 
-struct [[=rbe::pack_le]] OrderModify {
-  Header        header {.msg_type = message_type_t::order_modify, .length = 32};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::order_modify)]] OrderModify {
   security_id_t security_id;
   std::uint32_t quantity;
   price_t       price;
   order_ref_t   order_ref;
   timestamp_t   timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<OrderModify>() == 32);
 
-struct [[=rbe::pack_le]] QuoteAddReplace {
-  Header        header {.msg_type = message_type_t::quote_cancel, .length = 18};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::quote_add_replace)]] QuoteAddReplace {
   trader_id_t   trader_id;
   security_id_t security_id;
   std::uint32_t bid_quantity;
@@ -186,16 +184,16 @@ struct [[=rbe::pack_le]] QuoteAddReplace {
   price_t       offer_price;
   timestamp_t   timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<QuoteAddReplace>() == 42);
 
-struct [[=rbe::pack_le]] QuoteCancel {
-  Header        header {.msg_type = message_type_t::quote_cancel, .length = 18};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::quote_cancel)]] QuoteCancel {
   trader_id_t   trader_id;
   security_id_t security_id;
   timestamp_t   timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<QuoteCancel>() == 18);
 
-struct [[=rbe::pack_le]] Trade {
-  Header        header {.msg_type = message_type_t::trade, .length = 41};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade)]] Trade {
   security_id_t security_id;
   trade_type_t  trade_type;
   std::uint32_t quantity;
@@ -205,9 +203,9 @@ struct [[=rbe::pack_le]] Trade {
   timestamp_t   timestamp;
   std::uint32_t binary_mmt;   ///< See spec §3.6.1.
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Trade>() == 41);
 
-struct [[=rbe::pack_le]] TradeReport {
-  Header        header {.msg_type = message_type_t::trade_report, .length = 45};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_report)]] TradeReport {
   security_id_t security_id;
   trade_type_t  trade_type;
   std::uint32_t quantity;
@@ -217,10 +215,10 @@ struct [[=rbe::pack_le]] TradeReport {
   std::uint32_t binary_mmt;
   timestamp_t   transact_time;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeReport>() == 45);
 
 /// Emitted after a TradeReportCancel of the original report (spec §3.4.8).
-struct [[=rbe::pack_le]] TradeReportModify {
-  Header        header {.msg_type = message_type_t::trade_report_modify, .length = 57};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_report_modify)]] TradeReportModify {
   security_id_t security_id;
   trade_type_t  trade_type;
   std::uint32_t quantity;
@@ -232,9 +230,9 @@ struct [[=rbe::pack_le]] TradeReportModify {
   trade_ref_t   orig_trade_ref;
   timestamp_t   orig_timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeReportModify>() == 57);
 
-struct [[=rbe::pack_le]] TradeReportCancel {
-  Header        header {.msg_type = message_type_t::trade_report_cancel, .length = 65};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_report_cancel)]] TradeReportCancel {
   security_id_t orig_security_id;
   trade_type_t  orig_trade_type;
   std::uint32_t orig_quantity;
@@ -247,10 +245,10 @@ struct [[=rbe::pack_le]] TradeReportCancel {
   timestamp_t   orig_timestamp;
   timestamp_t   orig_transact_time;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeReportCancel>() == 65);
 
 /// Applies only to order-generated trades (spec §3.4.10).
-struct [[=rbe::pack_le]] TradeBust {
-  Header        header {.msg_type = message_type_t::trade_bust, .length = 36};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_bust)]] TradeBust {
   security_id_t security_id;
   std::uint32_t quantity;
   price_t       price;
@@ -258,36 +256,36 @@ struct [[=rbe::pack_le]] TradeBust {
   timestamp_t   timestamp;
   std::uint32_t binary_mmt;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeBust>() == 36);
 
 /// Disseminates opening and closing prices.
-struct [[=rbe::pack_le]] SecurityStatistics {
-  Header        header {.msg_type = message_type_t::security_statistics, .length = 25};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::security_statistics)]] SecurityStatistics {
   security_id_t security_id;
   price_t       price;
   price_type_t  price_type;
   timestamp_t   timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<SecurityStatistics>() == 25);
 
 /// Pre-market identification of quote originators.
-struct [[=rbe::pack_le]] TraderDefinition {
-  Header      header {.msg_type = message_type_t::trader_definition, .length = 24};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trader_definition)]] TraderDefinition {
   trader_id_t trader_id;
   sender_id_t sender_id;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TraderDefinition>() == 24);
 
 /// Pre-market dynamic tick tables / static ticks driving price increments.
-struct [[=rbe::pack_le]] TickTableData {
-  Header       header {.msg_type = message_type_t::tick_table_data, .length = 33};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::tick_table_data)]] TickTableData {
   std::uint8_t tick_table_id;
   name_t       name;
   price_t      threshold;
   price_t      tick_size;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TickTableData>() == 33);
 
 /// Pre-market security reference data. Occasionally emitted intraday
 /// when a correction is required.
-struct [[=rbe::pack_le]] SecurityDefinition {
-  Header        header {.msg_type = message_type_t::security_definition, .length = 34};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::security_definition)]] SecurityDefinition {
   security_id_t security_id;
   umtf_t        umtf;         ///< Not applicable to AQSE.
   isin_t        isin;
@@ -295,6 +293,7 @@ struct [[=rbe::pack_le]] SecurityDefinition {
   mic_t         mic;
   std::uint8_t  tick_table_id;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<SecurityDefinition>() == 34);
 
 /// Published when the trading status of a security or its parent market changes.
 /// market_flags bit layout (spec §3.4.15):
@@ -302,13 +301,13 @@ struct [[=rbe::pack_le]] SecurityDefinition {
 ///   bits 1-2 Reserved
 ///   bit 3    Pre-open/close: 0 = not a pre phase, 1 = pre phase
 ///   bits 4-7 Reserved
-struct [[=rbe::pack_le]] SecurityStatus {
-  Header           header {.msg_type = message_type_t::security_status, .length = 18};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::security_status)]] SecurityStatus {
   security_id_t    security_id;
   trading_status_t trading_status;
   std::uint8_t     market_flags;
   timestamp_t      timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<SecurityStatus>() == 18);
 
 // ─────────────────────────────────────────────────────────────────────
 // Auction On Demand (AoD) feed messages (spec §3.5)
@@ -316,13 +315,13 @@ struct [[=rbe::pack_le]] SecurityStatus {
 
 /// First AoDUpdate signals the start of an auction. Subsequent updates
 /// publish the indicative price and matched volume.
-struct [[=rbe::pack_le]] AoDUpdate {
-  Header        header {.msg_type = message_type_t::aod_update, .length = 28};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::aod_update)]] AoDUpdate {
   security_id_t security_id;
   price_t       indicative_price;
   std::uint32_t match_vol;
   timestamp_t   timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AoDUpdate>() == 28);
 
 // AoD Trade and AoD Trade Bust reuse the Trade / TradeBust structures
 // from §3.4 (spec §3.5.2, §3.5.3).
@@ -333,17 +332,16 @@ struct [[=rbe::pack_le]] AoDUpdate {
 
 /// First message of each snapshot; identifies the continuous-stream
 /// seq_no that this snapshot corresponds to.
-struct [[=rbe::pack_le]] SnapshotStart {
-  Header        header {.msg_type = message_type_t::snapshot_start, .length = 20};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::snapshot_start)]] SnapshotStart {
   std::uint32_t stream_seq_no;
   std::uint16_t security_count;
   timestamp_t   timestamp;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<SnapshotStart>() == 20);
 
 /// Book status for one security within a snapshot. Followed by `entries`
 /// BookEntry messages.
-struct [[=rbe::pack_le]] BookStatus {
-  Header           header {.msg_type = message_type_t::book_status, .length = 28};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::book_status)]] BookStatus {
   security_id_t    security_id;
   trading_status_t trading_status;
   std::uint8_t     market_flags;
@@ -352,49 +350,59 @@ struct [[=rbe::pack_le]] BookStatus {
   std::uint32_t    closing_sell_qty;
   price_t          indicative_price;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<BookStatus>() == 28);
 
 /// One open order in the book snapshot. Published in price-time priority
 /// per side.
-struct [[=rbe::pack_le]] BookEntry {
-  Header        header {.msg_type = message_type_t::book_entry, .length = 25};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::book_entry)]] BookEntry {
   security_id_t security_id;
   side_t        side;
   std::uint32_t quantity;
   price_t       price;
   order_ref_t   order_ref;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<BookEntry>() == 25);
 
 // ─────────────────────────────────────────────────────────────────────
 // Replay service messages — TCP/IP (spec §3.8)
 // ─────────────────────────────────────────────────────────────────────
 // seq_no in the header is ignored on the replay channel.
 
-struct [[=rbe::pack_le]] Login {
-  Header      header {.msg_type = message_type_t::login, .length = 26};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::login)]] Login {
   username_t  username;
   password_t  password;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Login>() == 26);
 
-struct [[=rbe::pack_le]] ReplayRequest {
-  Header        header {.msg_type = message_type_t::replay_request, .length = 14};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::replay_request)]] ReplayRequest {
   std::uint32_t begin_seq_no;
   std::uint32_t end_seq_no;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ReplayRequest>() == 14);
 
-struct [[=rbe::pack_le]] ReplayResponse {
-  Header          header {.msg_type = message_type_t::replay_response, .length = 7};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::replay_response)]] ReplayResponse {
   response_code_t response_code;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ReplayResponse>() == 7);
 
 // clang-format on
 
 // ─────────────────────────────────────────────────────────────────────
-// Type-erased dispatch — use with rbe::any_msg<aquis::messages>
+// Framing
 // ─────────────────────────────────────────────────────────────────────
 
+// TODO: Heartbeat is header-only, and empty payloads are not wirable yet,
+//       so it cannot be one of the alternatives.
 using messages = rbe::any<
-    Heartbeat, OrderAdd, OrderCancel, OrderModify, QuoteAddReplace, QuoteCancel, Trade, TradeReport, TradeReportModify,
+    OrderAdd, OrderCancel, OrderModify, QuoteAddReplace, QuoteCancel, Trade, TradeReport, TradeReportModify,
     TradeReportCancel, TradeBust, SecurityStatistics, TraderDefinition, TickTableData, SecurityDefinition,
     SecurityStatus, AoDUpdate, SnapshotStart, BookStatus, BookEntry, Login, ReplayRequest, ReplayResponse>;
+
+/// One market data message: `Header` followed by the message selected by `msg_type`.
+using message = rbe::frame<Header, messages>;
+
+/// One multicast UDP payload: `PacketHeader` followed by `count` back-to-back messages.
+/// `PacketHeader` carries no length, so the packet runs to the end of the datagram.
+using packet = rbe::frame<PacketHeader, rbe::many<message>>;
 
 } // namespace aquis

@@ -22,9 +22,10 @@
  *    terminated by an LF (0x0A). There is no on-wire length field —
  *    the wire size is fixed per message type.
  *
- * Each message struct embeds a protocol-specific `Header` as its
- * first member so `rbe::id` (and `rbe::frame_length` where applicable) are
- * declared once per protocol.
+ * Each protocol declares its `Header` once and composes it with its
+ * message set through `rbe::frame`: `rbe::id` on the header field selects
+ * the message annotated with the matching `rbe::id(value)`. See `message`
+ * (and `packet` for PITCH) at the end of each namespace.
  */
 #pragma once
 
@@ -237,7 +238,7 @@ enum class index_status_t : std::uint8_t {
 /// 8-byte UDP frame prefix that wraps `count` sequenced or unsequenced
 /// PITCH messages. A `count` of zero indicates a heartbeat frame.
 struct[[=rbe::pack_le]] SequencedUnitHeader {
-  std::uint16_t length; ///< Length of entire block including this header.
+  [[=rbe::frame_length]] std::uint16_t length; ///< Length of entire block including this header.
   std::uint8_t count; ///< Number of messages that follow.
   std::uint8_t unit; ///< Unit that applies to the enclosed messages.
   sequence_t sequence; ///< Sequence of the first enclosed sequenced message.
@@ -248,10 +249,9 @@ struct[[=rbe::pack_le]] SequencedUnitHeader {
 // ─────────────────────────────────────────────────────────────────────
 
 /// 2-byte header prefix of every PITCH / GRP / Spin message. Cboe puts
-/// `length` FIRST (offset 0), then the message type (offset 1). Each
-/// message struct embeds this as its first member and defaults both
-/// fields to its compile-time values; `rbe::id` and `rbe::frame_length` are
-/// declared exactly once for the whole protocol here.
+/// `length` FIRST (offset 0), then the message type (offset 1). Declared
+/// once for the whole protocol and composed with the message set in
+/// `message`; `length` covers the header plus the message.
 struct[[=rbe::pack_le]] Header {
   [[= rbe::frame_length]] std::uint8_t length {};
   [[= rbe::id]] message_type_t msg_type {};
@@ -263,87 +263,86 @@ struct[[=rbe::pack_le]] Header {
 
 
 /// GRP / Spin Server login (spec §3.1, §5.1).
-struct [[=rbe::pack_le]] Login {
-  Header          header {.length = 22, .msg_type = message_type_t::login};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::login)]] Login {
   std::array<char,4>  session_sub_id;
   std::array<char,4>  username;
   std::array<char,2>  filler;        ///< Space filled.
   std::array<char,10> password;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Login>() == 22);
 
 /// Response to a Login (spec §3.2, §5.2).
-struct [[=rbe::pack_le]] LoginResponse {
-  Header         header {.length = 3, .msg_type = message_type_t::login_response};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::login_response)]] LoginResponse {
   login_status_t status;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<LoginResponse>() == 3);
 
 /// Request retransmission of a sequenced range (spec §3.3).
-struct [[=rbe::pack_le]] GapRequest {
-  Header        header {.length = 9, .msg_type = message_type_t::gap_request};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::gap_request)]] GapRequest {
   std::uint8_t  unit;
   sequence_t    sequence; ///< Lowest sequence in the requested range.
   std::uint16_t count;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<GapRequest>() == 9);
 
 /// Reply to a GapRequest (spec §3.4).
-struct [[=rbe::pack_le]] GapResponse {
-  Header        header {.length = 10, .msg_type = message_type_t::gap_response};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::gap_response)]] GapResponse {
   std::uint8_t  unit;
   sequence_t    sequence;
   std::uint16_t count;
   gap_status_t  status;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<GapResponse>() == 10);
 
 // ─────────────────────────────────────────────────────────────────────
 // Spin Server messages — TCP (spec §5)
 // ─────────────────────────────────────────────────────────────────────
 
 /// Advertises the highest sequence for which a spin is currently available (spec §5.3).
-struct [[=rbe::pack_le]] SpinImageAvailable {
-  Header     header {.length = 6, .msg_type = message_type_t::spin_image_available};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::spin_image_available)]] SpinImageAvailable {
   sequence_t sequence;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<SpinImageAvailable>() == 6);
 
 /// Request a spin at a previously advertised sequence (spec §5.4).
-struct [[=rbe::pack_le]] SpinRequest {
-  Header     header {.length = 6, .msg_type = message_type_t::spin_request};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::spin_request)]] SpinRequest {
   sequence_t sequence;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<SpinRequest>() == 6);
 
 /// Response to a SpinRequest (spec §5.5).
-struct [[=rbe::pack_le]] SpinResponse {
-  Header        header {.length = 11, .msg_type = message_type_t::spin_response};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::spin_response)]] SpinResponse {
   sequence_t    sequence;
   std::uint32_t order_count; ///< Number of Add Order messages that will follow. 0 on reject.
   spin_status_t status;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<SpinResponse>() == 11);
 
 /// End-of-spin marker; not sent if the SpinRequest was rejected (spec §5.6).
-struct [[=rbe::pack_le]] SpinFinished {
-  Header     header {.length = 6, .msg_type = message_type_t::spin_finished};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::spin_finished)]] SpinFinished {
   sequence_t sequence;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<SpinFinished>() == 6);
 
 // ─────────────────────────────────────────────────────────────────────
 // PITCH 2.X market data messages (spec §4)
 // ─────────────────────────────────────────────────────────────────────
 
 /// Whole-second timestamp base for the unit (spec §4.1).
-struct [[=rbe::pack_le]] Time {
-  Header header {.length = 6, .msg_type = message_type_t::time};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::time)]] Time {
   time_t time;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Time>() == 6);
 
 /// Instructs feed recipients to clear all orders for the Cboe book of
 /// the enclosing Sequenced Unit (spec §4.2).
-struct [[=rbe::pack_le]] UnitClear {
-  Header        header {.length = 6, .msg_type = message_type_t::unit_clear};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::unit_clear)]] UnitClear {
   time_offset_t time_offset;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<UnitClear>() == 6);
 
 /// Newly accepted visible order — long form (spec §4.3.1).
-struct [[=rbe::pack_le]] AddOrderLong {
-  Header        header {.length = 35, .msg_type = message_type_t::add_order_long};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::add_order_long)]] AddOrderLong {
   time_offset_t time_offset;
   order_id_t    order_id;
   side_t        side;
@@ -351,10 +350,10 @@ struct [[=rbe::pack_le]] AddOrderLong {
   symbol_t      symbol;
   long_price_t  price;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AddOrderLong>() == 35);
 
 /// Newly accepted visible order — short form (spec §4.3.2).
-struct [[=rbe::pack_le]] AddOrderShort {
-  Header         header {.length = 25, .msg_type = message_type_t::add_order_short};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::add_order_short)]] AddOrderShort {
   time_offset_t  time_offset;
   order_id_t     order_id;
   side_t         side;
@@ -362,11 +361,11 @@ struct [[=rbe::pack_le]] AddOrderShort {
   symbol_short_t symbol;
   short_price_t  price;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AddOrderShort>() == 25);
 
 /// Newly accepted quote/order carrying attribution — used on the Cboe
 /// Systematic Internaliser platform (spec §4.3.3).
-struct [[=rbe::pack_le]] AddOrderExpanded {
-  Header           header {.length = 40, .msg_type = message_type_t::add_order_expanded};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::add_order_expanded)]] AddOrderExpanded {
   time_offset_t    time_offset;
   order_id_t       order_id;
   side_t           side;
@@ -376,20 +375,20 @@ struct [[=rbe::pack_le]] AddOrderExpanded {
   std::uint8_t     add_flags; ///< Bit 1 = SI Quote; bits 0, 2-7 reserved.
   participant_id_t participant_id;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AddOrderExpanded>() == 40);
 
 /// Visible order executed at its resting price (spec §4.4).
-struct [[=rbe::pack_le]] OrderExecuted {
-  Header             header {.length = 30, .msg_type = message_type_t::order_executed};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::order_executed)]] OrderExecuted {
   time_offset_t      time_offset;
   order_id_t         order_id;
   std::uint32_t      executed_shares;
   execution_id_t     execution_id;
   execution_flags_t  execution_flags;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<OrderExecuted>() == 30);
 
 /// Visible order executed at a price different from the resting price (spec §4.5).
-struct [[=rbe::pack_le]] OrderExecutedAtPriceSize {
-  Header            header {.length = 42, .msg_type = message_type_t::order_executed_at_price_size};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::order_executed_at_price_size)]] OrderExecutedAtPriceSize {
   time_offset_t     time_offset;
   order_id_t        order_id;
   std::uint32_t     executed_shares;
@@ -398,51 +397,51 @@ struct [[=rbe::pack_le]] OrderExecutedAtPriceSize {
   long_price_t      price;
   execution_flags_t execution_flags;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<OrderExecutedAtPriceSize>() == 42);
 
 /// Partial visible-order cancel — long form (spec §4.6.1).
-struct [[=rbe::pack_le]] ReduceSizeLong {
-  Header        header {.length = 18, .msg_type = message_type_t::reduce_size_long};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::reduce_size_long)]] ReduceSizeLong {
   time_offset_t time_offset;
   order_id_t    order_id;
   std::uint32_t cancelled_shares;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ReduceSizeLong>() == 18);
 
 /// Partial visible-order cancel — short form (spec §4.6.2).
-struct [[=rbe::pack_le]] ReduceSizeShort {
-  Header        header {.length = 16, .msg_type = message_type_t::reduce_size_short};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::reduce_size_short)]] ReduceSizeShort {
   time_offset_t time_offset;
   order_id_t    order_id;
   std::uint16_t cancelled_shares;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ReduceSizeShort>() == 16);
 
 /// Visible order modification — long form (spec §4.7.1).
-struct [[=rbe::pack_le]] ModifyOrderLong {
-  Header        header {.length = 26, .msg_type = message_type_t::modify_order_long};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::modify_order_long)]] ModifyOrderLong {
   time_offset_t time_offset;
   order_id_t    order_id;
   std::uint32_t shares;
   long_price_t  price;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ModifyOrderLong>() == 26);
 
 /// Visible order modification — short form (spec §4.7.2).
-struct [[=rbe::pack_le]] ModifyOrderShort {
-  Header        header {.length = 18, .msg_type = message_type_t::modify_order_short};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::modify_order_short)]] ModifyOrderShort {
   time_offset_t time_offset;
   order_id_t    order_id;
   std::uint16_t shares;
   short_price_t price;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ModifyOrderShort>() == 18);
 
 /// Complete visible-order cancel (spec §4.8).
-struct [[=rbe::pack_le]] DeleteOrder {
-  Header        header {.length = 14, .msg_type = message_type_t::delete_order};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::delete_order)]] DeleteOrder {
   time_offset_t time_offset;
   order_id_t    order_id;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<DeleteOrder>() == 14);
 
 /// Hidden-order or routed execution — long form (spec §4.9.1).
-struct [[=rbe::pack_le]] TradeLong {
-  Header         header {.length = 48, .msg_type = message_type_t::trade_long};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_long)]] TradeLong {
   time_offset_t  time_offset;
   order_id_t     order_id; ///< Obfuscated by default (spec §4.9).
   side_t         side;     ///< Always 'B' for hidden trades.
@@ -452,10 +451,10 @@ struct [[=rbe::pack_le]] TradeLong {
   execution_id_t execution_id;
   trade_flags_t  trade_flags;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeLong>() == 48);
 
 /// Hidden-order or routed execution — short form (spec §4.9.2).
-struct [[=rbe::pack_le]] TradeShort {
-  Header         header {.length = 38, .msg_type = message_type_t::trade_short};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_short)]] TradeShort {
   time_offset_t  time_offset;
   order_id_t     order_id;
   side_t         side;
@@ -465,10 +464,10 @@ struct [[=rbe::pack_le]] TradeShort {
   execution_id_t execution_id;
   trade_flags_t  trade_flags;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeShort>() == 38);
 
 /// Extended trade details, only used on the Cboe European platform (spec §4.9.4).
-struct [[=rbe::pack_le]] TradeExtended {
-  Header                    header {.length = 68, .msg_type = message_type_t::trade_extended};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_extended)]] TradeExtended {
   time_offset_t             time_offset;
   std::uint64_t             shares;
   symbol_t                  symbol;
@@ -480,10 +479,10 @@ struct [[=rbe::pack_le]] TradeExtended {
   std::uint8_t              cboe_trade_flags;    ///< 1-char alphanumeric, see spec §4.9.7.
   extended_trade_flags_t    extended_trade_flags;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeExtended>() == 68);
 
 /// Trade reported on an ISIN not known to Cboe — TRF only (spec §4.9.5).
-struct [[=rbe::pack_le]] TradeUnknownSymbol {
-  Header                 header {.length = 72, .msg_type = message_type_t::trade_unknown_symbol};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_unknown_symbol)]] TradeUnknownSymbol {
   time_offset_t          time_offset;
   std::uint64_t          shares;
   isin_t                 symbol;   ///< ISIN in place of local symbol.
@@ -495,57 +494,57 @@ struct [[=rbe::pack_le]] TradeUnknownSymbol {
   std::uint8_t           cboe_trade_flags;
   extended_trade_flags_t extended_trade_flags;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeUnknownSymbol>() == 72);
 
 /// Break of an order-generated trade — carries only the execution id
 /// of the broken trade (spec Appendix A / Appendix B, Trade Break).
-struct [[=rbe::pack_le]] TradeBreak {
-  Header         header {.length = 14, .msg_type = message_type_t::trade_break};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trade_break)]] TradeBreak {
   time_offset_t  time_offset;
   execution_id_t execution_id;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradeBreak>() == 14);
 
 /// End-of-session marker for the unit (spec §4.10).
-struct [[=rbe::pack_le]] EndOfSession {
-  Header        header {.length = 6, .msg_type = message_type_t::end_of_session};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::end_of_session)]] EndOfSession {
   time_offset_t time_offset;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<EndOfSession>() == 6);
 
 /// Start-of-transaction marker; subsequent messages up to the matching
 /// TransactionEnd belong to the same transaction block (spec §4.11).
-struct [[=rbe::pack_le]] TransactionBegin {
-  Header        header {.length = 6, .msg_type = message_type_t::transaction_begin};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::transaction_begin)]] TransactionBegin {
   time_offset_t time_offset;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TransactionBegin>() == 6);
 
 /// End-of-transaction marker (spec §4.12).
-struct [[=rbe::pack_le]] TransactionEnd {
-  Header        header {.length = 6, .msg_type = message_type_t::transaction_end};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::transaction_end)]] TransactionEnd {
   time_offset_t time_offset;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TransactionEnd>() == 6);
 
 /// Change in trading status for a security (spec §4.13).
-struct [[=rbe::pack_le]] TradingStatus {
-  Header                header {.length = 18, .msg_type = message_type_t::trading_status};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trading_status)]] TradingStatus {
   time_offset_t         time_offset;
   symbol_t              symbol;
   trading_status_code_t status;
   std::array<char,3>        reserved;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<TradingStatus>() == 18);
 
 /// Disseminates opening / closing / high / low statistics prices — Cboe
 /// European platform only (spec §4.14).
-struct [[=rbe::pack_le]] Statistics {
-  Header                header {.length = 24, .msg_type = message_type_t::statistics};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::statistics)]] Statistics {
   time_offset_t         time_offset;
   symbol_t              symbol;
   long_price_t          price;
   statistic_type_t      statistic_type;
   price_determination_t price_determination;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Statistics>() == 24);
 
 /// Indicative price / size during a call or extension phase (spec §4.15.1).
-struct [[=rbe::pack_le]] AuctionUpdate {
-  Header              header {.length = 37, .msg_type = message_type_t::auction_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::auction_update)]] AuctionUpdate {
   time_offset_t       time_offset;
   symbol_t            symbol;
   auction_type_t      auction_type;
@@ -555,46 +554,54 @@ struct [[=rbe::pack_le]] AuctionUpdate {
   outside_tolerance_t outside_tolerance;
   includes_primary_t  includes_primary;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AuctionUpdate>() == 37);
 
 /// Post-uncross auction result (spec §4.15.2).
-struct [[=rbe::pack_le]] AuctionSummary {
-  Header         header {.length = 27, .msg_type = message_type_t::auction_summary};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::auction_summary)]] AuctionSummary {
   time_offset_t  time_offset;
   symbol_t       symbol;
   auction_type_t auction_type;
   long_price_t   price;
   std::uint32_t  shares;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<AuctionSummary>() == 27);
 
 /// Real-time index quote (spec §4.16.1) — XIC/XID/XIE feeds only.
-struct [[=rbe::pack_le]] IndexQuote {
-  Header         header {.length = 29, .msg_type = message_type_t::index_quote};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::index_quote)]] IndexQuote {
   std::uint64_t  timestamp;    ///< Nanoseconds since midnight.
   index_ticker_t index_ticker;
   long_price_t   price;
   index_status_t index_status;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<IndexQuote>() == 29);
 
 /// End-of-day exchange delivery settlement price for an index (spec §4.16.2).
-struct [[=rbe::pack_le]] IndexQuoteEDSP {
-  Header         header {.length = 28, .msg_type = message_type_t::index_quote_edsp};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::index_quote_edsp)]] IndexQuoteEDSP {
   std::uint64_t  timestamp;
   index_ticker_t index_ticker;
   long_price_t   price;
 };
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<IndexQuoteEDSP>() == 28);
 
 // clang-format on
 
 // ─────────────────────────────────────────────────────────────────────
-// Type-erased dispatch — use with rbe::any_msg<cboe::pitch::messages>
+// Framing
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = std::tuple<
+using messages = rbe::any<
     Login, LoginResponse, GapRequest, GapResponse, SpinImageAvailable, SpinRequest, SpinResponse, SpinFinished, Time,
     UnitClear, AddOrderLong, AddOrderShort, AddOrderExpanded, OrderExecuted, OrderExecutedAtPriceSize, ReduceSizeLong,
     ReduceSizeShort, ModifyOrderLong, ModifyOrderShort, DeleteOrder, TradeLong, TradeShort, TradeExtended,
     TradeUnknownSymbol, TradeBreak, EndOfSession, TransactionBegin, TransactionEnd, TradingStatus, Statistics,
     AuctionUpdate, AuctionSummary, IndexQuote, IndexQuoteEDSP>;
+
+/// One PITCH / GRP / Spin message: `Header` followed by the message selected by `msg_type`.
+using message = rbe::frame<Header, messages>;
+
+/// One UDP frame: `SequencedUnitHeader` followed by `count` back-to-back messages
+/// (a `count` of zero is a heartbeat).
+using packet = rbe::frame<SequencedUnitHeader, rbe::many<message>>;
 
 } // namespace pitch
 
@@ -703,8 +710,9 @@ enum class reg_sho_action_t : std::uint8_t {
 // ─────────────────────────────────────────────────────────────────────
 
 /// TOP messages have no on-wire length field, only a 1-byte ASCII type.
-/// Each message struct embeds this as its first member; `rbe::id`
-/// dispatches on `msg_type` and the wire size is fixed per struct.
+/// Declared once for the whole protocol and composed with the message set
+/// in `message`; `msg_type` selects the message and the wire size is fixed
+/// per message type.
 struct[[= rbe::pack_le]] Header {
   [[= rbe::id]] message_type_t msg_type {};
 };
@@ -716,8 +724,7 @@ struct[[= rbe::pack_le]] Header {
 // clang-format off
 
 /// Client → server logon (spec §4.1).
-struct [[=rbe::pack_le]] Logon {
-  Header          header {.msg_type = message_type_t::logon};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::logon)]] Logon {
   std::array<char,6>  username;
   std::array<char,10> password;
   boolean_t       spin_flag; ///< 'Y' → send a spin of current top of book.
@@ -725,14 +732,12 @@ struct [[=rbe::pack_le]] Logon {
 };
 
 /// Server → client acceptance (spec §4.2).
-struct [[=rbe::pack_le]] LogonAccepted {
-  Header       header {.msg_type = message_type_t::logon_accepted};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::logon_accepted)]] LogonAccepted {
   std::uint8_t newline = '\n';
 };
 
 /// Server → client rejection (spec §4.3).
-struct [[=rbe::pack_le]] LogonRejected {
-  Header          header {.msg_type = message_type_t::logon_rejected};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::logon_rejected)]] LogonRejected {
   reject_reason_t reject_reason;
   std::uint8_t    newline = '\n';
 };
@@ -743,8 +748,7 @@ struct [[=rbe::pack_le]] LogonRejected {
 
 /// Per-symbol snapshot delivered during a spin, expanded form for ISRA
 /// symbol sizes (spec §5.1.1).
-struct [[=rbe::pack_le]] ExpandedSpin {
-  Header             header {.msg_type = message_type_t::expanded_spin};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_spin)]] ExpandedSpin {
   timestamp_t        timestamp;
   symbol_wide_t      symbol;
   price_long_t       bid_price;
@@ -763,8 +767,7 @@ struct [[=rbe::pack_le]] ExpandedSpin {
 };
 
 /// Per-symbol snapshot with extended (14-char) prices (spec §5.1.2).
-struct [[=rbe::pack_le]] ExtendedSpin {
-  Header             header {.msg_type = message_type_t::extended_spin};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_spin)]] ExtendedSpin {
   timestamp_t        timestamp;
   symbol_wide_t      symbol;
   price_extended_t   bid_price;
@@ -783,8 +786,7 @@ struct [[=rbe::pack_le]] ExtendedSpin {
 };
 
 /// End-of-spin marker (spec §5.2).
-struct [[=rbe::pack_le]] SpinDone {
-  Header       header {.msg_type = message_type_t::spin_done};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::spin_done)]] SpinDone {
   std::uint8_t newline = '\n';
 };
 
@@ -792,13 +794,11 @@ struct [[=rbe::pack_le]] SpinDone {
 // Heartbeat messages (spec §6)
 // ─────────────────────────────────────────────────────────────────────
 
-struct [[=rbe::pack_le]] ServerHeartbeat {
-  Header       header {.msg_type = message_type_t::server_heartbeat};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::server_heartbeat)]] ServerHeartbeat {
   std::uint8_t newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ClientHeartbeat {
-  Header       header {.msg_type = message_type_t::client_heartbeat};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::client_heartbeat)]] ClientHeartbeat {
   std::uint8_t newline = '\n';
 };
 
@@ -807,15 +807,13 @@ struct [[=rbe::pack_le]] ClientHeartbeat {
 // ─────────────────────────────────────────────────────────────────────
 
 /// Seconds past midnight, Eastern (spec §7.1).
-struct [[=rbe::pack_le]] Seconds {
-  Header       header {.msg_type = message_type_t::seconds};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::seconds)]] Seconds {
   seconds_t    seconds;
   std::uint8_t newline = '\n';
 };
 
 /// Milliseconds since the last Seconds message (spec §7.2).
-struct [[=rbe::pack_le]] Milliseconds {
-  Header         header {.msg_type = message_type_t::milliseconds};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::milliseconds)]] Milliseconds {
   milliseconds_t milliseconds;
   std::uint8_t   newline = '\n';
 };
@@ -824,64 +822,56 @@ struct [[=rbe::pack_le]] Milliseconds {
 // Bid / Ask update messages (spec §8.1)
 // ─────────────────────────────────────────────────────────────────────
 
-struct [[=rbe::pack_le]] ExtendedBidUpdate {
-  Header           header {.msg_type = message_type_t::extended_bid_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_bid_update)]] ExtendedBidUpdate {
   symbol_wide_t    symbol;
   price_extended_t bid_price;
   qty_long_t       bid_quantity;
   std::uint8_t     newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ExpandedBidUpdate {
-  Header        header {.msg_type = message_type_t::expanded_bid_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_bid_update)]] ExpandedBidUpdate {
   symbol_wide_t symbol;
   price_long_t  bid_price;
   qty_long_t    bid_quantity;
   std::uint8_t  newline = '\n';
 };
 
-struct [[=rbe::pack_le]] LongBidUpdate {
-  Header        header {.msg_type = message_type_t::long_bid_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::long_bid_update)]] LongBidUpdate {
   symbol_long_t symbol;
   price_long_t  bid_price;
   qty_long_t    bid_quantity;
   std::uint8_t  newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ShortBidUpdate {
-  Header         header {.msg_type = message_type_t::short_bid_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::short_bid_update)]] ShortBidUpdate {
   symbol_short_t symbol;
   price_short_t  bid_price;
   qty_short_t    bid_quantity;
   std::uint8_t   newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ExtendedAskUpdate {
-  Header           header {.msg_type = message_type_t::extended_ask_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_ask_update)]] ExtendedAskUpdate {
   symbol_wide_t    symbol;
   price_extended_t ask_price;
   qty_long_t       ask_quantity;
   std::uint8_t     newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ExpandedAskUpdate {
-  Header        header {.msg_type = message_type_t::expanded_ask_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_ask_update)]] ExpandedAskUpdate {
   symbol_wide_t symbol;
   price_long_t  ask_price;
   qty_long_t    ask_quantity;
   std::uint8_t  newline = '\n';
 };
 
-struct [[=rbe::pack_le]] LongAskUpdate {
-  Header        header {.msg_type = message_type_t::long_ask_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::long_ask_update)]] LongAskUpdate {
   symbol_long_t symbol;
   price_long_t  ask_price;
   qty_long_t    ask_quantity;
   std::uint8_t  newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ShortAskUpdate {
-  Header         header {.msg_type = message_type_t::short_ask_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::short_ask_update)]] ShortAskUpdate {
   symbol_short_t symbol;
   price_short_t  ask_price;
   qty_short_t    ask_quantity;
@@ -892,8 +882,7 @@ struct [[=rbe::pack_le]] ShortAskUpdate {
 // Two-sided update messages (spec §8.2)
 // ─────────────────────────────────────────────────────────────────────
 
-struct [[=rbe::pack_le]] ExpandedTwoSidedUpdate {
-  Header        header {.msg_type = message_type_t::expanded_two_sided_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_two_sided_update)]] ExpandedTwoSidedUpdate {
   symbol_wide_t symbol;
   price_long_t  bid_price;
   qty_long_t    bid_quantity;
@@ -902,8 +891,7 @@ struct [[=rbe::pack_le]] ExpandedTwoSidedUpdate {
   std::uint8_t  newline = '\n';
 };
 
-struct [[=rbe::pack_le]] LongTwoSidedUpdate {
-  Header        header {.msg_type = message_type_t::long_two_sided_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::long_two_sided_update)]] LongTwoSidedUpdate {
   symbol_long_t symbol;
   price_long_t  bid_price;
   qty_long_t    bid_quantity;
@@ -912,8 +900,7 @@ struct [[=rbe::pack_le]] LongTwoSidedUpdate {
   std::uint8_t  newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ShortTwoSidedUpdate {
-  Header         header {.msg_type = message_type_t::short_two_sided_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::short_two_sided_update)]] ShortTwoSidedUpdate {
   symbol_short_t symbol;
   price_short_t  bid_price;
   qty_short_t    bid_quantity;
@@ -922,8 +909,7 @@ struct [[=rbe::pack_le]] ShortTwoSidedUpdate {
   std::uint8_t   newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ExtendedTwoSidedUpdate {
-  Header           header {.msg_type = message_type_t::extended_two_sided_update};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_two_sided_update)]] ExtendedTwoSidedUpdate {
   symbol_wide_t    symbol;
   price_extended_t bid_price;
   qty_long_t       bid_quantity;
@@ -936,8 +922,7 @@ struct [[=rbe::pack_le]] ExtendedTwoSidedUpdate {
 // Trade messages (spec §9)
 // ─────────────────────────────────────────────────────────────────────
 
-struct [[=rbe::pack_le]] ExtendedTrade {
-  Header           header {.msg_type = message_type_t::extended_trade};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_trade)]] ExtendedTrade {
   symbol_wide_t    symbol;
   price_extended_t last_price;
   qty_long_t       last_quantity;
@@ -945,8 +930,7 @@ struct [[=rbe::pack_le]] ExtendedTrade {
   std::uint8_t     newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ExpandedTrade {
-  Header        header {.msg_type = message_type_t::expanded_trade};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_trade)]] ExpandedTrade {
   symbol_wide_t symbol;
   price_long_t  last_price;
   qty_long_t    last_quantity;
@@ -954,8 +938,7 @@ struct [[=rbe::pack_le]] ExpandedTrade {
   std::uint8_t  newline = '\n';
 };
 
-struct [[=rbe::pack_le]] LongTrade {
-  Header        header {.msg_type = message_type_t::long_trade};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::long_trade)]] LongTrade {
   symbol_long_t symbol;
   price_long_t  last_price;
   qty_long_t    last_quantity;
@@ -963,8 +946,7 @@ struct [[=rbe::pack_le]] LongTrade {
   std::uint8_t  newline = '\n';
 };
 
-struct [[=rbe::pack_le]] ShortTrade {
-  Header         header {.msg_type = message_type_t::short_trade};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::short_trade)]] ShortTrade {
   symbol_short_t symbol;
   price_short_t  last_price;
   qty_short_t    last_quantity;
@@ -977,8 +959,7 @@ struct [[=rbe::pack_le]] ShortTrade {
 // ─────────────────────────────────────────────────────────────────────
 
 /// Change in a security's trading state (spec §10.1).
-struct [[=rbe::pack_le]] TradingStatus {
-  Header           header {.msg_type = message_type_t::trading_status};
+struct [[=rbe::pack_le, =rbe::id(message_type_t::trading_status)]] TradingStatus {
   symbol_wide_t    symbol;
   halt_status_t    halt_status;
   reg_sho_action_t reg_sho_action;
@@ -990,7 +971,7 @@ struct [[=rbe::pack_le]] TradingStatus {
 // clang-format on
 
 // ─────────────────────────────────────────────────────────────────────
-// Type-erased dispatch — use with rbe::any_msg<cboe::top::messages>
+// Framing
 // ─────────────────────────────────────────────────────────────────────
 
 using messages = rbe::any<
@@ -998,6 +979,11 @@ using messages = rbe::any<
     Seconds, Milliseconds, ExtendedBidUpdate, ExpandedBidUpdate, LongBidUpdate, ShortBidUpdate, ExtendedAskUpdate,
     ExpandedAskUpdate, LongAskUpdate, ShortAskUpdate, ExpandedTwoSidedUpdate, LongTwoSidedUpdate, ShortTwoSidedUpdate,
     ExtendedTwoSidedUpdate, ExtendedTrade, ExpandedTrade, LongTrade, ShortTrade, TradingStatus>;
+
+/// One TOP message: `Header` followed by the message selected by `msg_type`.
+/// TODO: the length is implied by `msg_type`; until `rbe::any` resolves it
+///       (payload_extent::any_id) the payload runs to the end of the buffer.
+using message = rbe::frame<Header, messages>;
 
 } // namespace top
 

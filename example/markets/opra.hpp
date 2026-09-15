@@ -23,6 +23,13 @@
  * layout. OPRA does not carry a per-message length on the wire (except
  * for Administrative category-C messages): message length is derived
  * from the (category, indicator) tuple as defined in §5.
+ *
+ * The message `Header` is declared once and composed with the message set
+ * through `rbe::frame` (see `message` at the end). This is a partial model:
+ * `rbe::id` only dispatches on `msg_category`, while OPRA also needs
+ * `msg_type` for some categories and `msg_indicator` to size the optional
+ * BBO appendages, and Administrative messages carry their length inside
+ * the body. Those gaps are marked with TODOs.
  */
 #pragma once
 
@@ -330,7 +337,7 @@ struct[[= rbe::pack_be]] BlockTimestamp {
 
 struct[[= rbe::pack_be]] BlockHeader {
   version_t version {version_t::v6};
-  std::uint16_t block_size {}; ///< Total block bytes incl. header, data, pad.
+  [[= rbe::frame_length]] std::uint16_t block_size {}; ///< Total block bytes incl. header, data, pad.
   data_feed_indicator_t data_feed_indicator {data_feed_indicator_t::opra};
   retransmission_indicator_t retransmission_indicator {retransmission_indicator_t::original};
   session_indicator_t session_indicator {session_indicator_t::regular};
@@ -394,8 +401,7 @@ struct[[= rbe::pack_be]] DoubleAppendage {
 // Category 'a' – Equity and Index Last Sale (spec §6.01), 43 bytes.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be]] EquityIndexLastSale {
-  Header header {.msg_category = msg_category_t::last_sale};
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::last_sale)]] EquityIndexLastSale {
   symbol_t security_symbol;
   std::uint8_t reserved1 {};
   ExpirationBlock expiration;
@@ -413,8 +419,7 @@ struct[[= rbe::pack_be]] EquityIndexLastSale {
 // Category 'd' – Open Interest (spec §6.02), 30 bytes.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be]] OpenInterest {
-  Header header {.msg_category = msg_category_t::open_interest};
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::open_interest)]] OpenInterest {
   symbol_t security_symbol;
   std::uint8_t reserved {};
   ExpirationBlock expiration;
@@ -427,8 +432,7 @@ struct[[= rbe::pack_be]] OpenInterest {
 // Category 'f' – Equity and Index End of Day Summary (spec §6.03), 72 bytes.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be]] EquityIndexEodSummary {
-  Header header {.msg_category = msg_category_t::eod_summary};
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::eod_summary)]] EquityIndexEodSummary {
   symbol_t security_symbol;
   std::uint8_t reserved {};
   ExpirationBlock expiration;
@@ -454,8 +458,7 @@ struct[[= rbe::pack_be]] EquityIndexEodSummary {
 // selected by the BBO Indicator in the Message Header).
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be]] LongQuote {
-  Header header {.msg_category = msg_category_t::long_quote};
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::long_quote)]] LongQuote {
   symbol_t security_symbol;
   std::uint8_t reserved {};
   ExpirationBlock expiration;
@@ -474,8 +477,7 @@ struct[[= rbe::pack_be]] LongQuote {
 // Premium Price Denominator implied 'B'.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be]] ShortQuote {
-  Header header {.msg_category = msg_category_t::short_quote};
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::short_quote)]] ShortQuote {
   short_symbol_t security_symbol;
   ExpirationBlock expiration;
   short_price_t strike_price;
@@ -493,8 +495,7 @@ struct[[= rbe::pack_be]] ShortQuote {
 // sent one per block.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be]] Administrative {
-  Header header {.msg_category = msg_category_t::administrative};
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::administrative)]] Administrative {
   std::uint16_t msg_data_length {}; ///< Length of the trailing Message Data field, 0–200.
   // Message Data (variable, printable ASCII) follows on the wire.
 };
@@ -505,19 +506,15 @@ struct[[= rbe::pack_be]] Administrative {
 // specific control action within the shared layout.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be]] Control {
-  Header header {.msg_category = msg_category_t::control};
-};
+// TODO: header-only message: empty payloads are not wirable yet, so it is left out of `messages`.
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::control)]] Control {};
 
 // ─────────────────────────────────────────────────────────────────────
 // Category 'R' – Series Mapping Message (spec §6.07), 155 bytes.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be]] SeriesMapping {
-  Header header {
-    .msg_category = msg_category_t::series_mapping,
-    .msg_type     = static_cast<std::uint8_t>(series_mapping_type_t::series_mapping)
-  };
+// TODO: also discriminated by msg_type == series_mapping_type_t::series_mapping, which rbe::id cannot express yet.
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::series_mapping)]] SeriesMapping {
   symbol_t security_symbol;
   ExpirationBlock expiration;
   denominator_code_t strike_price_denom;
@@ -531,11 +528,8 @@ struct[[= rbe::pack_be]] SeriesMapping {
 // ─────────────────────────────────────────────────────────────────────
 
 /// Underlying Value – Last Sale (Message Type ' '), 27 bytes (spec §6.08.1).
-struct[[= rbe::pack_be]] UnderlyingValueLastSale {
-  Header header {
-    .msg_category = msg_category_t::underlying_value,
-    .msg_type     = static_cast<std::uint8_t>(underlying_value_type_t::last_sale)
-  };
+// TODO: also discriminated by msg_type == underlying_value_type_t::last_sale, which rbe::id cannot express yet.
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::underlying_value)]] UnderlyingValueLastSale {
   symbol_t security_symbol;
   std::uint8_t reserved1 {};
   denominator_code_t index_value_denom;
@@ -544,11 +538,8 @@ struct[[= rbe::pack_be]] UnderlyingValueLastSale {
 };
 
 /// Underlying Value – Bid and Offer (Message Type 'I'), 27 bytes (spec §6.08.2).
-struct[[= rbe::pack_be]] UnderlyingValueBidOffer {
-  Header header {
-    .msg_category = msg_category_t::underlying_value,
-    .msg_type     = static_cast<std::uint8_t>(underlying_value_type_t::bid_and_offer),
-  };
+// TODO: also discriminated by msg_type == underlying_value_type_t::bid_and_offer, which rbe::id cannot express yet.
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::underlying_value)]] UnderlyingValueBidOffer {
   symbol_t security_symbol;
   std::uint8_t reserved {};
   denominator_code_t index_value_denom;
@@ -558,11 +549,23 @@ struct[[= rbe::pack_be]] UnderlyingValueBidOffer {
 
 
 // ─────────────────────────────────────────────────────────────────────
-// Type-erased dispatch — use with rbe::any_msg<opra::messages>
+// Framing
 // ─────────────────────────────────────────────────────────────────────
 
+// TODO: Control is header-only, and empty payloads are not wirable yet, so it
+//       cannot be one of the alternatives. UnderlyingValueLastSale and
+//       UnderlyingValueBidOffer share msg_category 'Y' and are told apart by
+//       msg_type, which rbe::id cannot express yet.
 using messages = rbe::any<
-    EquityIndexLastSale, OpenInterest, EquityIndexEodSummary, LongQuote, ShortQuote, Administrative, Control,
-    SeriesMapping, UnderlyingValueLastSale, UnderlyingValueBidOffer>;
+    EquityIndexLastSale, OpenInterest, EquityIndexEodSummary, LongQuote, ShortQuote, Administrative, SeriesMapping,
+    UnderlyingValueLastSale, UnderlyingValueBidOffer>;
+
+/// One OPRA message: `Header` followed by the message selected by `msg_category`.
+/// TODO: the length is implied by the message category and the BBO indicator;
+///       until that is expressible the payload runs to the end of the buffer.
+using message = rbe::frame<Header, messages>;
+
+// TODO: `rbe::frame<BlockHeader, rbe::many<message>>` needs `message` to be
+//       self-delimiting (implied lengths and composite discriminants).
 
 } // namespace opra

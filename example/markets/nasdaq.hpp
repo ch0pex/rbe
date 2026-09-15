@@ -15,13 +15,13 @@
  *
  * ITCH itself carries no length field within each message; the feed
  * is delivered over SoupBinTCP, "Compressed SoupBinTCP" or MoldUDP64,
- * each of which prefixes every payload with its own length.  The
- * shared `Header` below models that framed layout: a 2-byte big-endian
- * length prefix (per SoupBinTCP: it excludes the length field itself)
- * followed by the 11-byte common ITCH header (message type + stock
- * locate + tracking number + 6-byte nanosecond timestamp).  Each
- * message struct embeds this as its first member and default-
- * initializes `msg_type` and `length` to its own compile-time values.
+ * each of which prefixes every payload with its own length.  That
+ * layout is modelled as two nested frames: `SoupHeader`, a 2-byte
+ * big-endian length prefix that excludes itself (`rbe::payload_length`),
+ * wraps one ITCH message, which is the 11-byte `ItchHeader` (message
+ * type + stock locate + tracking number + 6-byte nanosecond timestamp)
+ * followed by the message selected by its type. See `message` and
+ * `packet` at the end.
  */
 #pragma once
 
@@ -46,8 +46,9 @@ using price8_t = std::uint64_t;
 
 /// Nanoseconds since midnight (Eastern Time). Wire-encoded in 6 bytes.
 /// TODO: support 48-bit unsigned integer type
+// TODO: use rbe::uint48_t once it exists; until then the 6 bytes are kept raw.
 // using timestamp_t = rbe::uint48_t;
-using timestamp_t = std::uint64_t;
+using timestamp_t = std::array<std::uint8_t, 6>;
 
 using stock_locate_t    = std::uint16_t; ///< Dynamically assigned locate code (0 = not stock-dependent).
 using tracking_number_t = std::uint16_t; ///< Nasdaq internal tracking number.
@@ -307,19 +308,23 @@ enum class open_eligibility_status_t : std::uint8_t {
 // Common ITCH message header
 // ─────────────────────────────────────────────────────────────────────
 
-/// 13-byte prefix of every framed ITCH message.
+/// SoupBinTCP length prefix of every framed ITCH message: the length of
+/// the ITCH message that follows, excluding this prefix.
+struct[[= rbe::pack_be]] SoupHeader {
+  [[= rbe::payload_length]] std::uint16_t length {};
+};
+
+/// 11-byte common header of every ITCH message.
 ///
 /// Layout on the wire:
-///   [0..2)  length         — SoupBinTCP length prefix (excludes itself)
-///   [2..3)  msg_type       — one-byte ASCII message-type code
-///   [3..5)  stock_locate   — dynamically assigned locate code (0 = not stock-dependent)
-///   [5..7)  tracking_number — Nasdaq internal tracking number
-///   [7..13) timestamp      — nanoseconds since midnight (Eastern Time)
+///   [0..1)  msg_type        — one-byte ASCII message-type code
+///   [1..3)  stock_locate    — dynamically assigned locate code (0 = not stock-dependent)
+///   [3..5)  tracking_number — Nasdaq internal tracking number
+///   [5..11) timestamp       — nanoseconds since midnight (Eastern Time)
 ///
-/// The `rbe::id` and `rbe::frame_length` annotations live here so they are
-/// declared exactly once for the whole protocol.
-struct[[= rbe::pack_be]] Header {
-  [[= rbe::frame_length]] std::uint16_t length {};
+/// Declared once for the whole protocol and composed with the message set
+/// in `message`: `msg_type` selects the message whose `rbe::id(value)` matches.
+struct[[= rbe::pack_be]] ItchHeader {
   [[= rbe::id]] message_type_t msg_type {};
   stock_locate_t stock_locate {};
   tracking_number_t tracking_number {};
@@ -334,17 +339,16 @@ struct[[= rbe::pack_be]] Header {
 
 // --- System event (spec §1.1) ----------------------------------------
 
-struct [[=rbe::pack_be]] SystemEvent {
-  Header         header {.length = 12, .msg_type = message_type_t::system_event};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::system_event)]] SystemEvent {
   system_event_t event_code;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<SystemEvent>() == 12);
 
 // --- Stock-related messages (spec §1.2) ------------------------------
 
 /// Stock Directory (spec §1.2.1). Disseminated at the start of the day
 /// for every active symbol; occasionally intraday for corrections.
-struct [[=rbe::pack_be]] StockDirectory {
-  Header                      header {.length = 39, .msg_type = message_type_t::stock_directory};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::stock_directory)]] StockDirectory {
   stock_t                     stock;
   market_category_t           market_category;
   financial_status_t          financial_status;
@@ -360,89 +364,89 @@ struct [[=rbe::pack_be]] StockDirectory {
   std::uint32_t               etp_leverage_factor;   ///< Rounded down to nearest integer.
   inverse_indicator_t         inverse_indicator;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<StockDirectory>() == 39);
 
 /// Stock Trading Action (spec §1.2.2).
-struct [[=rbe::pack_be]] StockTradingAction {
-  Header                  header {.length = 25, .msg_type = message_type_t::stock_trading_action};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::stock_trading_action)]] StockTradingAction {
   stock_t                 stock;
   trading_state_t         trading_state;
   std::uint8_t            reserved;
   trading_action_reason_t reason;              ///< See spec Appendix C.
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<StockTradingAction>() == 25);
 
 /// Reg SHO Short Sale Price Test Restricted Indicator (spec §1.2.3).
-struct [[=rbe::pack_be]] RegSHORestriction {
-  Header           header {.length = 20, .msg_type = message_type_t::reg_sho_restriction};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::reg_sho_restriction)]] RegSHORestriction {
   stock_t          stock;
   reg_sho_action_t reg_sho_action;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<RegSHORestriction>() == 20);
 
 /// Market Participant Position (spec §1.2.4).
-struct [[=rbe::pack_be]] MarketParticipantPosition {
-  Header                     header {.length = 26, .msg_type = message_type_t::market_participant_position};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::market_participant_position)]] MarketParticipantPosition {
   mpid_t                     mpid;
   stock_t                    stock;
   primary_market_maker_t     primary_market_maker;
   market_maker_mode_t        market_maker_mode;
   market_participant_state_t market_participant_state;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<MarketParticipantPosition>() == 26);
 
 /// MWCB Decline Level Message (spec §1.2.5.1). Stock Locate always 0.
-struct [[=rbe::pack_be]] MWCBDeclineLevel {
-  Header    header {.length = 35, .msg_type = message_type_t::mwcb_decline_level};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::mwcb_decline_level)]] MWCBDeclineLevel {
   price8_t  level_1;
   price8_t  level_2;
   price8_t  level_3;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<MWCBDeclineLevel>() == 35);
 
 /// MWCB Status Message (spec §1.2.5.2). Stock Locate always 0.
-struct [[=rbe::pack_be]] MWCBStatus {
-  Header       header {.length = 12, .msg_type = message_type_t::mwcb_status};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::mwcb_status)]] MWCBStatus {
   mwcb_level_t breached_level;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<MWCBStatus>() == 12);
 
 /// IPO Quoting Period Update (spec §1.2.6). Stock Locate always 0.
-struct [[=rbe::pack_be]] IPOQuotingPeriodUpdate {
-  Header                            header {.length = 28, .msg_type = message_type_t::ipo_quoting_period_update};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::ipo_quoting_period_update)]] IPOQuotingPeriodUpdate {
   stock_t                           stock;
   std::uint32_t                     ipo_quotation_release_time;  ///< Seconds since midnight; 0 if cancelled.
   ipo_quotation_release_qualifier_t ipo_quotation_release_qualifier;
   price4_t                          ipo_price;                   ///< 0 if quotation cancelled/postponed.
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<IPOQuotingPeriodUpdate>() == 28);
 
 /// LULD Auction Collar (spec §1.2.7).
-struct [[=rbe::pack_be]] LULDAuctionCollar {
-  Header        header {.length = 35, .msg_type = message_type_t::luld_auction_collar};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::luld_auction_collar)]] LULDAuctionCollar {
   stock_t       stock;
   price4_t      auction_collar_reference_price;
   price4_t      upper_auction_collar_price;
   price4_t      lower_auction_collar_price;
   std::uint32_t auction_collar_extension;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<LULDAuctionCollar>() == 35);
 
 /// Operational Halt (spec §1.2.8).
-struct [[=rbe::pack_be]] OperationalHalt {
-  Header                    header {.length = 21, .msg_type = message_type_t::operational_halt};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::operational_halt)]] OperationalHalt {
   stock_t                   stock;
   market_code_t             market_code;
   operational_halt_action_t operational_halt_action;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<OperationalHalt>() == 21);
 
 // --- Add Order messages (spec §1.3) ----------------------------------
 
 /// Add Order — No MPID Attribution (spec §1.3.1).
-struct [[=rbe::pack_be]] AddOrder {
-  Header      header {.length = 36, .msg_type = message_type_t::add_order};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::add_order)]] AddOrder {
   order_ref_t order_reference_number;
   buy_sell_t  buy_sell_indicator;
   shares_t    shares;
   stock_t     stock;
   price4_t    price;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<AddOrder>() == 36);
 
 /// Add Order with MPID Attribution (spec §1.3.2).
-struct [[=rbe::pack_be]] AddOrderMPID {
-  Header      header {.length = 40, .msg_type = message_type_t::add_order_mpid};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::add_order_mpid)]] AddOrderMPID {
   order_ref_t order_reference_number;
   buy_sell_t  buy_sell_indicator;
   shares_t    shares;
@@ -450,50 +454,51 @@ struct [[=rbe::pack_be]] AddOrderMPID {
   price4_t    price;
   mpid_t      attribution;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<AddOrderMPID>() == 40);
 
 // --- Modify Order messages (spec §1.4) -------------------------------
 
 /// Order Executed Message (spec §1.4.1).
-struct [[=rbe::pack_be]] OrderExecuted {
-  Header         header {.length = 31, .msg_type = message_type_t::order_executed};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::order_executed)]] OrderExecuted {
   order_ref_t    order_reference_number;
   shares_t       executed_shares;
   match_number_t match_number;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<OrderExecuted>() == 31);
 
 /// Order Executed With Price Message (spec §1.4.2). May be marked
 /// non-printable when the shares are rolled into a later bulk print.
-struct [[=rbe::pack_be]] OrderExecutedWithPrice {
-  Header         header {.length = 36, .msg_type = message_type_t::order_executed_with_price};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::order_executed_with_price)]] OrderExecutedWithPrice {
   order_ref_t    order_reference_number;
   shares_t       executed_shares;
   match_number_t match_number;
   printable_t    printable;
   price4_t       execution_price;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<OrderExecutedWithPrice>() == 36);
 
 /// Order Cancel Message — partial cancellation (spec §1.4.3).
-struct [[=rbe::pack_be]] OrderCancel {
-  Header      header {.length = 23, .msg_type = message_type_t::order_cancel};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::order_cancel)]] OrderCancel {
   order_ref_t order_reference_number;
   shares_t    cancelled_shares;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<OrderCancel>() == 23);
 
 /// Order Delete Message — full cancellation (spec §1.4.4).
-struct [[=rbe::pack_be]] OrderDelete {
-  Header      header {.length = 19, .msg_type = message_type_t::order_delete};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::order_delete)]] OrderDelete {
   order_ref_t order_reference_number;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<OrderDelete>() == 19);
 
 /// Order Replace Message (spec §1.4.5). Side, stock and MPID are not
 /// carried — firms should retain them from the original Add Order.
-struct [[=rbe::pack_be]] OrderReplace {
-  Header      header {.length = 35, .msg_type = message_type_t::order_replace};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::order_replace)]] OrderReplace {
   order_ref_t original_order_reference_number;
   order_ref_t new_order_reference_number;
   shares_t    shares;
   price4_t    price;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<OrderReplace>() == 35);
 
 // --- Trade messages (spec §1.5) --------------------------------------
 
@@ -501,8 +506,7 @@ struct [[=rbe::pack_be]] OrderReplace {
 /// order matches. `order_reference_number` is always zero (effective
 /// 2010-12-06) and `buy_sell_indicator` is always `buy` (effective
 /// 2014-07-14).
-struct [[=rbe::pack_be]] Trade {
-  Header         header {.length = 44, .msg_type = message_type_t::trade};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::trade)]] Trade {
   order_ref_t    order_reference_number;
   buy_sell_t     buy_sell_indicator;
   shares_t       shares;
@@ -510,30 +514,30 @@ struct [[=rbe::pack_be]] Trade {
   price4_t       price;
   match_number_t match_number;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<Trade>() == 44);
 
 /// Cross Trade Message (spec §1.5.2). Sent after the Opening, Closing
 /// and EMC cross events for every active issue.
-struct [[=rbe::pack_be]] CrossTrade {
-  Header         header {.length = 40, .msg_type = message_type_t::cross_trade};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::cross_trade)]] CrossTrade {
   shares64_t     shares;
   stock_t        stock;
   price4_t       cross_price;
   match_number_t match_number;
   cross_type_t   cross_type;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<CrossTrade>() == 40);
 
 /// Broken Trade / Order Execution Message (spec §1.5.3). References
 /// the match number of a previous execution or trade.
-struct [[=rbe::pack_be]] BrokenTrade {
-  Header         header {.length = 19, .msg_type = message_type_t::broken_trade};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::broken_trade)]] BrokenTrade {
   match_number_t match_number;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<BrokenTrade>() == 19);
 
 // --- NOII (spec §1.6) ------------------------------------------------
 
 /// Net Order Imbalance Indicator (spec §1.6).
-struct [[=rbe::pack_be]] NOII {
-  Header                      header {.length = 50, .msg_type = message_type_t::noii};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::noii)]] NOII {
   shares64_t                  paired_shares;
   shares64_t                  imbalance_shares;
   imbalance_direction_t       imbalance_direction;
@@ -544,22 +548,22 @@ struct [[=rbe::pack_be]] NOII {
   cross_type_t                cross_type;
   price_variation_indicator_t price_variation_indicator;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<NOII>() == 50);
 
 // --- RPII (spec §1.7) ------------------------------------------------
 
 /// Retail Price Improvement Indicator (spec §1.7).
-struct [[=rbe::pack_be]] RPII {
-  Header          header {.length = 20, .msg_type = message_type_t::rpii};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::rpii)]] RPII {
   stock_t         stock;
   interest_flag_t interest_flag;
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<RPII>() == 20);
 
 // --- DLCR (spec §1.8) ------------------------------------------------
 
 /// Direct Listing with Capital Raise Price Discovery Message (spec §1.8).
 /// Disseminated once per second after the DLCR volatility test passes.
-struct [[=rbe::pack_be]] DLCR {
-  Header                    header {.length = 48, .msg_type = message_type_t::dlcr};
+struct [[=rbe::pack_be, =rbe::id(message_type_t::dlcr)]] DLCR {
   stock_t                   stock;
   open_eligibility_status_t open_eligibility_status;
   price4_t                  minimum_allowable_price;   ///< 20% below Registration Statement Lower Price.
@@ -569,16 +573,24 @@ struct [[=rbe::pack_be]] DLCR {
   price4_t                  lower_price_range_collar;  ///< 10% below the Near Execution Price.
   price4_t                  upper_price_range_collar;  ///< 10% above the Near Execution Price.
 };
+static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<DLCR>() == 48);
 
 // clang-format on
 
 // ─────────────────────────────────────────────────────────────────────
-// Type-erased dispatch — use with rbe::any_msg<nasdaq::messages>
+// Framing
 // ─────────────────────────────────────────────────────────────────────
 
 using messages = rbe::any<
     SystemEvent, StockDirectory, StockTradingAction, RegSHORestriction, MarketParticipantPosition, MWCBDeclineLevel,
     MWCBStatus, IPOQuotingPeriodUpdate, LULDAuctionCollar, OperationalHalt, AddOrder, AddOrderMPID, OrderExecuted,
     OrderExecutedWithPrice, OrderCancel, OrderDelete, OrderReplace, Trade, CrossTrade, BrokenTrade, NOII, RPII, DLCR>;
+
+/// One ITCH message: `ItchHeader` followed by the message selected by `msg_type`.
+/// ITCH carries no length of its own: it is bounded by the enclosing `packet`.
+using message = rbe::frame<ItchHeader, messages>;
+
+/// One SoupBinTCP packet: `SoupHeader` followed by exactly one ITCH message.
+using packet = rbe::frame<SoupHeader, message>;
 
 } // namespace nasdaq
