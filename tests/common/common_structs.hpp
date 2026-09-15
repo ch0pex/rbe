@@ -486,4 +486,18 @@ struct IdValueOnScalar {
   [[=rbe::id(test_msg_type_t::heartbeat)]] std::uint8_t x; // id(value) is struct-level
 };
 
+struct [[=rbe::little, =rbe::pack]] WithFrameLength {
+  std::uint8_t type;
+  [[=rbe::frame_length]] std::uint16_t length;
+};
+
+struct [[=rbe::little, =rbe::pack]] WithPayloadLength {
+  [[=rbe::payload_length]] std::uint16_t length;
+};
+
+struct [[=rbe::little, =rbe::pack]] WithHeaderLength {
+  [[=rbe::header_length]] std::uint8_t length;
+  std::uint8_t flags;
+};
+
 // clang-format on

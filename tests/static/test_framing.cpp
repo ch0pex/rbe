@@ -11,6 +11,9 @@
 // --- Includes ---
 #include "common_structs.hpp"
 
+#include <rbe/annotations/alignment.hpp>
+#include <rbe/annotations/endianness.hpp>
+#include <rbe/annotations/length.hpp>
 #include <rbe/framing.hpp>
 
 // --- STD ---
@@ -93,6 +96,61 @@ static_assert(not rbe::is_frame<std::uint32_t>);
 // a lowered frame is a dsrl::frame, and only satisfies the dsrl concept
 static_assert(rbe::dsrl::is_frame<msg_frame::dsrl_type>);
 static_assert(not rbe::is_frame<msg_frame::dsrl_type>);
+
+
+// ============================================================
+// payload extent
+// ============================================================
+
+using rbe::detail::payload_extent;
+using rbe::detail::payload_extent_of;
+
+static_assert(payload_extent_of<WithPayloadLength, rbe::blob>() == payload_extent::payload_length_field);
+static_assert(payload_extent_of<WithFrameLength, rbe::blob>() == payload_extent::frame_length_field);
+static_assert(payload_extent_of<CommonHeader, msg_frame>() == payload_extent::nested_frame);
+static_assert(payload_extent_of<CommonHeader, MessageWithHeader>() == payload_extent::static_size);
+static_assert(payload_extent_of<CommonHeader, rbe::blob>() == payload_extent::buffer_end);
+static_assert(payload_extent_of<CommonHeader, rbe::many<msg_frame>>() == payload_extent::buffer_end);
+static_assert(payload_extent_of<CommonHeader, candidates>() == payload_extent::buffer_end); // TODO: any_id
+// a length field takes precedence over the static size of the payload
+static_assert(payload_extent_of<WithPayloadLength, MessageWithHeader>() == payload_extent::payload_length_field);
+
+// lowering never changes the extent, so dsrl::frame::payload_length() agrees with the rbe:: classification
+template<typename Header, typename Payload>
+inline constexpr bool same_extent_when_lowered =
+    payload_extent_of<Header, Payload>() == payload_extent_of<Header, rbe::detail::to_dsrl_t<Payload>>();
+
+static_assert(same_extent_when_lowered<WithFrameLength, rbe::blob>);
+static_assert(same_extent_when_lowered<CommonHeader, msg_frame>);
+static_assert(same_extent_when_lowered<CommonHeader, MessageWithHeader>);
+static_assert(same_extent_when_lowered<CommonHeader, rbe::blob>);
+static_assert(same_extent_when_lowered<CommonHeader, candidates>);
+static_assert(same_extent_when_lowered<NestedPackParent, rbe::many<any_frame>>);
+
+
+// ============================================================
+// self-delimiting vs buffer-delimited frames
+// ============================================================
+static_assert(rbe::self_delimiting_frame<msg_frame>);
+static_assert(rbe::self_delimiting_frame<rbe::frame<WithFrameLength, rbe::blob>>);
+static_assert(rbe::self_delimiting_frame<rbe::frame<WithPayloadLength, rbe::blob>>);
+static_assert(rbe::self_delimiting_frame<rbe::frame<WithHeaderLength, MessageWithHeader>>);
+static_assert(rbe::buffer_delimited_frame<blob_frame>);
+static_assert(rbe::buffer_delimited_frame<packet>); // many runs to the end of the buffer
+// header_length only delimits the header, the payload still runs to the end of the buffer
+static_assert(rbe::buffer_delimited_frame<rbe::frame<WithHeaderLength, rbe::blob>>);
+
+// a nested frame delimits the outer payload only if it delimits itself...
+static_assert(rbe::self_delimiting_frame<nested>);
+static_assert(rbe::buffer_delimited_frame<rbe::frame<CommonHeader, blob_frame>>);
+// ...unless the outer header already carries a length
+static_assert(rbe::self_delimiting_frame<rbe::frame<WithFrameLength, blob_frame>>);
+
+// both concepts only accept rbe:: frames, neither their lowerings nor plain messages
+static_assert(not rbe::self_delimiting_frame<msg_frame::dsrl_type>);
+static_assert(not rbe::self_delimiting_frame<MessageWithHeader>);
+static_assert(not rbe::buffer_delimited_frame<blob_frame::dsrl_type>);
+static_assert(not rbe::buffer_delimited_frame<MessageWithHeader>);
 
 
 // ============================================================
