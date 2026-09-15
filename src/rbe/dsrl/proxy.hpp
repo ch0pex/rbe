@@ -44,7 +44,8 @@ public:
 
   // --- Constructors ---
 
-  constexpr explicit proxy(buffer_type const data) : data_(data) { }
+  /// precondition: data.size() >= wire_size_of<value_type, local>()
+  constexpr explicit proxy(buffer_type const data) : data_(data.first(wire_size_of<value_type, local>())) { }
 
   template<static_string First, static_string... Rest>
     requires(wirable_class<value_type>)
@@ -100,13 +101,9 @@ public:
 
   [[nodiscard]] constexpr auto length() const -> size_type { return wire_size_of<value_type, local>(); }
 
-  [[nodiscard]] constexpr auto size() const -> size_type { return data_.size(); }
-
-  [[nodiscard]] constexpr auto size_bytes() const -> size_type { return data_.size(); }
-
   [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(length()); }
 
-  [[nodiscard]] constexpr auto data() const -> buffer_type { return data_; }
+  [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
 
   [[nodiscard]] friend constexpr auto operator==(proxy const lhs, value_type const& rhs) -> bool
     requires(std::equality_comparable<value_type>)

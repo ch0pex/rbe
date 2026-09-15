@@ -64,9 +64,7 @@ constexpr void test_lazy(std::span<std::byte const> input, T const& expected) {
 
   RBE_CHECK(msg.value() == expected);
   RBE_CHECK(msg.length() == rbe::wire_size_of<T>());
-  RBE_CHECK(msg.size() == input.size());
-  RBE_CHECK(msg.size_bytes() == input.size());
-  RBE_CHECK(std::ranges::equal(msg.data(), input));
+  RBE_CHECK(std::ranges::equal(std::span {msg.data(), input.size()}, input));
   RBE_CHECK(std::ranges::equal(msg.as_span(), input.first(msg.length())));
 }
 
@@ -195,9 +193,7 @@ TEST_CASE("serde - proxy accessors honor the ambient context") {
 
   RBE_CHECK(view.length() == 5); // packed: the 3 bytes of padding a native layout would add are gone
   RBE_CHECK(view.as_span().size() == 5);
-  RBE_CHECK(view.size() == wire.size()); // size is the buffer's, not the message's
-  RBE_CHECK(view.size_bytes() == wire.size());
-  RBE_CHECK(std::ranges::equal(view.data(), wire));
+  RBE_CHECK(std::ranges::equal(std::span {view.data(), wire.size()}, wire));
 }
 
 TEST_CASE("serde - proxy unique annotation accessor") {
