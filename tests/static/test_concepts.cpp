@@ -76,9 +76,12 @@ constexpr auto no_wirable_structs = std::array{
   ^^NoAggregate, ^^AggregateWithPtr, ^^AggregateWithRef
 };
 
+
 static_assert(test_concept(^^rbe::wirable, trivially_wirable_primitives));
 static_assert(test_concept(^^rbe::wirable, wirable_structs));
 static_assert(not test_concept(^^rbe::wirable, no_wirable_structs));
+// static_assert(rbe::wirable<EmptyStruct>);
+
 
 // --- Trivially wirable ---
 

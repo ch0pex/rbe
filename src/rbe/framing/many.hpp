@@ -22,6 +22,7 @@
 namespace rbe {
 
 template<is_frame T>
+// requires self_delimiting_frame<T>
 struct many {
   using dsrl_type = dsrl::many<typename T::dsrl_type>;
   // TODO: using srl_type  = srl::many<typename T::srl_type>;

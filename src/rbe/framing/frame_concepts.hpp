@@ -13,14 +13,14 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/annotations/length.hpp>
+#include <rbe/annotations/well_annotated_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/framing/detail/payload_extent.hpp>
 #include <rbe/framing/dsrl/frame_concepts.hpp>
 
 // --- STD ---
 #include <concepts>
-#include "rbe/annotations/length.hpp"
-#include "rbe/annotations/well_annotated_concepts.hpp"
 
 namespace rbe {
 
@@ -59,11 +59,16 @@ concept frame_compatible = frame_header<HeaderType> and frame_payload<PayloadTyp
 
 template<typename T>
 concept is_frame = requires(T const ct) {
-  requires frame_header<typename T::header_type>;
-  requires frame_payload<typename T::payload_type>;
-  requires frame_compatible<typename T::header_type, typename T::payload_type>;
-  requires dsrl::is_frame<typename T::dsrl_type>;
+  typename T::header_type;
+  typename T::payload_type;
 
+  requires frame_compatible<typename T::header_type, typename T::payload_type>;
+};
+
+template<typename T>
+concept is_frame_type_builder = requires(T const ct) {
+  requires is_frame<typename T::frame_type>;
+  requires dsrl::is_frame<typename T::dsrl_type>;
   // TODO:
   // requires srl::is_frame<typeanme T::srl_type>;
   // requires value_type_of<typename T::value_type, T>;

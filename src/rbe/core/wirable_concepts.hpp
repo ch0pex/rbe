@@ -52,17 +52,13 @@ concept introspectable = std::meta::is_enumerable_type(^^T);
  *   - It is an enumeration type (`std::is_enum_v`)
  *   - It has a custom serder (user-provided or RBE-provided specialization)
  *   - It is a class such that:
- *       - It has at least one member variable
          - Member variables exist in only one class within the inheritance
  *         hierarchy (inheritance is allowed, but fields cannot be split
  *         across multiple levels)
  *       - All member variables are wirable
  *
  * Not supported yet:
- *   - Nested wirable types in non-static member variables
  *   - Base classes
- *   - Array types
- *
  */
 template<typename T>
 concept wirable = wirable_primitive<T> or detail::is_wirable_class_type(^^T);

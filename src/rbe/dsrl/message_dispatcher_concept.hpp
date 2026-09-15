@@ -11,8 +11,8 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/detail/throw_check.hpp>
-#include <rbe/core/message_list.hpp>
+#include <rbe/core/detail/no_throw.hpp>
+#include <rbe/core/message_concepts.hpp>
 #include <rbe/dsrl/detail/message_dispatcher_impl.hpp>
 
 namespace rbe {
@@ -36,8 +36,8 @@ namespace rbe {
  * @tparam MsgList Message list the dispatcher must be able to handle
  */
 template<typename Overload, typename MsgList>
-concept message_dispatcher = //
-    is_msg_list<MsgList> //
+concept any_dispatcher = //
+    candidate_list<MsgList> //
     and detail::no_throw(detail::diagnose_message_dispatcher<Overload, MsgList>);
 
 } // namespace rbe

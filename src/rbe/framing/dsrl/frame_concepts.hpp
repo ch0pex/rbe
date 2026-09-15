@@ -61,7 +61,7 @@ concept is_frame = requires(T const ct) {
   { ct.header_span() } -> std::same_as<typename T::buffer_type>;
   { ct.payload_span() } -> std::same_as<typename T::buffer_type>;
   { ct.length() } -> std::same_as<typename T::size_type>;
-  { T::length_of(ct.as_span()) } -> std::same_as<typename T::size_type>;
+  { T::length_of(ct.as_span()) } -> std::same_as<std::optional<typename T::size_type>>;
   { ct.header_length() } -> std::same_as<typename T::size_type>;
   { ct.payload_length() } -> std::same_as<typename T::size_type>;
   { ct.as_span() } -> std::same_as<typename T::buffer_type>;

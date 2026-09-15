@@ -11,10 +11,10 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/message_list.hpp>
 #include <rbe/dsrl/deserialize.hpp>
-#include <rbe/dsrl/msg.hpp>
+#include <rbe/dsrl/proxy.hpp>
 #include <rbe/dsrl/tags.hpp>
+#include <rbe/framing/dsrl/detail/candidate_list.hpp>
 
 // --- STD ---
 #include <concepts>

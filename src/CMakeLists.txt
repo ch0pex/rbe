@@ -60,13 +60,13 @@ target_sources(
         rbe/framing/detail/to_dsrl_type.hpp
         rbe/framing/detail/to_srl_type.hpp
         rbe/framing/detail/to_value_type.hpp
-        rbe/framing/dsrl/detail/message_dispatcher_impl.hpp
+        rbe/framing/dsrl/detail/any_dispatcher_impl.hpp
         rbe/framing/dsrl/any.hpp
         rbe/framing/dsrl/flatten.hpp
         rbe/framing/dsrl/frame.hpp
         rbe/framing/dsrl/frame_concepts.hpp
         rbe/framing/dsrl/many.hpp
-        rbe/framing/dsrl/message_dispatcher_concepts.hpp
+        rbe/framing/dsrl/any_dispatcher_concepts.hpp
         rbe/framing/srl/any.hpp
         rbe/framing/srl/frame.hpp
         rbe/framing/srl/many.hpp

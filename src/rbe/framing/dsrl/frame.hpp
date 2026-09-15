@@ -40,6 +40,12 @@ public:
   using buffer_type  = std::span<std::byte const>;
   using size_type    = std::size_t;
 
+  // --- static constants ---
+  /**
+   * @brief The fixed header length in bytes, as computed by rbe::wire_size_of<header_type>()
+   */
+  static constexpr auto fixed_header_length = wire_size_of<header_type>();
+
   // --- Constructors ---
 
   /**
@@ -57,14 +63,28 @@ public:
    *  - buffer-delimited frames (rbe::buffer_delimited_frame) have a payload that extends to the end of the
    *    span, so the span size *is* the frame length: trailing bytes are taken as payload, never as padding.
    *
+   *  - explicitly delimited frames are preferable for multiple reasons:
+   *    - performance, reading an explicit frame_length or payload_length + header_length is cheap
+   *    - frames can be skipped while iterating
+   *  - implicitly delimited frames might have some problems:
+   *    - if payload type is any, a dispatching is needed on construction to know compute header_length + frame_length
+   *    - if the id is unknown iteration cannot skip the frame
+   *
    * To find out how many bytes a partially received frame needs before constructing it, use length_of().
    *
    * Preconditions:
    *   - data.size() >= length_of(data)
    *   - buffer-delimited frames: the span covers exactly the frame
    *   - annotated lengths are consistent: wire_size_of<header_type>() <= header_length <= frame_length
+   *  Under these preconditions length_of(data) is guaranteed to return a value
    */
-  constexpr explicit frame(buffer_type const data) : data_(data.first(length_of(data))) { }
+  constexpr explicit frame(buffer_type const data) : data_(data.first(*length_of(data))) { }
+
+  // struct resolved_type { };
+  //
+  // constexpr explicit frame(resolved_type /**/, buffer_type const data)
+  //   requires(is_any<payload_type>)
+  //   : data_(data) { }
 
   // --- Member accessors ---
 
@@ -135,10 +155,16 @@ public:
    *
    * Length fields are read over the fixed-size header prefix, never over a span that depends on a length.
    *
+   * Preconditions:
+   *   - data.size() >= rbe::wire_size_of<header_type>()
+   *
    * @return The length of the frame in bytes
    */
-  [[nodiscard]] static constexpr auto length_of(buffer_type const data) -> size_type {
+  [[nodiscard]] static constexpr auto length_of(buffer_type const data) -> std::optional<size_type> {
     static constexpr auto extent = rbe::detail::payload_extent_of<header_type, payload_type>();
+    if (data.size() < rbe::wire_size_of<header_type>()) {
+      return std::nullopt;
+    }
 
     if constexpr (extent == rbe::detail::payload_extent::payload_length_field) {
       return header_length_of(data) + fixed_header(data).template field<rbe::payload_length>();
@@ -148,7 +174,7 @@ public:
     }
     else if constexpr (extent == rbe::detail::payload_extent::nested_frame) {
       auto const header_length = header_length_of(data);
-      return header_length + payload_type::length_of(data.subspan(header_length));
+      return header_length + *payload_type::length_of(data.subspan(header_length));
     }
     else if constexpr (extent == rbe::detail::payload_extent::static_size) {
       return header_length_of(data) + wire_size_of<payload_type>();
@@ -201,6 +227,5 @@ private:
 
   buffer_type data_;
 };
-
 
 } // namespace rbe::dsrl
