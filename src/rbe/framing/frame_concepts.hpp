@@ -5,122 +5,82 @@
 /**
  * @file frame_concepts.hpp
  * @date 11/09/2026
- * @brief Short description
+ * @brief Level-agnostic core of the framing concepts
  *
- * Longer description
+ * A frame exists at three levels: the rbe:: vocabulary type the user writes (rbe::frame, see
+ * frame.hpp), and its rbe::dsrl:: / rbe::srl:: lowerings. Lowering only rewrites the payload
+ * *representation*, never the shape of a frame nor the categories a payload may fall into, so the shape
+ * (rbe::is_frame) and the payload of a lowered frame (rbe::frame_payload) are written once here and reused by
+ * every level. What each level adds on top -- the traits it must expose, the API it must offer -- lives with
+ * that level: rbe::frame_serder (frame_serder_concepts.hpp), rbe::dsrl::is_frame, rbe::srl::is_frame.
+ *
+ * Everything that only depends on the shape -- the delimiting classification of
+ * frame_delimiting_concepts.hpp and detail/payload_extent.hpp -- is therefore written against
+ * rbe::is_frame and applies to a frame and to its lowerings alike.
  */
 
 #pragma once
 
 // --- Includes ---
 #include <rbe/core/wirable_concepts.hpp>
-#include <rbe/framing/detail/payload_extent.hpp>
-#include <rbe/framing/dsrl/frame_concepts.hpp>
 
 // --- STD ---
 #include <concepts>
-#include "rbe/annotations/length.hpp"
-#include "rbe/annotations/well_annotated_concepts.hpp"
+#include <cstddef>
+#include <span>
 
 namespace rbe {
 
+// TODO: structural concepts, see rbe::dsrl::any / rbe::dsrl::many
 template<typename T>
 concept is_any = true;
 
 template<typename T>
 concept is_many = true;
 
-template<typename T>
-concept serder_traits = requires(T const ct) {
-  typename T::dsrl_type;
-  // typename T::srl_type;
-
-  // requires std::constructible_from<typename T::dsrl_type, std::span<std::byte const>>;
-  // requires std::constructible_from<typename T::srl_type, std::span<std::byte>>;
-};
-
+/**
+ * @brief The header of a frame, at any level
+ *
+ * A header is a fixed-layout message, and lowering never changes its type, so there is a single header
+ * concept shared by the vocabulary frame and by both lowerings.
+ */
 template<typename T>
 concept frame_header = wirable<T>;
 
 /**
- * A frame payload can be the following forms:
- *   - A wirable type (struct, class, array, etc.)
- *   - Something constructible from a span of bytes (e.g. custom parser, std::span, rbe::many)
- *   - rbe::any<Args...>
+ * @brief The shape shared by every frame, at every level
+ *
+ * rbe::frame, rbe::dsrl::frame and rbe::srl::frame all expose the same header_type / payload_type pair.
+ * This is the weakest thing worth calling a frame, and the only thing the delimiting classification needs:
+ * it says nothing about how the frame is (de)serialized, which is what the per-level concepts add.
  */
 template<typename T>
-concept frame_payload = wirable<T> or serder_traits<T>;
-
-/// Verifies wether a header and a payload ar compatible to conform a frame
-// TODO: and rbe::detail::is_compatible<HeaderType, PayloadType>
-template<typename HeaderType, typename PayloadType>
-concept frame_compatible = frame_header<HeaderType> and frame_payload<PayloadType>;
-
-
-template<typename T>
-concept frame_serder = requires(T const ct) {
+concept is_frame = requires {
+  typename T::header_type;
+  typename T::payload_type;
   requires frame_header<typename T::header_type>;
-  requires frame_payload<typename T::payload_type>;
-  requires frame_compatible<typename T::header_type, typename T::payload_type>;
-  requires dsrl::is_frame<typename T::dsrl_type>;
-
-  // TODO:
-  // requires srl::is_frame<typeanme T::srl_type>;
-  // requires value_type_of<typename T::value_type, T>;
 };
 
 /**
- * @brief A frame whose length can be resolved without looking at the size of the buffer
+ * @brief The payload of a lowered frame, shared by rbe::dsrl and rbe::srl
  *
- * The length comes from a header field (payload_length, frame_length), from static sizes, or from a nested
- * self-delimiting frame (see rbe::detail::payload_extent). Such a frame may be read from a larger buffer,
- * trailing bytes being padding, which is what allows a sequence of frames to share a single buffer.
+ * The payload categories are the same on both sides of the wire, and so is the concept: a deserializer views
+ * the payload bytes read-only and a serializer writes into them, but a type constructible from
+ * std::span<std::byte const> is also constructible from std::span<std::byte>, which converts to it, so
+ * testing the writable span covers both lowerings. The vocabulary counterpart is rbe::frame_serder_payload.
  */
 template<typename T>
-concept self_delimiting_frame = frame_serder<T> and detail::is_self_delimiting<T>();
+concept frame_payload = //
+    wirable<T> // a fixed-layout message
+    or is_frame<T> // a nested frame
+    or is_any<T> // a set of alternatives resolved by an id
+    or is_many<T> // a sequence of frames
+    or std::constructible_from<T, std::span<std::byte>>; // an opaque view over the payload bytes
 
-/**
- * @brief A frame whose payload extends to the end of the buffer it is read from
- *
- * The buffer size is the frame length, so the buffer must cover exactly the frame: trailing bytes are
- * taken as payload, never as padding. Such a frame can only be the last one in a buffer.
- *
- * @note these frames are not iterable: a sequence of them cannot be split without an external length
- */
-template<typename T>
-concept buffer_delimited_frame = frame_serder<T> and not detail::is_self_delimiting<T>();
+template<is_frame T>
+using frame_header_t = T::header_type;
 
-/**
- * @brief A frame whose length is explicitly resolved by reading a wire field.
- *
- * This concept requires the frame to be self-delimiting and checks if its
- * header contains an explicit annotation for either the total frame length
- * (`rbe::frame_length`) or the payload length (`rbe::payload_length`).
- *
- * @tparam T The frame type to be evaluated.
- */
-template<typename T>
-concept explicitly_delimited_frame = //
-    self_delimiting_frame<T> //
-    and (contains_annotation<typename T::header_type, rbe::frame_length> or
-         contains_annotation<typename T::header_type, rbe::payload_length>);
-
-/**
- * @brief A frame whose length is resolved by the implicit size of its underlying types.
- *
- * This concept applies to self-delimiting frames that lack explicit length
- * annotations in their header.
- *
- * @note Determining the length of this kind of frame might be slower when the
- * payload is arbitrary (e.g., `std::any`), as it requires dynamic type
- * dispatching to calculate the total size.
- *
- * @tparam T The frame type to be evaluated.
- */
-template<typename T>
-concept implicitly_delimited_frame = //
-    self_delimiting_frame<T> //
-    and not(contains_annotation<typename T::header_type, rbe::frame_length> or
-            contains_annotation<typename T::header_type, rbe::payload_length>);
+template<is_frame T>
+using frame_payload_t = T::payload_type;
 
 } // namespace rbe

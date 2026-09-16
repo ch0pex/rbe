@@ -69,12 +69,14 @@ target_sources(
         rbe/framing/dsrl/message_dispatcher_concepts.hpp
         rbe/framing/srl/any.hpp
         rbe/framing/srl/frame.hpp
+        rbe/framing/srl/frame_concepts.hpp
         rbe/framing/srl/many.hpp
         rbe/framing/any.hpp
         rbe/framing/blob.hpp
-        rbe/framing/frame.hpp
         rbe/framing/frame_concepts.hpp
-        rbe/framing/frame_traits.hpp
+        rbe/framing/frame.hpp
+        rbe/framing/frame_delimiting_concepts.hpp
+        rbe/framing/frame_serder_concepts.hpp
         rbe/framing/many.hpp
         rbe/framing/value_type.hpp
 

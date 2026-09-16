@@ -5,50 +5,35 @@
 /**
  * @file frame_concepts.hpp
  * @date 11/09/2026
- * @brief Short description
+ * @brief Deserialization level of the framing concepts
  *
- * Longer description
+ * Only what the dsrl lowering adds on top of the shared core (rbe/framing/frame_concepts.hpp) lives here:
+ * the API a frame deserializer must offer. The shape (rbe::is_frame), the header (rbe::frame_header) and the
+ * payload (rbe::frame_payload) are used as-is from the enclosing namespace.
  */
 
 #pragma once
 
 // --- Includes ---
+#include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/return_type.hpp>
 #include <rbe/dsrl/tags.hpp>
+#include <rbe/framing/frame_concepts.hpp>
 
 // --- STD ---
+#include <concepts>
+#include <cstddef>
 
 namespace rbe::dsrl {
 
-
+/**
+ * @brief A frame deserializer: a non-owning view over a frame's bytes that decodes it lazily
+ *
+ * On top of the shape, this is the API rbe::dsrl::frame offers and the one generic code (flatten, many)
+ * relies on.
+ */
 template<typename T>
-concept is_any = true;
-
-template<typename T>
-concept is_many = true;
-
-// template<typename T>
-// concept is_any = requires(T const ct) {
-//   typename T::id_type;
-//   typename T::types // TODO: naming
-//
-//       // TODO: mock it with overload set
-//       {ct.match()};
-//
-//   requires std::constructible_from<T, typename T::id_type, std::span<std::byte const>>;
-// };
-
-
-template<typename T>
-concept frame_header = wirable<T>;
-
-template<typename T>
-concept frame_payload = wirable<T> or is_any<T> or is_many<T> or std::constructible_from<T, std::span<std::byte const>>;
-
-template<typename T>
-concept is_frame = requires(T const ct) {
-  typename T::header_type;
-  typename T::payload_type;
+concept is_frame = rbe::is_frame<T> and requires(T const ct) {
   typename T::buffer_type;
   typename T::size_type;
 
@@ -67,9 +52,7 @@ concept is_frame = requires(T const ct) {
   { ct.as_span() } -> std::same_as<typename T::buffer_type>;
   { ct.data() } -> std::same_as<std::byte const*>;
 
-
   requires std::constructible_from<T, typename T::buffer_type>;
-  requires frame_header<typename T::header_type>;
   requires frame_payload<typename T::payload_type>;
 };
 

@@ -34,10 +34,40 @@ lower to the types that actually view or write bytes:
 - The header is never lowered, only the payload (`rbe/framing/detail/to_dsrl_type.hpp`).
 - Lowering recurses through nesting and is idempotent.
 
-**Implemented. Wire-format properties belong to the `rbe::` level**, not to `dsrl::`. Classifying how a frame
-is delimited describes the format, and `srl` needs it as much as `dsrl` (which length field to back-patch,
-whether a run of frames can be split by a reader). Constraining the vocabulary type also makes errors show up
-on the type the user wrote, not deep inside a lowering.
+**Implemented. Wire-format properties are level-agnostic.** Classifying how a frame is delimited describes
+the format, and `srl` needs it as much as `dsrl` (which length field to back-patch, whether a run of frames
+can be split by a reader), so the classification is written once against the *shape* of a frame and holds at
+every level: `self_delimiting_frame<msg_frame>` and `self_delimiting_frame<msg_frame::dsrl_type>` are both
+valid and give the same answer, because lowering never changes how a frame is delimited. Errors still show up
+on the type the user wrote, since `rbe::frame` constrains its own parameters.
+
+### Concept layering
+
+**Implemented.** The concepts used to be written three times, once per level. They are now split along what
+actually differs between levels:
+
+| Concept | Where | Holds for |
+| --- | --- | --- |
+| `frame_header` | `frame_concepts.hpp` | every level — a header is never lowered |
+| `is_frame` | `frame_concepts.hpp` | every level — `header_type` + `payload_type`, nothing else |
+| `frame_payload` | `frame_concepts.hpp` | `dsrl` and `srl` — the payload categories over the bytes |
+| `self_delimiting_frame`, `buffer_delimited_frame`, … | `frame_delimiting_concepts.hpp` | every level, via `is_frame` |
+| `frame_serder_payload`, `serder_traits`, `frame_serder` | `frame_serder_concepts.hpp` | the vocabulary level |
+| `dsrl::is_frame` | `dsrl/frame_concepts.hpp` | the deserializer API |
+| `srl::is_frame` | `srl/frame_concepts.hpp` | the serializer API (TODO) |
+
+- `is_frame` is the weakest thing worth calling a frame, and the only thing the delimiting classification
+  needs. Everything a level adds on top (traits to lower itself, an API to offer) stays with that level.
+- `frame_payload` is spelled over `std::span<std::byte>` only: a payload type constructible from
+  `std::span<std::byte const>` is constructible from `std::span<std::byte>` too, which converts to it, so the
+  writable span covers both lowerings and the concept does not need to be parameterized by the level.
+- The vocabulary payload (`frame_serder_payload`) is *not* that list of categories: at that level a payload
+  is either a wirable message or a type that lowers itself (`serder_traits`), which is what `blob`, `many`,
+  `any` and nested frames have in common. The short names belong to the shared core; the vocabulary level,
+  which is the one that owns the serder traits, keeps the `_serder` prefix.
+- **Open.** `is_any` and `is_many` are still `= true` placeholders, so `frame_payload` is currently
+  satisfied by anything. Once they are real concepts `serder_traits` can fold into the same disjunction, and
+  `frame_payload` and `frame_serder_payload` become one concept.
 
 ---
 
@@ -145,7 +175,7 @@ and the concepts in [§4](#4-self-delimiting-and-buffer-delimited-frames) are bu
 resolution and the compile-time classification cannot drift apart.
 
 The classification is *structural*: it only needs `header_type` and `payload_type`
-(`rbe::detail::frame_like`), so an `rbe::frame` and its `dsrl::frame` lowering classify identically. That
+(`rbe::is_frame`), so an `rbe::frame` and its `dsrl::frame` lowering classify identically. That
 invariant is static-asserted (`same_extent_when_lowered` in `tests/static/test_framing.cpp`).
 
 **Open — units.** All three annotations count bytes. IPv4's IHL counts 32-bit words, and some protocols count
@@ -179,7 +209,7 @@ Rules, all covered by static asserts:
 - A nested frame makes the outer frame self-delimiting only if the nested frame is.
 - `header_length` alone does not delimit anything: it bounds the header, and the payload still runs to the
   end (`frame<WithHeaderLength, blob>` is buffer-delimited).
-- Both concepts only accept `rbe::is_frame` types, not their lowerings.
+- Both concepts only accept `rbe::frame_serder` types, not their lowerings.
 
 Concepts cannot be recursive, so the walk through nested frames lives in the `consteval`
 `rbe::detail::is_self_delimiting<F>()`.

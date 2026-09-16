@@ -13,6 +13,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/core/wirable_concepts.hpp>
 
 // --- STD ---
 

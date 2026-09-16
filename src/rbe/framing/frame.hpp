@@ -14,7 +14,7 @@
 #include <rbe/framing/detail/to_dsrl_type.hpp>
 #include <rbe/framing/detail/to_srl_type.hpp>
 #include <rbe/framing/dsrl/frame.hpp>
-#include <rbe/framing/frame_concepts.hpp>
+#include <rbe/framing/frame_serder_concepts.hpp>
 #include <rbe/framing/srl/frame.hpp>
 #include <rbe/framing/value_type.hpp>
 
@@ -22,8 +22,14 @@
 
 namespace rbe {
 
-template<frame_header HeaderType, frame_payload PayloadType>
-  requires(frame_compatible<HeaderType, PayloadType>)
+/**
+ * @brief Framer serder builder class
+ *
+ * This empty class's sole purpose is to offer a single type with both serialization
+ * and deserialization type aliases following serder_traits. This way, the user can define
+ * their frame only once and extract both srl and dsrl types from it.
+ */
+template<frame_header HeaderType, frame_serder_payload PayloadType>
 struct frame {
   using header_type  = HeaderType;
   using payload_type = PayloadType;

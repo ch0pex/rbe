@@ -17,23 +17,12 @@
 #include <rbe/annotations/length.hpp>
 #include <rbe/annotations/well_annotated_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
+#include <rbe/framing/frame_concepts.hpp>
 
 // --- STD ---
 #include <cstdint>
 
 namespace rbe::detail {
-
-/**
- * @brief Structural view of a frame: anything naming its header and payload types
- *
- * Deliberately weaker than rbe::frame_serder and rbe::dsrl::is_frame, so a single classification serves every
- * framing level without depending on any of them.
- */
-template<typename T>
-concept frame_like = requires {
-  typename T::header_type;
-  typename T::payload_type;
-};
 
 /**
  * @brief Where a frame resolves its payload length from, in priority order
@@ -44,14 +33,14 @@ concept frame_like = requires {
  */
 enum class payload_extent : std::uint8_t {
   payload_length_field, ///< payload_length annotated header field
-  frame_length_field,   ///< frame_length annotated header field minus header_length
-  nested_frame,         ///< the nested frame's own length(), self-delimiting only if the nested frame is
-  static_size,          ///< rbe::wire_size_of<payload_type>()
+  frame_length_field, ///< frame_length annotated header field minus header_length
+  nested_frame, ///< the nested frame's own length(), self-delimiting only if the nested frame is
+  static_size, ///< rbe::wire_size_of<payload_type>()
   // TODO: any_id -- rbe::any whose alternatives imply their length from the id
   buffer_end, ///< the payload extends to the end of the buffer (blob, span constructible, any, many)
 };
 
-template<wirable HeaderType, typename PayloadType>
+template<frame_header HeaderType, typename PayloadType>
 [[nodiscard]] consteval auto payload_extent_of() -> payload_extent {
   if (contains_annotation<HeaderType, rbe::payload_length>) {
     return payload_extent::payload_length_field;
@@ -59,7 +48,7 @@ template<wirable HeaderType, typename PayloadType>
   if (contains_annotation<HeaderType, rbe::frame_length>) {
     return payload_extent::frame_length_field;
   }
-  if (frame_like<PayloadType>) {
+  if (is_frame<PayloadType>) {
     return payload_extent::nested_frame;
   }
   if (wirable<PayloadType>) {
@@ -69,7 +58,7 @@ template<wirable HeaderType, typename PayloadType>
 }
 
 // concepts cannot be recursive, so the walk through nested frames lives here
-template<frame_like FrameType>
+template<is_frame FrameType>
 [[nodiscard]] consteval auto is_self_delimiting() -> bool {
   constexpr auto extent = payload_extent_of<typename FrameType::header_type, typename FrameType::payload_type>();
   if constexpr (extent == payload_extent::nested_frame) {

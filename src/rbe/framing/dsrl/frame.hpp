@@ -21,6 +21,7 @@
 #include <rbe/dsrl/deserialize.hpp>
 #include <rbe/dsrl/tags.hpp>
 #include <rbe/framing/detail/payload_extent.hpp>
+#include <rbe/framing/dsrl/frame_concepts.hpp>
 #include <rbe/framing/dsrl/flatten.hpp>
 
 // --- STD ---

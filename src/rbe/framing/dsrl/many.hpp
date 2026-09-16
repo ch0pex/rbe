@@ -13,6 +13,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/framing/dsrl/frame_concepts.hpp>
 
 // --- STD ---
 

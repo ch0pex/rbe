@@ -11,7 +11,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/framing/frame_concepts.hpp>
+#include <rbe/framing/frame_serder_concepts.hpp>
 
 // --- STD ---
 
@@ -19,7 +19,7 @@
 namespace rbe {
 
 // TODO:
-template<frame_header HeaderType, frame_payload PayloadType>
+template<frame_header HeaderType, frame_serder_payload PayloadType>
 using value_type = void;
 
 } // namespace rbe
