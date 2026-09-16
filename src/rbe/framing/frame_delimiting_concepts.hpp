@@ -79,4 +79,10 @@ concept implicitly_delimited_frame = //
     and not(contains_annotation<frame_header_t<T>, rbe::frame_length> or
             contains_annotation<frame_header_t<T>, rbe::payload_length>);
 
+/**
+ * @brief A frame whose length is resolved dynamiclaly at runtime, typically because its payload is of type `rbe::any`.
+ */
+template<typename T>
+concept dispatch_delimited_frame = self_delimiting_frame<T> and detail::is_dispatch_delimited<T>();
+
 } // namespace rbe

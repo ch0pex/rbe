@@ -36,8 +36,8 @@ enum class payload_extent : std::uint8_t {
   frame_length_field, ///< frame_length annotated header field minus header_length
   nested_frame, ///< the nested frame's own length(), self-delimiting only if the nested frame is
   static_size, ///< rbe::wire_size_of<payload_type>()
-  // TODO: any_id -- rbe::any whose alternatives imply their length from the id
-  buffer_end, ///< the payload extends to the end of the buffer (blob, span constructible, any, many)
+  any_id, ///< rbe::any whose alternatives imply their length from the id
+  buffer_end, ///< the payload extends to the end of the buffer (blob, span constructible, many)
 };
 
 template<frame_header HeaderType, typename PayloadType>
@@ -54,18 +54,32 @@ template<frame_header HeaderType, typename PayloadType>
   if (wirable<PayloadType>) {
     return payload_extent::static_size;
   }
+  if (is_any<PayloadType>) {
+    return payload_extent::any_id;
+  }
   return payload_extent::buffer_end;
 }
 
 // concepts cannot be recursive, so the walk through nested frames lives here
-template<is_frame FrameType>
+template<is_frame T>
 [[nodiscard]] consteval auto is_self_delimiting() -> bool {
-  constexpr auto extent = payload_extent_of<typename FrameType::header_type, typename FrameType::payload_type>();
+  constexpr auto extent = payload_extent_of<typename T::header_type, typename T::payload_type>();
   if constexpr (extent == payload_extent::nested_frame) {
-    return is_self_delimiting<typename FrameType::payload_type>();
+    return is_self_delimiting<typename T::payload_type>();
   }
   else {
     return extent != payload_extent::buffer_end;
+  }
+}
+
+template<is_frame T>
+[[nodiscard]] consteval auto is_dispatch_delimited() -> bool {
+  constexpr auto extent = payload_extent_of<typename T::header_type, typename T::payload_type>();
+  if constexpr (extent == payload_extent::nested_frame) {
+    return is_dispatch_delimited<typename T::payload_type>();
+  }
+  else {
+    return extent == payload_extent::any_id;
   }
 }
 

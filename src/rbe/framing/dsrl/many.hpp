@@ -13,13 +13,16 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/framing/detail/base_tags.hpp>
 #include <rbe/framing/dsrl/frame_concepts.hpp>
+#include <rbe/framing/frame_delimiting_concepts.hpp>
 
 // --- STD ---
 
 namespace rbe::dsrl {
 
 template<is_frame T>
-class many { };
+  requires self_delimiting_frame<T>
+class many : public rbe::detail::many_tag { };
 
 } // namespace rbe::dsrl

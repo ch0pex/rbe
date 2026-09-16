@@ -21,8 +21,8 @@
 #include <rbe/dsrl/deserialize.hpp>
 #include <rbe/dsrl/tags.hpp>
 #include <rbe/framing/detail/payload_extent.hpp>
-#include <rbe/framing/dsrl/frame_concepts.hpp>
 #include <rbe/framing/dsrl/flatten.hpp>
+#include <rbe/framing/dsrl/frame_concepts.hpp>
 
 // --- STD ---
 #include <cstddef>
@@ -31,7 +31,6 @@
 namespace rbe::dsrl {
 
 template<frame_header HeaderType, frame_payload PaylaodType>
-// TODO: compatibility between header and payload
 class frame {
 public:
   // --- Type traits ---

@@ -3,8 +3,8 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file any.hpp
- * @date 09/09/2026
+ * @file is_any_detail.hpp
+ * @date 17/09/2026
  * @brief Short description
  *
  * Longer description
@@ -13,19 +13,13 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/wirable_concepts.hpp>
-#include <rbe/framing/detail/base_tags.hpp>
 
 // --- STD ---
 
+namespace rbe::detail {
 
-namespace rbe::dsrl {
+struct any_tag { };
 
+struct many_tag { };
 
-template<wirable_class... Args>
-class any : public rbe::detail::any_tag {
-public:
-private:
-};
-
-} // namespace rbe::dsrl
+} // namespace rbe::detail

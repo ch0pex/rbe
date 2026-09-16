@@ -12,6 +12,7 @@
 
 // --- Includes ---
 #include <rbe/core/wirable_concepts.hpp>
+#include <rbe/framing/detail/base_tags.hpp>
 #include <rbe/framing/dsrl/any.hpp>
 #include <rbe/framing/srl/any.hpp>
 
@@ -19,7 +20,7 @@
 namespace rbe {
 
 template<wirable_class... Args>
-struct any {
+struct any : detail::any_tag {
   using dsrl_type = dsrl::any<Args...>;
   // using srl_type  = srl::any<Args...>;
 };

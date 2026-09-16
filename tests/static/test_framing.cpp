@@ -138,7 +138,7 @@ static_assert(payload_extent_of<CommonHeader, msg_frame>() == payload_extent::ne
 static_assert(payload_extent_of<CommonHeader, MessageWithHeader>() == payload_extent::static_size);
 static_assert(payload_extent_of<CommonHeader, rbe::blob>() == payload_extent::buffer_end);
 static_assert(payload_extent_of<CommonHeader, rbe::many<msg_frame>>() == payload_extent::buffer_end);
-static_assert(payload_extent_of<CommonHeader, candidates>() == payload_extent::buffer_end); // TODO: any_id
+static_assert(payload_extent_of<CommonHeader, candidates>() == payload_extent::any_id);
 // a length field takes precedence over the static size of the payload
 static_assert(payload_extent_of<WithPayloadLength, MessageWithHeader>() == payload_extent::payload_length_field);
 
@@ -209,6 +209,22 @@ static_assert(not rbe::implicitly_delimited_frame<rbe::frame<WithPayloadLength, 
 
 static_assert(not rbe::implicitly_delimited_frame<rbe::frame<CommonHeader, blob_frame>>);
 static_assert(not rbe::explicitly_delimited_frame<rbe::frame<CommonHeader, blob_frame>>);
+
+// ============================================================
+// dispatch_delimited_frame -- the any_id case
+// ============================================================
+static_assert(rbe::dispatch_delimited_frame<rbe::frame<CommonHeader, candidates>>);
+static_assert(not rbe::dispatch_delimited_frame<rbe::frame<CommonHeader, MessageWithHeader>>);
+// header_length only delimits the header, so the payload still resolves through the id
+static_assert(rbe::dispatch_delimited_frame<rbe::frame<WithHeaderLength, candidates>>);
+// a length field is read straight off the wire: no dispatch, whatever the payload is
+static_assert(not rbe::dispatch_delimited_frame<rbe::frame<WithFrameLength, rbe::blob>>);
+static_assert(not rbe::dispatch_delimited_frame<rbe::frame<WithPayloadLength, rbe::blob>>);
+static_assert(not rbe::dispatch_delimited_frame<rbe::frame<WithFrameLength, candidates>>);
+static_assert(not rbe::dispatch_delimited_frame<rbe::frame<WithPayloadLength, candidates>>);
+// ... and the cost of a nested frame is the cost of the frame it nests
+static_assert(rbe::dispatch_delimited_frame<rbe::frame<CommonHeader, rbe::frame<CommonHeader, candidates>>>);
+static_assert(not rbe::dispatch_delimited_frame<rbe::frame<WithFrameLength, rbe::frame<CommonHeader, candidates>>>);
 
  // ============================================================
  // frame member types

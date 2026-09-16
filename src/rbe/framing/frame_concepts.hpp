@@ -23,6 +23,7 @@
 
 // --- Includes ---
 #include <rbe/core/wirable_concepts.hpp>
+#include <rbe/framing/detail/base_tags.hpp>
 
 // --- STD ---
 #include <concepts>
@@ -33,10 +34,10 @@ namespace rbe {
 
 // TODO: structural concepts, see rbe::dsrl::any / rbe::dsrl::many
 template<typename T>
-concept is_any = true;
+concept is_any = std::derived_from<T, detail::any_tag>;
 
 template<typename T>
-concept is_many = true;
+concept is_many = std::derived_from<T, detail::many_tag>;
 
 /**
  * @brief The header of a frame, at any level

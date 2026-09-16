@@ -13,6 +13,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/framing/detail/base_tags.hpp>
 #include <rbe/framing/dsrl/many.hpp>
 #include <rbe/framing/frame_serder_concepts.hpp>
 #include <rbe/framing/srl/many.hpp>
@@ -22,7 +23,7 @@
 namespace rbe {
 
 template<frame_serder T>
-struct many {
+struct many : detail::many_tag {
   using dsrl_type = dsrl::many<typename T::dsrl_type>;
   // TODO: using srl_type  = srl::many<typename T::srl_type>;
 };
