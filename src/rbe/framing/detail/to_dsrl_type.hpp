@@ -24,7 +24,7 @@ struct to_dsrl {
   using type = T;
 };
 
-template<frame_serder T>
+template<serder_traits T>
 struct to_dsrl<T> {
   using type = typename T::dsrl_type;
 };

@@ -57,24 +57,24 @@ static_assert(rbe::frame_payload<rbe::many<rbe::frame<CommonHeader, MessageWithH
 static_assert(rbe::frame_payload<rbe::blob>); // blob
 static_assert(rbe::frame_payload<rbe::frame<CommonHeader, rbe::many<rbe::frame<CommonHeader, MessageWithHeader>>>>);
 static_assert(rbe::frame_payload<rbe::frame<CommonHeader, rbe::many<rbe::frame<CommonHeader, rbe::any<MessageWithHeader, MessageWithHeaderPack>>>>>);
-// neither wirable nor frame_serder
+// neither wirable nor serder_traits
 static_assert(not rbe::frame_payload<Empty>);
 static_assert(not rbe::frame_payload<AggregateWithPtr>);
 
 
 // ============================================================
-// frame_serder
+// serder_traits
 // ============================================================
 
 // every framing vocabulary type lowers to a deserialization type
-static_assert(rbe::frame_serder<candidates>);
-static_assert(rbe::frame_serder<rbe::many<msg_frame>>);
-static_assert(rbe::frame_serder<rbe::blob>);
-static_assert(rbe::frame_serder<msg_frame>);
+static_assert(rbe::serder_traits<candidates>);
+static_assert(rbe::serder_traits<rbe::many<msg_frame>>);
+static_assert(rbe::serder_traits<rbe::blob>);
+static_assert(rbe::serder_traits<msg_frame>);
 
-// a plain wirable message is not a frame_serder, it is lowered as-is
-static_assert(not rbe::frame_serder<MessageWithHeader>);
-static_assert(not rbe::frame_serder<std::uint32_t>);
+// a plain wirable message is not a serder_traits, it is lowered as-is
+static_assert(not rbe::serder_traits<MessageWithHeader>);
+static_assert(not rbe::serder_traits<std::uint32_t>);
 
 
 // ============================================================

@@ -24,7 +24,7 @@ struct to_srl {
   using type = T;
 };
 
-template<frame_serder T>
+template<serder_traits T>
 struct to_srl<T> {
   using type = typename T::srl_type;
 };

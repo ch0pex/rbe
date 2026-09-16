@@ -31,7 +31,7 @@ template<typename T>
 concept is_many = true;
 
 template<typename T>
-concept frame_serder = requires(T const ct) {
+concept serder_traits = requires(T const ct) {
   typename T::dsrl_type;
   // typename T::srl_type;
 
@@ -49,7 +49,7 @@ concept frame_header = wirable<T>;
  *   - rbe::any<Args...>
  */
 template<typename T>
-concept frame_payload = wirable<T> or frame_serder<T>;
+concept frame_payload = wirable<T> or serder_traits<T>;
 
 /// Verifies wether a header and a payload ar compatible to conform a frame
 // TODO: and rbe::detail::is_compatible<HeaderType, PayloadType>
