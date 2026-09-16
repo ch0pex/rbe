@@ -26,7 +26,7 @@ namespace rbe::detail {
 /**
  * @brief Structural view of a frame: anything naming its header and payload types
  *
- * Deliberately weaker than rbe::is_frame and rbe::dsrl::is_frame, so a single classification serves every
+ * Deliberately weaker than rbe::frame_serder and rbe::dsrl::is_frame, so a single classification serves every
  * framing level without depending on any of them.
  */
 template<typename T>

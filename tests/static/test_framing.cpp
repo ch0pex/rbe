@@ -81,22 +81,22 @@ static_assert(not rbe::serder_traits<std::uint32_t>);
 // is_frame
 // ============================================================
 
-static_assert(rbe::is_frame<rbe::frame<CommonHeader, MessageWithHeader>>);
-static_assert(rbe::is_frame<any_frame>);
-static_assert(rbe::is_frame<blob_frame>);
-static_assert(rbe::is_frame<nested>);
-static_assert(rbe::is_frame<packet>);
+static_assert(rbe::frame_serder<rbe::frame<CommonHeader, MessageWithHeader>>);
+static_assert(rbe::frame_serder<any_frame>);
+static_assert(rbe::frame_serder<blob_frame>);
+static_assert(rbe::frame_serder<nested>);
+static_assert(rbe::frame_serder<packet>);
 
 // the framing vocabulary types are payloads, not frames
-static_assert(not rbe::is_frame<candidates>);
-static_assert(not rbe::is_frame<rbe::many<msg_frame>>);
-static_assert(not rbe::is_frame<rbe::blob>);
-static_assert(not rbe::is_frame<MessageWithHeader>);
-static_assert(not rbe::is_frame<std::uint32_t>);
+static_assert(not rbe::frame_serder<candidates>);
+static_assert(not rbe::frame_serder<rbe::many<msg_frame>>);
+static_assert(not rbe::frame_serder<rbe::blob>);
+static_assert(not rbe::frame_serder<MessageWithHeader>);
+static_assert(not rbe::frame_serder<std::uint32_t>);
 
 // a lowered frame is a dsrl::frame, and only satisfies the dsrl concept
 static_assert(rbe::dsrl::is_frame<msg_frame::dsrl_type>);
-static_assert(not rbe::is_frame<msg_frame::dsrl_type>);
+static_assert(not rbe::frame_serder<msg_frame::dsrl_type>);
 
 
 // ============================================================

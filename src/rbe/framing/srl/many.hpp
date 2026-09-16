@@ -18,7 +18,7 @@
 
 namespace rbe::srl {
 
-template<is_frame T>
+template<typename T>
 class many { };
 
 } // namespace rbe::srl

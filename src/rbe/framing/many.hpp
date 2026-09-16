@@ -21,7 +21,7 @@
 
 namespace rbe {
 
-template<is_frame T>
+template<frame_serder T>
 struct many {
   using dsrl_type = dsrl::many<typename T::dsrl_type>;
   // TODO: using srl_type  = srl::many<typename T::srl_type>;

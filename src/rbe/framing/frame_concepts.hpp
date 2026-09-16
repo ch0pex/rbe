@@ -58,7 +58,7 @@ concept frame_compatible = frame_header<HeaderType> and frame_payload<PayloadTyp
 
 
 template<typename T>
-concept is_frame = requires(T const ct) {
+concept frame_serder = requires(T const ct) {
   requires frame_header<typename T::header_type>;
   requires frame_payload<typename T::payload_type>;
   requires frame_compatible<typename T::header_type, typename T::payload_type>;
@@ -77,7 +77,7 @@ concept is_frame = requires(T const ct) {
  * trailing bytes being padding, which is what allows a sequence of frames to share a single buffer.
  */
 template<typename T>
-concept self_delimiting_frame = is_frame<T> and detail::is_self_delimiting<T>();
+concept self_delimiting_frame = frame_serder<T> and detail::is_self_delimiting<T>();
 
 /**
  * @brief A frame whose payload extends to the end of the buffer it is read from
@@ -88,7 +88,7 @@ concept self_delimiting_frame = is_frame<T> and detail::is_self_delimiting<T>();
  * @note these frames are not iterable: a sequence of them cannot be split without an external length
  */
 template<typename T>
-concept buffer_delimited_frame = is_frame<T> and not detail::is_self_delimiting<T>();
+concept buffer_delimited_frame = frame_serder<T> and not detail::is_self_delimiting<T>();
 
 /**
  * @brief A frame whose length is explicitly resolved by reading a wire field.
