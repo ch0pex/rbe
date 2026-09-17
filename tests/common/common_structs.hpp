@@ -387,8 +387,11 @@ struct Parent {
 struct[[=rbe::pack, =rbe::pack]] DuplicatedAnnotations {
   int a, b;
 };
+
 struct[[=rbe::little, =rbe::big]] ConflictingAnnotations { };
+
 struct BadParent { [[=rbe::little]] Child child; };
+
 
 // Neither NestedLeaf nor NestedMiddle carry any annotation of their own -- both must inherit
 // big-endian transitively from NestedParent, propagated through two levels of unannotated nesting.
@@ -424,7 +427,7 @@ struct [[=rbe::pack]] NestedPackParent {
   constexpr bool operator==(NestedPackParent const&) const = default;
 };
 
-struct LenghtAnnotatedTwice {
+struct LengthAnnotatedTwice {
   [[=rbe::frame_length]] std::uint32_t length;
   [[=rbe::frame_length]] std::uint32_t length2;
 };
@@ -433,18 +436,27 @@ struct NestedLengthLeaf {
   [[=rbe::frame_length]] std::uint16_t length;
 };
 
-struct LenghtAnnotatedTwiceNested {
+struct LengthAnnotatedTwiceNested {
   NestedLengthLeaf       leaf;
   [[=rbe::frame_length]] std::uint16_t length; // duplicated two levels down
 };
 
-struct LenghtNotConvertible {
+struct LengthNotConvertible {
   [[=rbe::frame_length]] NestedPackLeaf length; // not convertible to std::size_t
 };
 
 struct IdAnnotatedTwice {
   [[=rbe::id]] std::uint32_t id;
   [[=rbe::id]] std::uint32_t id2;
+};
+
+struct IdAnnotatedTwiceNested { 
+  struct Nested { 
+    [[=rbe::id]] int number2;
+  };
+
+  Nested hello;
+  [[=rbe::id]] int number1;
 };
 
 struct IdNotEqualityComparable {
