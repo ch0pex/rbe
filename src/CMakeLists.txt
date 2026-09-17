@@ -27,7 +27,7 @@ target_sources(
         rbe/annotations/format.hpp
         rbe/annotations/id.hpp
         rbe/annotations/length.hpp
-        rbe/annotations/well_annotated_concepts.hpp
+        rbe/annotations/annotation_concepts.hpp
 
         # Core
         rbe/core/detail/context.hpp

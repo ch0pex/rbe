@@ -3,7 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file well_annotated_concepts.hpp
+ * @file annotation_concepts.hpp
  * @date 10/08/2026
  * @brief well_annotated concept verifying the annotation correctness of a type
  */
