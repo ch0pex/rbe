@@ -32,13 +32,13 @@ struct[[ = rbe::little, = rbe::pack ]] ExplicitMemberAnnotation {
 // I believe option A to be appropriate and handy but might be dangerous if the lib is used for network communication
 struct NoAnnotation { //
   std::uint16_t
-      length; // Option A: implicit endian::native, align; Option B: compile error don't support implicit endiannes
+      length; // Option A: implicit little-endian, align; Option B: compile error don't support implicit endiannes
   std::uint8_t
-      count; // Option A: implicit endian::native, align; Option B: compile error don't support implicit endianness
+      count; // Option A: implicit little-endian, align; Option B: compile error don't support implicit endianness
   std::uint8_t
-      unit; // Option A: implicit endian::native, align; Option B: compile error don't support implicit endianness
+      unit; // Option A: implicit little-endian, align; Option B: compile error don't support implicit endianness
   std::uint32_t
-      sequence; // Option A: implicit endian::native, align; Option B: compile error don't support implicit endianness
+      sequence; // Option A: implicit little-endian, align; Option B: compile error don't support implicit endianness
 };
 
 // Lets consider that we support implicit annotations bc its convenient
@@ -46,7 +46,7 @@ struct NoDefaultEndiannes {
   [[= rbe::big]] std::uint16_t length; // Implicit align, explicit big;
   [[= rbe::big]] std::uint8_t count; // Implicit align, explicit big;
   [[= rbe::big]] std::uint8_t unit; // Implicit align, explicit big;
-  std::uint32_t sequence; // Implicit align and native endianness;
+  std::uint32_t sequence; // Implicit align and little-endian byte order
 };
 
 struct[[ = rbe::pack, = rbe::big ]] Header {
@@ -62,19 +62,19 @@ struct[[= rbe::little]] Msg {
 struct Msg2 {
   [[= rbe::little]] Header hdr; // Option A: Explicit annotation ignored Header remains big and packed; Option B:
                                 // Compilation error, annotations conflict
-  std::uint32_t payload; // Implicit native endianness and align
+  std::uint32_t payload; // Implicit little-endian byte order and align
 };
 
 
 // Things get complicated when structure nesting is present:
 
 struct Leaf {
-  std::uint32_t valor; // Implicit native endianness and align
+  std::uint32_t valor; // Implicit little-endian byte order and align
   [[= rbe::little]] std::uint64_t leaf_valor; // Explicit little, implicit align
 };
 
 struct[[= rbe::pack]] MiddleNode {
-  Leaf leaf; // Implicit native endianness, derived pack (leaf don't have any explicit requirement related to aligment)
+  Leaf leaf; // Implicit little-endian byte order, derived pack (leaf don't have any explicit requirement related to aligment)
   std::uint32_t valor2; // Implicit native endianness
 };
 

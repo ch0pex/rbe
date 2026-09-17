@@ -12,7 +12,7 @@
 
 // --- Includes ---
 #include <rbe/annotations/detail/correctness.hpp>
-#include "rbe/annotations/detail/utils.hpp"
+#include <rbe/annotations/detail/utils.hpp>
 
 // --- STD ---
 

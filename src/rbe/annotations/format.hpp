@@ -11,23 +11,23 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/detail/dimension.hpp>
-
-// --- STD ---
-#include <type_traits>
+#include <rbe/annotations/detail/annotation.hpp>
 
 namespace rbe {
 
+namespace detail {
+
+struct fmt_tag { };
+
+} // namespace detail
+
 /**
- * @brief Debugging annotations
+ * @brief Opts the annotated type into RBE's universal formatter.
+ *
+ * The type becomes printable through `std::format` and `operator<<` (`rbe/core/fmt.hpp`), which
+ * walks every member recursively, base classes and bit-fields included. It belongs to no dimension,
+ * so it combines freely with any other annotation.
  */
-inline constexpr struct {} fmt {}; /// < format message for debugging purposes
+inline constexpr detail::annotation_kind<detail::fmt_tag> fmt {};
 
 } // namespace rbe
-
-/**
- * `fmt` opts into RBE annotation identity but belongs to no dimension: no correctness rule is ever
- * enforced for it, and well_annotated's generic dimension loop never even sees it.
- */
-template<>
-struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::fmt)>> { };

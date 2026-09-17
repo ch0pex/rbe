@@ -4,39 +4,40 @@
  ************************************************************************/
 /**
  * @file utils.hpp
- * @version 1.0
+ * @version 2.0
  * @date 15/08/2026
  * @brief Helpers for gathering and querying the RBE annotations attached to a type or member
+ *
+ * Three ranges, each one a `std::vector<annotation_info>` -- the annotations written on an entity,
+ * the annotation range the requirements define for it, and that same range recursively. Everything
+ * else is an ordinary range algorithm over one of them.
  */
 #pragma once
 
-#include <optional>
-#include <rbe/annotations/detail/dimension.hpp>
+// --- Includes ---
 #include <rbe/annotations/detail/view.hpp>
+
+// --- STD ---
+#include <algorithm>
+#include <optional>
+#include <ranges>
+#include <type_traits>
+#include <vector>
 
 namespace rbe::detail {
 
 /**
- * NOTE: most are constant expressions with a type and a value, however so we need to normalize them into
- * a list of types to define dimensions
- */
-consteval auto types_list(auto... args) {
-  return std::array<std::meta::info, sizeof...(args)> {normalize_type(args)...};
-}
-
-/**
  * The RBE annotations written directly on `entity` (a type or a non-static data member) -- derive<...>
  * lists already expanded, non-RBE attributes already filtered out.
+ *
+ * Not named `annotations_of`: ADL on `std::meta::info` would make the call ambiguous with
+ * `std::meta::annotations_of`.
  */
-consteval auto rbe_annotations(std::meta::info const entity) -> std::vector<std::meta::info> {
-  std::vector<std::meta::info> raw_annotations;
-  if (is_nonstatic_data_member(entity) or std::meta::is_type(entity)) {
-    raw_annotations = std::meta::annotations_of(entity);
+consteval auto own_annotations(std::meta::info const entity) -> std::vector<annotation_info> {
+  if (not is_nonstatic_data_member(entity) and not std::meta::is_type(entity)) {
+    throw std::meta::exception("info is not a non-static data member or a type", ^^own_annotations);
   }
-  else {
-    throw std::meta::exception("info is not a non-static data member or a type", ^^rbe_annotations);
-  }
-  return raw_annotations | views::rbe_annotations | std::ranges::to<std::vector>();
+  return std::meta::annotations_of(entity) | views::annotations | std::ranges::to<std::vector>();
 }
 
 /**
@@ -46,10 +47,10 @@ consteval auto rbe_annotations(std::meta::info const entity) -> std::vector<std:
  * @param info entity to gather rbe annotations from
  * @return a vector with all the annotations of the entity
  */
-consteval auto annotation_range(std::meta::info const info) -> std::vector<std::meta::info> {
-  auto result = rbe_annotations(info);
+consteval auto annotation_range(std::meta::info const info) -> std::vector<annotation_info> {
+  auto result = own_annotations(info);
   if (is_nonstatic_data_member(info)) {
-    result.append_range(rbe_annotations(type_of(info)));
+    result.append_range(own_annotations(type_of(info)));
   }
   return result;
 }
@@ -63,8 +64,8 @@ consteval auto annotation_range(std::meta::info const info) -> std::vector<std::
  * @param info reflection of the type (or member) to inspect recursively
  * @return a vector with all the annotations found within the type
  */
-consteval auto deep_annotations(std::meta::info const info) -> std::vector<std::meta::info> {
-  std::vector<std::meta::info> result = annotation_range(info);
+consteval auto deep_annotations(std::meta::info const info) -> std::vector<annotation_info> {
+  std::vector<annotation_info> result = annotation_range(info);
 
   auto const type = normalize_type(info);
   if (not is_class_type(type)) {
@@ -80,74 +81,72 @@ consteval auto deep_annotations(std::meta::info const info) -> std::vector<std::
 
 /**
  * @param annotations The range of annotations to search within.
- * @param value The annotations to find.
+ * @param needle The annotation, or `derive<...>` list of annotations, to find.
  *
- * @return true if all annotations are found in the range of annotations.
+ * @return true if every annotation the needle denotes is found in the range.
  */
-consteval auto has_annotations(std::ranges::range auto const& annotations, auto value) -> bool
-  requires annotation<decltype(value)> or annotation_list<decltype(value)>
+consteval auto has_annotations(std::ranges::range auto const& annotations, auto const needle) -> bool
+  requires annotation<std::remove_cvref_t<decltype(needle)>> or annotation_list<std::remove_cvref_t<decltype(needle)>>
 {
-  return std::ranges::all_of(views::rbe_annotations(value), [&](std::meta::info const needle) {
-    return std::ranges::contains(annotations, needle);
-  });
+  using needle_type = std::remove_cvref_t<decltype(needle)>;
+
+  if constexpr (annotation_list<needle_type>) {
+    return std::ranges::all_of(views::expand_annotation(^^needle_type), [&](annotation_info const one) {
+      return std::ranges::contains(annotations, one);
+    });
+  }
+  else {
+    return std::ranges::any_of(annotations, [&](annotation_info const one) { return one.is(needle); });
+  }
 }
 
 /**
- * Single entry point: `value` may be a plain annotation OR a `derive<...>` list -- both normalize
- * through the same `views::rbe_annotations` range, so there is exactly one code path.
+ * Single entry point: `needle` may be a plain annotation OR a `derive<...>` list -- both are compared
+ * against the same range, so there is exactly one code path.
  */
-consteval auto has_annotations(std::meta::info const info, auto value) -> bool
-  requires annotation<decltype(value)> or annotation_list<decltype(value)>
+consteval auto has_annotations(std::meta::info const info, auto const needle) -> bool
+  requires annotation<std::remove_cvref_t<decltype(needle)>> or annotation_list<std::remove_cvref_t<decltype(needle)>>
 {
-  auto const haystack = annotation_range(info);
-  return has_annotations(haystack, value);
+  return has_annotations(annotation_range(info), needle);
 }
 
-consteval auto has_annotations_deep(std::meta::info const info, auto value) -> bool
-  requires annotation<decltype(value)> or annotation_list<decltype(value)>
+consteval auto has_annotations_deep(std::meta::info const info, auto const needle) -> bool
+  requires annotation<std::remove_cvref_t<decltype(needle)>> or annotation_list<std::remove_cvref_t<decltype(needle)>>
 {
-  return has_annotations(rbe::detail::deep_annotations(info), value);
+  return has_annotations(deep_annotations(info), needle);
 }
 
 /**
- * Flattens a single raw attribute into the RBE annotation VALUES it denotes (a `derive<...>` list
- * expands into its filtered constituents, a plain annotation is itself, anything else vanishes).
- * Unlike `views::rbe_annotations`/`annotation_range`, this does NOT normalize to types -- it must
- * preserve the actual values so `value_of` can `extract<T>` them.
+ * @brief The annotation built from `tag` that applies to `entity`, if any.
+ *
+ * The reverse direction of `has_annotations`: instead of asking whether a known annotation is there,
+ * it hands back the one that is, so its value can be read (`rbe::id(value)` -> the id a message type
+ * is dispatched under).
  */
-consteval auto rbe_annotation_values(std::meta::info const raw) -> std::vector<std::meta::info> {
-  if (is_annotation_list(raw)) {
-    return template_arguments_of(type_of(raw)) | std::views::filter(is_rbe_annotation) | std::ranges::to<std::vector>();
-  }
-  return is_rbe_annotation(raw) ? std::vector {raw} : std::vector<std::meta::info> {};
+consteval auto find_annotation(std::meta::info const entity, std::meta::info const tag)
+    -> std::optional<annotation_info> {
+  auto const range = annotation_range(entity);
+  auto const it    = std::ranges::find_if(range, [tag](annotation_info const one) { return one.tag() == tag; });
+  return it == std::ranges::end(range) ? std::nullopt : std::optional {*it};
 }
 
-/**
- * Same annotation range as `annotation_range` (member's own, unioned with its type's own), but
- * preserving values instead of normalizing to types -- the range `resolve_in_scope` searches.
- */
-consteval auto annotation_values(std::meta::info const entity) -> std::vector<std::meta::info> {
-  std::vector<std::meta::info> result;
-  for (auto const a: std::meta::annotations_of(entity)) {
-    result.append_range(rbe_annotation_values(a));
-  }
-  if (is_nonstatic_data_member(entity)) {
-    for (auto const a: std::meta::annotations_of(type_of(entity))) {
-      result.append_range(rbe_annotation_values(a));
-    }
-  }
-  return result;
+/// `find_annotation`, searching the whole (deep) type instead of just the entity's own range.
+consteval auto find_annotation_deep(std::meta::info const entity, std::meta::info const tag)
+    -> std::optional<annotation_info> {
+  auto const range = deep_annotations(entity);
+  auto const it    = std::ranges::find_if(range, [tag](annotation_info const one) { return one.tag() == tag; });
+  return it == std::ranges::end(range) ? std::nullopt : std::optional {*it};
 }
 
 /**
  * Searches entity's REQ-058..061 annotation range (its own annotations, unioned with its type's own
- * annotations for a member) for the first annotation that yields a `T`.
+ * annotations for a member) for the first annotation carrying a `T`.
  */
 template<typename T>
 consteval auto resolve_in_scope(std::meta::info const entity) -> std::optional<T> {
-  for (auto const a: annotation_values(entity)) {
-    if (auto v = value_of<T>(a)) {
-      return v;
+  for (auto const one: annotation_range(entity)) {
+    if (auto const value = one.value<T>()) {
+      return value;
     }
   }
   return std::nullopt;

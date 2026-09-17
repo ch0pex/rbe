@@ -30,8 +30,8 @@ namespace rbe::detail {
  * threads down one hop at a time instead of resetting to the dimension's default at each level.
  */
 struct context {
-  endian::order endianness  = endian::order::native; ///< one field per dimension
-  alignment_mode alignment  = alignment_mode::native; ///< `rbe::pack`/`rbe::align`
+  endian::order endianness = endianness_dim::default_value; ///< one field per dimension
+  alignment_mode alignment = alignment_dim::default_value; ///< `rbe::pack`/`rbe::align`
 
   friend constexpr bool operator==(context, context) = default; ///< required: NTTPs must be structural types
 };

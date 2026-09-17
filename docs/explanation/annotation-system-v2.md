@@ -1,238 +1,215 @@
 # Annotation System Redesign
 
-> **Status: implemented**, except where a section is explicitly marked otherwise below. The trait-based dimension mechanism (identity, `kind`, `default_value`, the uniform range API) and N-level annotation propagation via `context` threading are both shipped and covered by real tests. `count`/variable-length fields and the "annotation scope" trait remain genuinely open. This file is not linked from the site navigation; the relevant implemented parts should eventually move into [Design Overview](design-overview.md) and the [Annotations Reference](../reference/annotations.md), and this file trimmed down to just the parts that remain useful as rationale for what's still open.
+> **Status: implemented.** This is the third shape of the annotation system. v1 identified an annotation
+> by inheritance from `base_annotation` and kept dimension membership in a central list; v2 replaced both
+> with a specializable `annotation_traits<T>` and reused plain enums (`std::endian`) as annotation values
+> directly. v3 — described here — keeps v2's dynamically discovered dimensions and its uniform range API,
+> and replaces `annotation_traits` with a single way of *building* an annotation. The sections that remain
+> genuinely open (`count`/variable-length fields, annotation scope) are marked as such below.
 
 ## Motivation
 
-The current annotation system (`rbe/annotations/`) identifies an "RBE annotation" by requiring its type to derive from `rbe::detail::base_annotation`, and records which annotations conflict with which ("dimensions") in a central list in `annotations/detail/correctness.hpp`, physically disconnected from where the annotations themselves are defined.
+v2 solved "how do I recognize an annotation" but left "how do I write one" unanswered, and four different
+answers had grown in the tree:
 
-This has three concrete problems:
+| Annotation | v2 shape |
+| --- | --- |
+| `little` / `big` | a plain `endian::order` enumerator reused as the annotation value |
+| `pack` / `align` | a plain `alignment_mode` enumerator |
+| `bits(msb, lsb)` | a struct with a payload and a constructor |
+| `frame_length`, `fmt` | an anonymous `struct {}` object used as a marker |
+| `id` / `id(value)` | a consteval functor object plus a hidden `id_value<T>` template |
 
-1. **Base-class identity excludes enums.** `rbe::endian` conversion in `core/memory_layout.hpp` (`endiannes_from_annotation`) is a hand-written `if`/`else` chain mapping each endianness annotation *type* to an `endian::order` *value*. The natural fix — making `rbe::little`/`rbe::big` literally be `std::endian::little`/`std::endian::big` — is impossible today, because `std::endian` cannot derive from `base_annotation`.
-2. **Dimension membership is centrally registered, not colocated.** Adding a new annotation to an existing dimension means editing two files: the annotation's own header, and `correctness.hpp`'s hand-maintained `types_list(...)` for that dimension.
-3. **No uniform "range of annotations" entry point.** Call sites juggle two concepts (`annotation` vs `annotation_list`) and `has_annotation` has two overloads instead of one.
+Each shape dragged its own `annotation_traits` specialization behind it, spelled
+`annotation_traits<std::remove_cvref_t<decltype(rbe::frame_length)>>` for the anonymous ones. Nothing was
+wrong with any single one; the problem was that adding a new annotation meant picking a shape with no
+criterion, and that the machinery had to keep coping with all of them.
 
-Two more requirements surfaced while designing the fix:
+Two more concrete problems came from the same root:
 
-1. **Some dimensions have a default value when nothing is explicitly annotated** (e.g. endianness defaults to native byte order). Today that default is hard-coded inside `core/memory_layout.hpp`, not declared anywhere near the dimension itself.
-2. **Some annotations only make sense in one syntactic position** — e.g. a hypothetical `count(...)` annotation (see [Open problem: variable-length fields](#open-problem-variable-length-fields) below) only makes sense on a struct member, never on a type declaration.
+1. **Annotations were handled sometimes as types, sometimes as values.** `annotation_range()` normalized
+   everything to *types*, `annotation_values()` preserved *values*, `rbe_annotation_values()` was a third
+   variant, and every caller had to know which representation it was holding. Because identity was
+   type-based, three annotations that are semantically three values of one thing
+   (`frame_length`/`payload_length`/`header_length`) were forced to be three distinct types.
+2. **There was no way to ask "which annotation of this kind does this type carry, and what is its
+   value?"** — the direction dispatch needs (`framing/dsrl/detail/candidate_list.hpp` was written against
+   an API that did not exist). Nothing in the system represented *one whole annotation*.
 
-## Core mechanism: `annotation_traits<T>`
+## Core mechanism: one recipe, `annotation_kind<Tag>`
 
-Replace `base_annotation` inheritance with a **specializable trait**, mirroring the customization-point idiom this codebase already uses for `rbe::custom<T>` (`core/custom.hpp`, detected via `is_complete_type(substitute(^^custom, {info}))`):
+There is no trait to specialize and no registry. An annotation is built, always, like this:
 
 ```cpp
-template<class T>
-struct annotation_traits; // primary template, intentionally incomplete
+namespace detail {                     // tags and dimensions are not public API: nothing outside
+struct endianness_dim {                // RBE ever needs to name them
+  static constexpr auto kind          = dimension_kind::exclusive;
+  static constexpr auto default_value = endian::order::native;
+};
+
+struct order_tag {
+  using dimension  = endianness_dim;   // optional: the dimension it belongs to
+  using value_type = endian::order;    // optional: absent means "marker only"
+};
+} // namespace detail
+
+inline constexpr detail::annotation_kind<detail::order_tag> order {}; // [[=rbe::order(endian::order::big)]]
+
+inline constexpr auto big    = order(endian::order::big);             // [[=rbe::big]]
+inline constexpr auto little = order(endian::order::little);
 ```
 
-A type `T` is a first-class RBE annotation **iff `annotation_traits<T>` has been specialized** — completeness of the specialization is the identity check, not inheritance. This works identically for empty tag structs, payload-carrying structs, and plain enumerations, because template specialization doesn't care what kind of type `T` is.
+The public surface of an annotation is therefore exactly three things: the value type it is written
+with (`endian::order`, `alignment_mode`, `length_kind`), the factory object, and the named aliases.
+The tag and the dimension stay in `rbe::detail`, colocated with the annotation they describe.
 
-The same specialization optionally carries additional members, each answered by a small reflection-based accessor:
+`annotation_kind<Tag>` is the object the user spells; calling it produces an `annotation_value<Tag, T>`.
+Every named annotation in the library is an alias of such a call. Identity is structural: a type is an RBE
+annotation iff it is a specialization of `annotation_kind`, `annotation_value` or `annotations_t` — which
+also means `is_complete_type(substitute(...))` and the whole `annotation_traits` apparatus are gone.
 
-| Member (optional) | Meaning | Accessor |
-| --- | --- | --- |
-| `using dimension = SomeDimTag;` | Which dimension `T` belongs to. Absent ⇒ a "free" annotation with zero correctness ceremony (e.g. `fmt`). | `dimension_of(type) -> std::meta::info` |
-| — (on the dimension tag itself) `static constexpr dimension_kind kind` | How the dimension is enforced (see below). Mandatory on every dimension tag. | `kind_of(dim) -> dimension_kind` |
-| — (on the dimension tag itself) `static constexpr auto default_value` | The value assumed when no annotation of this dimension is present anywhere in scope. Optional; only meaningful for value-bearing dimensions. | `default_value_of<T>(dim) -> T` |
-| — (on `annotation_traits<T>` itself) `static constexpr auto scope` | Where `T` is syntactically allowed: struct-level, member-level, or both (default). | *(new, not yet designed in full — see below)* |
+A tag may declare four more things, all optional:
+
+| Member | Meaning |
+| --- | --- |
+| `using dimension = SomeDim;` | the dimension the annotation belongs to; absent ⇒ no correctness ceremony at all (`fmt`) |
+| `static constexpr bool marker = true;` | the bare factory object is an annotation too — this is what makes `rbe::id` and `rbe::id(value)` two forms of one tag |
+| `static constexpr auto identity = identity_kind::kind;` | how repetitions are counted, see below |
+| `static consteval auto check(annotation_info, std::meta::info entity) -> bool;` | the annotation's own correctness rule; it receives the whole annotation, so one `check` covers both forms |
+
+`using value_type = detail::deduced;` means the annotation carries whatever type it is handed, which is
+what `rbe::id(42)` and `rbe::id(msg_type::heartbeat)` need.
+
+Dimensions are unchanged from v2 — a tag type with a `kind`, discovered dynamically from the annotations
+actually attached to a type, so adding a dimension still requires zero edits to `correctness.hpp`:
 
 ```cpp
 enum class dimension_kind : std::uint8_t {
-  exclusive = 1 << 0, ///< at most one annotation of the dimension may appear within a single annotation range
-  unique    = 1 << 1, ///< each annotation of the dimension may independently appear at most once across the whole (deep) type
+  exclusive = 1 << 0, ///< at most one annotation of the dimension within a single annotation range
+  unique    = 1 << 1, ///< each annotation of the dimension at most once across the whole (deep) type
 };
 ```
 
-The rules are independent and combinable with `|`; `verify_dimension` runs whichever ones the dimension declares.
+### What "the same annotation" means
 
-`exclusive` alone is the `alignment`/`endianness` rule (`[[=rbe::little, =rbe::big]]` conflicts). The `id` and `length` dimensions declare `exclusive | unique`: within one annotation range they are mutually exclusive (a field encodes one length, and is either the id field or a type's id value, never both), and across the whole (possibly nested) message none of them may repeat. Annotations from *different* dimensions stay freely combinable — a field may be `[[=rbe::id]]` and a message may carry an id plus any of the lengths.
+Since annotations are compared by value now, `unique` needs to know what counts as a repetition. That is
+the one knob `identity_kind` provides:
 
-### Adding an annotation to a dimension becomes one colocated block
+- `identity_kind::value` (the default) — the annotation *is* its value. `frame_length` and
+  `payload_length` are two values of one tag and are independently unique, which is exactly why the three
+  length annotations could collapse into a single type.
+- `identity_kind::kind` — the value is a payload, not an alternative. `rbe::id(1)` and `rbe::id(2)` are
+  one id said twice, so a message carrying both (at any depth) is rejected.
 
-```cpp
-// alignment.hpp -- pack/align are literally alignment_mode::pack/::align, the enum reused directly
-// as the annotation value, exactly like little/big reuse endian::order directly (one annotation_traits
-// specialization for the whole enum, not one per enumerator).
-enum class alignment_mode : std::uint8_t { native, pack, align };
-struct alignment_dim {
-  static constexpr auto kind          = detail::dimension_kind::exclusive;
-  static constexpr auto default_value = alignment_mode::native;
-};
-
-inline constexpr auto pack  = alignment_mode::pack;
-inline constexpr auto align = alignment_mode::align;
-
-template<> struct rbe::detail::annotation_traits<rbe::alignment_mode> { using dimension = rbe::alignment_dim; };
-```
-
-No edit to any other file is needed — `correctness.hpp` no longer hand-lists which annotations exist per dimension; `well_annotated` discovers, for a given type, *which dimensions are actually used among its attached annotations*, and checks each one generically by its `kind`. A brand new dimension (not just a new annotation within an existing one) therefore requires **zero** edits to `well_annotated`/`correctness.hpp` — it falls out of the generic loop automatically.
+Local duplicate detection is always by value, so `[[=rbe::little, =rbe::little]]` is reported as a
+duplicate while `[[=rbe::little, =rbe::big]]` is reported as a dimension conflict — in v2 both came out
+as "duplicate", because identity was type-based and the two share a type.
 
 ### `derive<...>` is unaffected
 
-`rbe::derive<Args...>` / `pack_le` / `pack_be` / `debug` need no changes: `annotations_t<Args...>` never depended on `base_annotation` for its own mechanics (`is_annotation_list` already checks `template_of(info) == ^^annotations_t` directly).
+`rbe::derive<Args...>` / `pack_le` / `pack_be` / `debug` need no changes: `annotations_t<Args...>` never
+depended on how a single annotation is built, and `annotation_value` is a structural type, so it remains
+usable as a non-type template parameter.
 
-## Solving pain point 1: reusing `std::endian` directly
+## One whole annotation: `annotation_info`
+
+`annotation_info` is a strongly typed `std::meta::info` that always wraps an annotation's **value**
+(never its type), validated on construction. It is what every range, view and query in the system deals
+in, which is what removed the type/value duality:
 
 ```cpp
-// endianness.hpp
-struct endianness_dim {
-  static constexpr auto kind          = detail::dimension_kind::exclusive;
-  static constexpr auto default_value = endian::order::native; // resolves to little or big at compile
-                                                                 // time, conditionally on the target platform
-};
-
-struct bits { // payload-carrying: msb/lsb, NOT reducible to a plain byte order
-  std::uint8_t msb, lsb;
-  constexpr explicit bits(std::uint8_t const msb, std::uint8_t const lsb) : msb(msb), lsb(lsb) {}
-};
-
-inline constexpr auto little = endian::order::little; // literally std::endian::little
-inline constexpr auto big    = endian::order::big;    // literally std::endian::big
-
-template<> struct rbe::detail::annotation_traits<rbe::endian::order> { using dimension = rbe::endianness_dim; };
-template<> struct rbe::detail::annotation_traits<rbe::bits>          { using dimension = rbe::endianness_dim; };
+consteval explicit annotation_info(std::meta::info);   // throws unless it is one rbe annotation
+reflection() -> std::meta::info     // the value, as written
+type()       -> std::meta::info     // annotation_kind<Tag> or annotation_value<Tag, T>
+tag()        -> std::meta::info     // what frame_length and payload_length share
+dimension()  -> std::meta::info     // null reflection if it belongs to none
+has_value()  -> bool
+value_type() -> std::meta::info     // the payload's type -- what dispatch needs to recover an id's type
+value<T>()   -> std::optional<T>
+is(needle)   -> bool                // same annotation as this known one
+operator==   -> bool                // same annotation, neither type known statically
+identity_equals(other) -> bool      // same annotation for the purposes of `unique`
 ```
 
-**`rbe::native` is removed entirely** rather than kept as a distinct tag. The "no explicit endianness annotation anywhere in scope" case already resolves through the dimension's `default_value = endian::order::native`, which is resolved conditionally, at compile time, to whichever of `little`/`big` matches the target platform (`std::endian::native`'s own standard-mandated behavior — no runtime branch needed). A dedicated marker type was never actually necessary for that: it existed in the first draft of this design only so the *default* could be represented distinctly from `little`/`big`'s shared `endian::order` type, out of a concern that sharing the type would make the dimension's exclusivity check platform-dependent. That concern doesn't hold up: exclusivity (`dimension_kind::exclusive`) is enforced by *counting how many annotations of the dimension's type are present*, never by comparing their values — `[[=rbe::little, =rbe::native]]` would have been rejected as two `endian::order`-typed annotations on every platform, identically, whether or not `native` happened to equal `little` on the machine compiling it. So there was no real hazard, just unnecessary ceremony.
+Two mechanisms make the type-erased half work, both reached reflectively:
 
-**Trade-off worth flagging explicitly:** this removes the ability to *write* `=rbe::native` at all. [REQ-062](requirements.md#endianness-and-packing) currently lists `=rbe::native` alongside `=rbe::little`/`=rbe::big` as a required explicit annotation, and [REQ-078](requirements.md#implicit-annotations) implies an explicit-endianness-required safety mode where every member must carry *some* endianness annotation — under this change, a member that wants native order would have no explicit spelling available to satisfy that mode with, and would be forced to rely on the implicit default instead. Either REQ-062/REQ-078 need revising to drop the explicit-`native` requirement, or `rbe::native` needs to come back as an explicit, writable annotation of type `endian::order` (same type as `little`/`big`, just always evaluating to `std::endian::native` — which, per the paragraph above, is equally safe to share the type with them). Flagging this rather than silently resolving it either way.
+- `annotation_value<Tag, T>` generates `static consteval payload(info) -> T` and
+  `static consteval equals(info, info) -> bool`. `annotation_info` finds them with
+  `static_member_function(type, "payload"/"equals")` and calls them through `extract<fn_t>` — the same
+  trick `verify_check` already used for an annotation's `check`. No annotation author ever writes them.
+- `is(needle)` needs no reflection of the needle at all: the needle's type is known statically at the
+  call site, so it is a plain `extract<needle_t>(a) == needle`. This matters because `^^` cannot be
+  applied to a non-type template parameter or to a function parameter, which is precisely how needles
+  arrive (`contains_annotation<T, Annotation>`, `proxy::field<Annotation>()`).
 
-**Why `bits` doesn't break this:** it joins the dimension (participates in exclusivity: `[[=rbe::little, =rbe::bits(3,0)]]` is correctly rejected) via one trait line, but it simply isn't the type asked for when extracting an `endian::order` value — see `value_of<T>` below, which returns "not found" rather than a wrong answer for annotations of the wrong type. This is the proof that the design isn't "make every dimension member an enum" — heterogeneous representations within one dimension are the normal case, not a special case.
+## One range entry point
 
-### Generic value extraction and default resolution
+`views::annotations` normalizes anything — a scalar annotation, a `derive<...>` list, or the raw output
+of `std::meta::annotations_of` — into a flat range of `annotation_info`. On top of it there are exactly
+three ranges and two lookups:
 
 ```cpp
-template<typename T>
-consteval auto value_of(std::meta::info const a) -> std::optional<T> {
-  if (remove_cvref(type_of(a)) != ^^T) return std::nullopt;
-  return extract<T>(a);
-}
+own_annotations(entity)   -> std::vector<annotation_info>  // written directly on the entity
+annotation_range(entity)  -> std::vector<annotation_info>  // REQ-058..061: member's own + its type's own
+deep_annotations(entity)  -> std::vector<annotation_info>  // the above, recursively
 
-template<typename T>
-consteval auto default_value_of(std::meta::info const dim) -> T {
-  for (auto const member : static_data_members_of(dim, default_context))
-    if (has_identifier(member) and identifier_of(member) == "default_value") return extract<T>(member);
-  throw std::meta::exception("dimension has no default_value for the requested type", dim);
-}
-
-// Searches entity's REQ-058..061 annotation range (its own annotations, unioned with its type's
-// own annotations for a member -- see annotation_range() in the range-API section below) for the
-// first annotation that yields a T.
-template<typename T>
-consteval auto resolve_in_scope(std::meta::info const entity) -> std::optional<T> {
-  for (auto const a : annotation_range(entity))
-    if (auto v = value_of<T>(a)) return v;
-  return std::nullopt;
-}
-
-// Replaces endiannes_from_annotation + has_endianness_annotation + get_member_endianness in one
-// function, generically, for ANY value-bearing dimension -- not just endianness.
-template<typename T>
-consteval auto resolve(std::meta::info const parent, std::meta::info const member, std::meta::info const dim) -> T {
-  if (auto v = resolve_in_scope<T>(member)) return *v;
-  if (auto v = resolve_in_scope<T>(parent)) return *v;
-  return default_value_of<T>(dim);
-}
+find_annotation(entity, tag)      -> std::optional<annotation_info>
+find_annotation_deep(entity, tag) -> std::optional<annotation_info>
+resolve_in_scope<T>(entity)       -> std::optional<T>
 ```
 
-`core/memory_layout.hpp` then collapses to:
+`own_annotations` is deliberately not called `annotations_of`: ADL on `std::meta::info` would make the
+call ambiguous with `std::meta::annotations_of`.
+
+Everything else is an ordinary range algorithm over one of those three: `has_annotations` is an
+`any_of`/`all_of`, the exclusivity rule is a `count_if(range, by_dimension(dim)) <= 1`, the uniqueness
+rule is a `count_if` with `identity_equals`, duplicate detection is `find` with `operator==`.
+
+`find_annotation` is the direction v2 lacked. Dispatch can now write, generically:
 
 ```cpp
-consteval auto get_member_endianness(std::meta::info const parent, std::meta::info const member) -> endian::order {
-  return detail::resolve<endian::order>(parent, member, ^^endianness_dim);
-}
+auto const id = find_annotation(^^Msg, ^^rbe::detail::id_tag);   // the annotation itself
+id->value_type();                                        // the type the id was declared with
+id->value<msg_type_t>();                                 // the value it was declared with
 ```
 
-This is the mechanism that answers pain point 4 (per-dimension defaults) at the same time as pain point 1 (no more hand-written conversion chain): the default lives declared on the dimension, `resolve`/`resolve_in_scope`/`value_of` are the *only* three functions in the whole system that ever deal with extracting a semantic value from a reflection, and any future value-bearing dimension reuses them for free.
+## `core/detail/context.hpp` is the only value-resolution consumer
 
-## Solving pain point 3: one range entry point
-
-`views::rbe_annotations` (the existing `range_adaptor_closure`) stays the low-level piece that normalizes *anything* — a scalar annotation, a `derive<...>` list, or the raw output of `std::meta::annotations_of` — into the flat range of concrete annotation instances it denotes.
-
-On top of it, a single function-call entry point replaces every hand-written recursive traversal in the system (`annotation_types_of`, `deep_annotation_types_of`, and the `resolve_in_scope` walk from above all become 1–3 line compositions of this plus ordinary `std::ranges`/`std::views` algorithms):
+`merge_context` remains the single chokepoint where annotation values become behavior:
 
 ```cpp
-namespace rbe::detail {
-
-/// The RBE annotations written directly on `entity` (a type or a non-static data member) --
-/// derive<...> lists already expanded, non-RBE attributes already filtered out.
-consteval auto rbe_annotations(std::meta::info const entity) -> std::vector<std::meta::info> {
-  return std::meta::annotations_of(entity) | views::rbe_annotations | std::ranges::to<std::vector>();
-}
-
-/// The REQ-058..061 "annotation range": for a member, its own annotations unioned with its
-/// type's own annotations; for a type, just its own annotations.
-consteval auto annotation_range(std::meta::info const entity) -> std::vector<std::meta::info> {
-  auto result = rbe_annotations(entity);
-  if (is_nonstatic_data_member(entity)) {
-    result.append_range(rbe_annotations(type_of(entity)));
-  }
+consteval auto merge_context(context const ambient, std::meta::info const entity) -> context {
+  context result = ambient;
+  if (auto v = resolve_in_scope<endian::order>(entity))   { result.endianness = *v; }
+  if (auto v = resolve_in_scope<alignment_mode>(entity))  { result.alignment  = *v; }
   return result;
 }
-
-/// annotation_range(entity), recursively unioned with every nested non-static data member's.
-consteval auto deep_annotations(std::meta::info const entity) -> std::vector<std::meta::info> {
-  auto result = annotation_range(entity);
-  if ((is_type(entity) and not is_class_type(entity)) or is_nonstatic_data_member(entity)) {
-    return result;
-  }
-  for (auto const member : nsdm(entity)) {
-    result.append_range(deep_annotations(member));
-  }
-  return result;
-}
-
-/// Filter predicate factory: keep only annotations belonging to dimension `dim`.
-consteval auto by_dimension(std::meta::info const dim) {
-  return [dim](std::meta::info const a) { return dimension_of(normalize_type(a)) == dim; };
-}
-
-} // namespace rbe::detail
 ```
 
-Every correctness check and value-resolution step is then genuinely one expression built from `std::ranges`/`std::views` over these three ranges, instead of a bespoke recursive function per concern:
+`resolve_in_scope<T>` walks `annotation_range(entity)` and returns the first `annotation_info::value<T>()`
+that answers — so an annotation of the right dimension but the wrong payload type (`bits` inside the
+endianness dimension) is skipped rather than producing a wrong answer, and `context`'s defaults are read
+straight off the dimension tags (`endianness_dim::default_value`).
 
-```cpp
-// has_annotation: single code path for a scalar annotation OR a derive<...> list
-consteval auto has_annotations(std::meta::info const entity, auto const value) -> bool
-  requires annotation<decltype(value)> or annotation_list<decltype(value)>
-{
-  auto const haystack = annotation_range(entity);
-  return std::ranges::all_of(views::rbe_annotations(value), [&](std::meta::info const needle) {
-    return std::ranges::find(haystack, needle) != haystack.end();
-  });
-}
-
-// exclusive dimension: at most one match within the annotation range
-consteval auto satisfies_dimension(std::meta::info const entity, std::meta::info const dim) -> bool {
-  return std::ranges::count_if(annotation_range(entity), by_dimension(dim)) <= 1;
-}
-
-// unique dimension: every dimension-matching annotation in the deep range appears at most once
-consteval auto satisfies_uniqueness(std::meta::info const entity, std::meta::info const dim) -> bool {
-  auto const in_dim = deep_annotations(entity) | std::views::filter(by_dimension(dim)) | std::ranges::to<std::vector>();
-  return std::ranges::all_of(in_dim, [&](std::meta::info const a) { return std::ranges::count(in_dim, a) <= 1; });
-}
-
-```
-
-`resolve_in_scope<T>` (in the endianness section above) is itself one more example of this: it searches `annotation_range(entity)` for the first annotation `value_of<T>` recognizes, which is exactly what let it drop its own hand-written member→type recursion once `annotation_range` already does that union.
-
-`by_dimension` composes with `std::views::filter` the same way any other predicate would (`rbe_annotations(^^T) | std::views::filter(by_dimension(^^endianness_dim))`), and presence checks compose with `std::ranges::find`/`std::ranges::contains` directly on the ranges above — the annotation-query surface becomes ordinary range algorithms end to end, not a growing set of bespoke functions.
-
-## Empirically verified against GCC 16.1.1
+## Empirically verified against GCC 16
 
 Before committing to this design, a set of standalone `.cpp` probes were compiled (`-freflection -fsyntax-only`) against this machine's GCC 16.1.1 to de-risk the reflection API usage, since C++26 reflection is still an experimental, fast-moving feature:
 
-- ✅ `is_complete_type(substitute(^^annotation_traits, {T}))` correctly detects specialization for both a plain struct and an `enum class`, and correctly reports "incomplete" for an unspecialized type.
-- ✅ `members_of(traits_specialization, ctx)` + `is_type_alias`/`identifier_of` correctly locates a nested `using dimension = ...;`; `static_data_members_of` + `identifier_of` correctly locates `static constexpr kind`/`default_value`.
+- ✅ `members_of(specialization, ctx)` + `is_type_alias`/`identifier_of` correctly locates a nested `using dimension = ...;`; `static_data_members_of` + `identifier_of` correctly locates `static constexpr kind`/`default_value`. (v2 also verified `is_complete_type(substitute(^^annotation_traits, {T}))`; v3 no longer needs it.)
 - ✅ `type_of(annotation_value) == ^^T` (after `remove_cvref`) reliably identifies an annotation's type, including when the annotation is a value of type `T` shared by several distinct annotations (e.g. `little`/`big` both being `endian::order`).
 - ✅ `extract<T>(a) == extract<T>(b)` reliably compares two annotation instances **by their real, extracted value**, regardless of how each was spelled at the call site (a named `constexpr` variable vs. a bare enumerator expression).
 - ✅ An overloaded `consteval` "factory" function (e.g. two overloads both named `count`, taking different argument types and returning different underlying annotation types) works fine as the operand of `[[=...]]` — useful if a future annotation wants one call-syntax name backed by more than one concrete type.
 - ⚠️ **`std::meta::info` equality is *not* reliable for comparing annotation *values* directly.** Two reflections that denote the same constant (e.g. the object `little_v` vs. the bare expression `e_kind::little`) compare **unequal** with plain `==`, even though they print identically in diagnostics. This invalidated the first draft of this design, which planned to normalize annotation instances to a "canonical value" reflection (via `constant_of`) and compare *those* directly. The fix — and the reason the design above never compares value-reflections with `==` — is to always route semantic comparisons through `extract<T>(...) == extract<T>(...)`, comparing the real C++ values, never the reflections. Type-level comparisons (`normalize_type`/`type_of`, used throughout for identity and dimension lookup) remain fully reliable and needed no change.
 
-This last finding is also why duplicate-detection (`has_duplicates`, used by `verify_no_local_duplications`) does **not** need to change: it already only ever compared annotation *types* (via `normalize_type`), never values, and type-level comparison was never the broken part. Two different-valued annotations sharing a type (`little`/`big` both being `endian::order`) will still be correctly rejected when both appear together — not because "duplicate" catches it, but because the dimension's `exclusive` check (which only ever needed to count *how many* annotations of the dimension's *type* are present, never which values) already does.
+Re-verified for v3, with a fresh probe (`spike_annotation.cpp`, GCC 16.2.1):
+
+- ✅ `static_member_function(type, "payload"/"equals")` + `extract<fn_t>` finds and calls a static member function of a **class template specialization**, so the payload of an annotation whose concrete type is only known as a reflection can be read back, and two such annotations compared by value. This is what lets `frame_length`/`payload_length`/`header_length` share a single type.
+- ✅ `annotation_value<Tag, T>` is a structural type: usable as an NTTP both in `derive<...>` and in `proxy::field<Annotation>()`.
+- ✅ `[[=rbe::order(endian::order::big)]]` (the factory called inline in the annotation) and `[[=rbe::big]]` (the named alias) produce annotations that compare equal by value, confirming the `info`-equality hazard above is fully contained.
+- ⚠️ **`^^` cannot be applied to a non-type template parameter, to a function parameter, or to an arbitrary expression.** Needles arrive as exactly those (`contains_annotation<T, Annotation>`, `has_annotations(entity, needle)`), so a needle is never reflected: its type is known statically at the call site, which is all `extract<needle_t>(a) == needle` needs.
+- ⚠️ **`^^SomeAliasName` compares unequal to a reflection of the type it names.** `^^std::remove_cvref_t<decltype(x)>` reflects the *alias*, so every type-identity check would silently fail for a type spelled through one. `normalize_type` therefore applies `dealias`, and so does every member-alias read (`value_type`, `tag`, `dimension`). This is the type-level sibling of the `annotations_of` alias trap recorded below, and it cost a debugging round before it was found.
+
+This last finding is also why duplicate-detection (`has_duplicates`, used by `verify_no_local_duplications`) could stay type-based for as long as it did: type-level comparison was never the broken part. In v3 it compares whole annotations (`annotation_info::operator==`, routed through `extract`), which is what makes `[[=rbe::little, =rbe::big]]` come out as a dimension conflict rather than as a duplicate.
 
 ## Open: annotation scope (struct-level vs. member-level only)
 

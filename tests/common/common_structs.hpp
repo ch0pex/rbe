@@ -11,8 +11,9 @@
 #pragma once
 
 #include <rbe/annotations/alignment.hpp>
+#include <rbe/annotations/bits.hpp>
 #include <rbe/annotations/derive.hpp>
-#include <rbe/annotations/detail/base.hpp>
+#include <rbe/annotations/detail/annotation.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/format.hpp>
 #include <rbe/annotations/id.hpp>
@@ -337,15 +338,13 @@ struct[[=rbe::id]]     TestId{};
 struct[[=rbe::frame_length]] TestLength{};
 struct[[=rbe::debug]]  TestDebug{};
 
-inline constexpr struct {} annotation_a {};
-inline constexpr struct {} annotation_b {}; // deliberately NOT specialized -- stays a non-RBE annotation
-inline constexpr struct {} annotation_c {};
+// user-defined annotations, written with the one and only recipe: a tag + the factory object
+struct annotation_a_tag { };
+struct annotation_c_tag { };
 
-template<>
-struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(annotation_a)>> { };
-
-template<>
-struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(annotation_c)>> { };
+inline constexpr rbe::detail::annotation_kind<annotation_a_tag> annotation_a {};
+inline constexpr struct {} annotation_b {}; // deliberately not built with the recipe -- a non-RBE annotation
+inline constexpr rbe::detail::annotation_kind<annotation_c_tag> annotation_c {};
 struct [[=annotation_a]] AnnotatedStructA {
   int x;
   double y;
@@ -493,6 +492,28 @@ struct [[=rbe::id(test_msg_type_t::heartbeat), =rbe::id]] IdValueAndMarker {
 };
 
 struct [[=rbe::id(test_msg_type_t::heartbeat), =rbe::id(test_msg_type_t::add_order)]] TwoIdValues { };
+
+// --- bits ---
+struct BitsField {
+  [[=rbe::bits(3, 0)]] std::uint8_t flags;
+};
+
+struct BitsWiderThanField {
+  [[=rbe::bits(9, 0)]] std::uint8_t flags; // bit 9 does not exist in an 8 bit field
+};
+
+struct BitsOnNonIntegral {
+  [[=rbe::bits(3, 0)]] double value;
+};
+
+struct BitsAndEndianness {
+  [[=rbe::little, =rbe::bits(3, 0)]] std::uint8_t flags; // same dimension, one annotation range
+};
+
+// one message declares one id, whatever its value: the nested message already declares its own
+struct [[=rbe::id(test_msg_type_t::add_order)]] TwoIdValuesNested {
+  MsgWithIdValue nested;
+};
 
 struct IdValueOnScalar {
   [[=rbe::id(test_msg_type_t::heartbeat)]] std::uint8_t x; // id(value) is struct-level

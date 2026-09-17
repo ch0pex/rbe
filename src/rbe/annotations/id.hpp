@@ -11,70 +11,52 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/detail/dimension.hpp>
+#include <rbe/annotations/detail/annotation_info.hpp>
 #include <rbe/core/detail/introspection.hpp>
 #include <rbe/core/detail/invoke_concept.hpp>
 
 // --- STD ---
 #include <concepts>
-#include <type_traits>
 
 namespace rbe {
 
 namespace detail {
 
-/**
- * The id a message type is dispatched under -- the annotation value produced by `rbe::id(value)`.
- * Never spelled directly: `struct [[=rbe::id(25)]] Heartbeat {};`
- */
-template<std::equality_comparable T>
-struct id_value {
-  T value;
-  consteval explicit id_value(T const value) : value(value) { }
+struct id_dim {
+  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::unique;
 };
+
+struct id_tag { // clang-format off
+  using dimension  = id_dim;
+  using value_type = deduced;
+
+  static constexpr auto marker   = true; ///< the bare `rbe::id` is an annotation of its own
+  static constexpr auto identity = identity_kind::kind;
+
+  static consteval auto check(annotation_info const ann, std::meta::info const entity) -> bool {
+    if (ann.has_value()) { // rbe::id(value): declares the id of a message type
+      return is_class_type(normalize_type(entity))
+             and invoke_concept(^^std::equality_comparable, {ann.value_type()});
+    }
+    // rbe::id: marks the field the id is read from
+    return invoke_concept(^^std::equality_comparable, {normalize_type(entity)});
+  }
+}; // clang-format on
 
 } // namespace detail
 
 /**
- * `id` and `id(value)` are the two halves of message identity -- where the id lives on the wire, and
- * which id a type is dispatched under -- so they share a dimension: they may not appear in the same
- * annotation range (a field is one or the other, never both), and neither may repeat across the
- * whole (deep) type. They are not exclusive with any other dimension: a message may carry an id and
- * any of the length annotations.
- */
-struct id_dim {
-  static constexpr auto kind = detail::dimension_kind::exclusive | detail::dimension_kind::unique;
-};
-
-/**
- * @brief Message id annotations
+ * @brief Where a type's id lives on the wire, and which id a message type answers to.
  *
- * `[[=rbe::id]]` on a member marks the field the id is read from on the wire; `[[=rbe::id(value)]]`
- * on a struct declares the id that message type is dispatched under. The call is `consteval`, so the
- * value is baked into the annotation's type.
+ * Ids can be used to recognize a message type on the wire, and to select the right type
+ * to deserialize into.
+ *
+ * To express ids there are two forms of the annotation:
+ *   - `rbe::id(value)` declares the id of a type.
+ *   - `rbe::id` marks the field that carries the id.
+ *
+ * @note The field annotated and the value annotated as id must be comparable.
  */
-inline constexpr struct {
-  consteval auto operator()(std::equality_comparable auto const value) const { // clang-format off
-    return detail::id_value {value};
-  } // clang-format on
-} id {}; /// < message id
+inline constexpr detail::annotation_kind<detail::id_tag> id {};
 
 } // namespace rbe
-
-template<>
-struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::id)>> {
-  using dimension = rbe::id_dim;
-
-  static consteval auto check(std::meta::info const /**/, std::meta::info const entity) -> bool { // clang-format off
-     return invoke_concept(^^std::equality_comparable, {normalize_type(entity)});
-   } // clang-format on
-};
-
-template<typename T>
-struct rbe::detail::annotation_traits<rbe::detail::id_value<T>> {
-  using dimension = rbe::id_dim;
-
-  static consteval auto check(std::meta::info const /**/, std::meta::info const entity) -> bool { // clang-format off
-    return is_class_type(normalize_type(entity));
-  } // clang-format on
-};

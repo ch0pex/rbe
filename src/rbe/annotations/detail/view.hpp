@@ -4,44 +4,46 @@
  ************************************************************************/
 /**
  * @file view.hpp
- * @version 1.0
+ * @version 2.0
  * @date 15/08/2026
  * @brief Range adaptor that flattens annotations and annotation lists into a single view
  */
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/detail/base.hpp>
-#include <rbe/core/detail/introspection.hpp>
+#include <rbe/annotations/detail/annotation_info.hpp>
 
+// --- STD ---
+#include <ranges>
+#include <vector>
 
 namespace rbe::detail::views {
 
-consteval auto types_of_rbe_annotation(std::meta::info const info) {
-  if (is_annotation_list(info)) {
-    auto const args = template_arguments_of(type_of(info));
-    return args | std::views::transform(normalize_type) | std::ranges::to<std::vector>();
+/**
+ * @brief The annotations one raw attribute denotes: a `derive<...>` list expands into its
+ * constituents (recursively), a plain RBE annotation is itself, anything else vanishes.
+ */
+consteval auto expand_annotation(std::meta::info const raw) -> std::vector<annotation_info> {
+  if (is_annotation_list(raw)) {
+    std::vector<annotation_info> expanded;
+    for (auto const arg: template_arguments_of(normalize_type(raw))) {
+      expanded.append_range(expand_annotation(arg));
+    }
+    return expanded;
   }
-  return std::vector {normalize_type(info)};
+  return is_rbe_annotation(raw) ? std::vector {annotation_info {raw}} : std::vector<annotation_info> {};
 }
 
-struct rbe_annotations_view_fn : std::ranges::range_adaptor_closure<rbe_annotations_view_fn> {
+struct annotations_view_fn : std::ranges::range_adaptor_closure<annotations_view_fn> {
   template<std::ranges::range R>
     requires std::ranges::viewable_range<R>
   consteval auto operator()(R const& r) const {
     return r // all annotations
-           | std::views::filter(is_rbe_annotation) // filter out non-rbe annotations
-           | std::views::transform(types_of_rbe_annotation) // normalize lists and annotations to ranges of annotations
+           | std::views::transform(expand_annotation) // drop non-rbe ones, expand the lists
            | std::views::join; // join back to one single range of annotations
-  }
-
-  consteval auto operator()(auto value) const
-    requires annotation<decltype(value)> or annotation_list<decltype(value)>
-  {
-    return types_of_rbe_annotation(^^value);
   }
 };
 
-inline constexpr rbe_annotations_view_fn rbe_annotations;
+inline constexpr annotations_view_fn annotations;
 
 } // namespace rbe::detail::views

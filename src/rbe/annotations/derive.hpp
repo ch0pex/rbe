@@ -12,7 +12,7 @@
 
 // --- Includes ---
 #include <rbe/annotations/alignment.hpp>
-#include <rbe/annotations/detail/base.hpp>
+#include <rbe/annotations/detail/annotation.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/format.hpp>
 
@@ -36,8 +36,9 @@ template<auto... Args>
 inline constexpr detail::annotations_t<Args...> derive {};
 
 // --- Builtin Annotation lists ---
-inline constexpr auto pack_le = derive<pack, little>; /// < pack with little-endian semantics
-inline constexpr auto pack_be = derive<pack, big>;    /// < pack with big-endian semantics
-inline constexpr auto debug   = derive<fmt>;          /// < debug annotation
+
+inline constexpr auto pack_le = derive<pack, little>;
+inline constexpr auto pack_be = derive<pack, big>;
+inline constexpr auto debug   = derive<fmt>;
 
 } // namespace rbe

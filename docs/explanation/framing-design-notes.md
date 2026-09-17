@@ -51,7 +51,7 @@ actually differs between levels:
 | `frame_header` | `frame_concepts.hpp` | every level — a header is never lowered |
 | `is_frame` | `frame_concepts.hpp` | every level — `header_type` + `payload_type`, nothing else |
 | `frame_payload` | `frame_concepts.hpp` | `dsrl` and `srl` — the payload categories over the bytes |
-| `self_delimiting_frame`, `buffer_delimited_frame`, … | `frame_delimiting_concepts.hpp` | every level, via `is_frame` |
+| `self_delimiting_frame`, `buffer_delimited_frame`, `dispatch_delimited_frame`, … | `frame_delimiting_concepts.hpp` | every level, via `is_frame` |
 | `frame_serder_payload`, `serder_traits`, `frame_serder` | `frame_serder_concepts.hpp` | the vocabulary level |
 | `dsrl::is_frame` | `dsrl/frame_concepts.hpp` | the deserializer API |
 | `srl::is_frame` | `srl/frame_concepts.hpp` | the serializer API (TODO) |
@@ -65,9 +65,10 @@ actually differs between levels:
   is either a wirable message or a type that lowers itself (`serder_traits`), which is what `blob`, `many`,
   `any` and nested frames have in common. The short names belong to the shared core; the vocabulary level,
   which is the one that owns the serder traits, keeps the `_serder` prefix.
-- **Open.** `is_any` and `is_many` are still `= true` placeholders, so `frame_payload` is currently
-  satisfied by anything. Once they are real concepts `serder_traits` can fold into the same disjunction, and
-  `frame_payload` and `frame_serder_payload` become one concept.
+- `is_any` / `is_many` are detected by a tag base (`rbe::detail::any_tag`, `many_tag`), which both the
+  vocabulary type and its lowering inherit **publicly** — `std::derived_from` needs the base to be reachable,
+  so a `class` vocabulary type must say `public`. Now that they are real, `serder_traits` could fold into the
+  same disjunction and `frame_payload` / `frame_serder_payload` become one concept.
 
 ---
 
@@ -263,8 +264,12 @@ Constrain `many` once `any_id` exists.
 
 ## 5. `any` with id-implied lengths (`any_id`)
 
-**Decided.** `rbe::any<Ts...>` counts as self-delimiting when every alternative is (fixed-size, or itself
-delimited). Users need `many<frame<Header, any<Msgs...>>>`, and many protocols imply each message's length
+**Implemented (classification).** `rbe::any<Ts...>` counts as self-delimiting when every alternative is
+(fixed-size, or itself delimited). `payload_extent_of()` returns `any_id` for an `any` payload and
+`rbe::dispatch_delimited_frame` picks those frames out, so callers can tell apart the frames whose `length()`
+costs an id dispatch; resolving the id at runtime is still pending. **Open:** the classification does not yet
+check that every alternative *does* imply its length, so an `any` holding a variable-size alternative would be
+classified `any_id` anyway. Users need `many<frame<Header, any<Msgs...>>>`, and many protocols imply each message's length
 from its id rather than a header field. When the header carries *both* a length field and an id, the length
 field wins: it is cheaper and tolerates unknown ids (see [§6](#6-unknown-ids)).
 

@@ -11,14 +11,23 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/detail/dimension.hpp>
+#include <rbe/annotations/detail/annotation_info.hpp>
 #include <rbe/core/detail/introspection.hpp>
 
 // --- STD ---
 #include <cstddef>
-#include <type_traits>
+#include <cstdint>
 
 namespace rbe {
+
+namespace detail {
+
+/// Which length a field encodes.
+enum class length_kind : std::uint8_t {
+  frame, ///< total frame length: header + payload
+  payload, ///< payload length: frame minus header
+  header, ///< header length
+};
 
 /**
  * A field encodes exactly one length, so the three annotations may not share an annotation range;
@@ -26,43 +35,42 @@ namespace rbe {
  * of frame/payload/header lengths, each at most once.
  */
 struct length_dim {
-  static constexpr auto kind = detail::dimension_kind::exclusive | detail::dimension_kind::unique;
+  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::unique;
 };
 
 /**
- * @brief Message length annotations
+ * The three lengths are three values of one annotation, not three annotations: they share a dimension,
+ * a check and a spelling, and they are told apart by their value alone.
  */
-// clang-format off
-inline constexpr struct {} frame_length {};   /// < total frame length: header + payload
-inline constexpr struct {} payload_length {}; /// < payload length: frame minus header
-inline constexpr struct {} header_length {};  /// < header length
-// clang-format on
+struct length_tag {
+  using dimension  = length_dim;
+  using value_type = length_kind;
+
+  /// The annotated field must be able to hold a length.
+  static consteval auto check(annotation_info const /**/, std::meta::info const entity) -> bool {
+    return is_convertible_type(normalize_type(entity), ^^std::size_t);
+  }
+};
+
+} // namespace detail
+
+/// Which of the three lengths on the wire a field encodes.
+using length_kind = detail::length_kind;
+
+/**
+ * @brief Marks the field that encodes a length on the wire.
+ *
+ * A type may carry any combination of the three lengths, each on its own field and each at most
+ * once; the annotated field must be convertible to `std::size_t`.
+ *
+ * Length ssemantics:
+ * - frame_length: the total frame length, header + payload
+ * - payload_length: the payload length, frame minus header
+ * - header_length: the header length
+ */
+inline constexpr detail::annotation_kind<detail::length_tag> length {};
+inline constexpr auto frame_length   = length(length_kind::frame);
+inline constexpr auto payload_length = length(length_kind::payload);
+inline constexpr auto header_length  = length(length_kind::header);
 
 } // namespace rbe
-
-template<>
-struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::frame_length)>> {
-  using dimension = rbe::length_dim;
-
-  static consteval auto check(std::meta::info const /**/, std::meta::info const entity) -> bool { // clang-format off
-    return is_convertible_type(normalize_type(entity), ^^std::size_t);
-  } // clang-format on
-};
-
-template<>
-struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::payload_length)>> {
-  using dimension = rbe::length_dim;
-
-  static consteval auto check(std::meta::info const /**/, std::meta::info const entity) -> bool { // clang-format off
-    return is_convertible_type(normalize_type(entity), ^^std::size_t);
-  } // clang-format on
-};
-
-template<>
-struct rbe::detail::annotation_traits<std::remove_cvref_t<decltype(rbe::header_length)>> {
-  using dimension = rbe::length_dim;
-
-  static consteval auto check(std::meta::info const /**/, std::meta::info const entity) -> bool { // clang-format off
-    return is_convertible_type(normalize_type(entity), ^^std::size_t);
-  } // clang-format on
-};

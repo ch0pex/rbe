@@ -15,6 +15,7 @@
 // --- STD ---
 #include <algorithm>
 #include <meta>
+#include <optional>
 #include <ranges>
 
 // --- System ---
@@ -23,8 +24,16 @@ namespace rbe::detail {
 
 inline constexpr auto default_context = std::meta::access_context::unchecked();
 
+/**
+ * @brief The plain, cv-unqualified, alias-free type denoted by `info` -- the type itself if `info` is
+ * one, the type of the entity otherwise.
+ *
+ * `dealias` is not optional: `^^SomeAliasName` reflects the *alias*, and compares unequal to a
+ * reflection of the type it names, so every type identity check in the library would silently fail for
+ * a type spelled through an alias (e.g. `std::remove_cvref_t<decltype(x)>`).
+ */
 consteval auto normalize_type(std::meta::info const info) -> std::meta::info {
-  return not is_type(info) ? remove_cvref(type_of(info)) : remove_cvref(info);
+  return dealias(not is_type(info) ? remove_cvref(type_of(info)) : remove_cvref(info));
 };
 
 consteval auto nsdm(std::meta::info info, std::meta::access_context ctx = default_context) {
@@ -103,6 +112,32 @@ consteval auto static_member_functions_of(std::meta::info const info, std::meta:
   return members_of(info, ctx) | std::views::filter(is_static_member_function) | std::ranges::to<std::vector>();
 }
 
+consteval auto static_data_member(
+    std::meta::info const info, //
+    std::string_view const identifier, //
+    std::meta::access_context ctx = default_context //
+) -> std::optional<std::meta::info> {
+  for (auto const member: static_data_members_of(info, ctx)) {
+    if (has_identifier(member) and identifier_of(member) == identifier) {
+      return member;
+    }
+  }
+  return std::nullopt;
+}
+
+consteval auto static_member_function(
+    std::meta::info const info, //
+    std::string_view const identifier, //
+    std::meta::access_context ctx = default_context //
+) -> std::optional<std::meta::info> {
+  for (auto const member: static_member_functions_of(info, ctx)) {
+    if (has_identifier(member) and identifier_of(member) == identifier) {
+      return member;
+    }
+  }
+  return std::nullopt;
+}
+
 consteval auto member_aliases_of(std::meta::info const info, std::meta::access_context ctx = default_context)
     -> std::vector<std::meta::info> {
   return members_of(info, ctx) //
@@ -110,18 +145,27 @@ consteval auto member_aliases_of(std::meta::info const info, std::meta::access_c
          | std::ranges::to<std::vector>();
 }
 
+/// The member alias named `identifier` (NOT dealiased -- see `member_alias_of`), or nullopt.
+consteval auto find_member_alias( //
+    std::meta::info const info, //
+    std::string_view const identifier, //
+    std::meta::access_context ctx = default_context //
+) -> std::optional<std::meta::info> {
+  for (auto const alias: member_aliases_of(info, ctx)) {
+    if (has_identifier(alias) and identifier_of(alias) == identifier) {
+      return alias;
+    }
+  }
+  return std::nullopt;
+}
+
 consteval auto member_alias_of( //
     std::meta::info const info,  //
     std::string_view const identifier,  //
     std::meta::access_context ctx = default_context //
 ) -> std::meta::info {
-  auto const aliases = member_aliases_of(info, ctx);
-  auto it            = std::ranges::find_if(aliases, [&](std::meta::info const alias) {
-    return has_identifier(alias) and identifier_of(alias) == identifier;
-  });
-
-  if (it != aliases.end()) {
-    return *it;
+  if (auto const alias = find_member_alias(info, identifier, ctx)) {
+    return *alias;
   }
 
   throw std::meta::exception("invalid member alias, no such member alias", ^^member_alias_of);

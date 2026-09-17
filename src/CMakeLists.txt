@@ -14,13 +14,14 @@ target_sources(
 
         # annotations
         rbe/annotations/detail/annotated_nsdm.hpp
-        rbe/annotations/detail/base.hpp
+        rbe/annotations/detail/annotation.hpp
+        rbe/annotations/detail/annotation_info.hpp
         rbe/annotations/detail/correctness.hpp
         rbe/annotations/detail/dimension.hpp
-        rbe/annotations/detail/traits.hpp
         rbe/annotations/detail/utils.hpp
         rbe/annotations/detail/view.hpp
         rbe/annotations/alignment.hpp
+        rbe/annotations/bits.hpp
         rbe/annotations/derive.hpp
         rbe/annotations/endianness.hpp
         rbe/annotations/format.hpp

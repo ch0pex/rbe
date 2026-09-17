@@ -103,7 +103,9 @@ as it.** It is today's `any_msg` with the framing half removed. What that means 
 - **`frame::match(...)` is a forwarder** to `payload().match(...)`, kept because `frame` is the object
   callers hold. `frame::payload()` still hands out the `any` itself for anyone who wants to keep it.
 - **Candidate ids come from `rbe::id(value)` on the candidate** rather than
-  `default_annotation_value<rbe::id, U>()` reading an embedded `Header` — the same
+  `default_annotation_value<rbe::id, U>()` reading an embedded `Header`. Reading it back is
+  `rbe::detail::find_annotation(^^Candidate, ^^rbe::detail::id_tag)`, whose `annotation_info` hands over both the
+  id's value (`value<T>()`) and the type it was declared with (`value_type()`) — the same
   `msg_list::ids` array (`message_list.hpp:42-49`), sourced differently. The candidates' common id type
   must match the header's `id_field` type; that is checkable where `frame` is instantiated.
 

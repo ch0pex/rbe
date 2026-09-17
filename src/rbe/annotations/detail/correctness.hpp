@@ -4,13 +4,12 @@
  ************************************************************************/
 /**
  * @file correctness.hpp
- * @version 1.0
+ * @version 2.0
  * @date 15/08/2026
  * @brief Annotation dimension definitions and correctness checks used by well_annotated
  */
 #pragma once
 
-#include <rbe/annotations/detail/dimension.hpp>
 #include <rbe/annotations/detail/utils.hpp>
 #include <rbe/core/detail/introspection.hpp>
 
@@ -42,7 +41,11 @@ consteval auto verify_dimension_correctness(std::meta::info info, std::meta::inf
 
 consteval auto verify_global_unique_dimension(std::meta::info const type, std::meta::info const dim) -> bool {
   auto const in_dim = deep_annotations(type) | std::views::filter(by_dimension(dim)) | std::ranges::to<std::vector>();
-  return std::ranges::all_of(in_dim, [&in_dim](std::meta::info const a) { return std::ranges::count(in_dim, a) <= 1; });
+  return std::ranges::all_of(in_dim, [&in_dim](annotation_info const one) {
+    return std::ranges::count_if(in_dim, [one](annotation_info const other) { //
+      return one.identity_equals(other);
+    }) <= 1;
+  });
 }
 
 // --- No duplicated annotations ---
@@ -73,8 +76,7 @@ consteval auto verify_no_local_duplications(std::meta::info info) -> bool {
 consteval auto dimensions_used_in(std::meta::info const type) -> std::vector<std::meta::info> {
   std::vector<std::meta::info> dims;
   for (auto const ann: deep_annotations(type)) {
-    if (auto const dim = dimension_of(normalize_type(ann));
-        dim != std::meta::info {} and not std::ranges::contains(dims, dim)) {
+    if (auto const dim = ann.dimension(); dim != std::meta::info {} and not std::ranges::contains(dims, dim)) {
       dims.push_back(dim);
     }
   }
@@ -94,25 +96,24 @@ consteval auto verify_dimension(std::meta::info const type, std::meta::info cons
 
 // --- Local constraints : verify that every annotation found in `type` satisfies its own correctness rule
 
-consteval auto verify_check(std::meta::info const value, std::meta::info const entity) -> bool {
-  auto const traits = traits_of(normalize_type(value));
-  if (not traits) {
-    throw std::meta::exception("annotation is not marked with annotation_traits<T>", ^^verify_check);
-  }
-
-  auto static_member_fns = static_member_functions_of(*traits);
-  auto const check_fn    = std::ranges::find(static_member_fns, std::string {"check"}, std::meta::identifier_of);
-  if (check_fn == std::ranges::end(static_member_fns)) {
+/**
+ * Runs the annotation's own `check`, declared on its tag, if it declares one. The check is reached
+ * reflectively -- `check` is a static member function of a type only known at this point as a
+ * reflection.
+ */
+consteval auto verify_check(annotation_info const ann, std::meta::info const entity) -> bool {
+  auto const check = static_member_function(ann.tag(), "check");
+  if (not check) {
     return true;
   }
 
-  using check_fn_t = bool (*)(std::meta::info const, std::meta::info const);
-  return std::meta::extract<check_fn_t>(*check_fn)(value, entity);
+  using check_fn = bool (*)(annotation_info const, std::meta::info const);
+  return extract<check_fn>(*check)(ann, entity);
 }
 
 consteval auto verify_local_constraints(std::meta::info info) -> bool {
-  auto check = std::ranges::all_of(annotation_range(info), [info](std::meta::info value) { //
-    return verify_check(value, info);
+  auto check = std::ranges::all_of(annotation_range(info), [info](annotation_info const ann) { //
+    return verify_check(ann, info);
   });
 
   info = normalize_type(info);

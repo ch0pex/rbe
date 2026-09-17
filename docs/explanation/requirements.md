@@ -162,7 +162,7 @@ Example: if `Header` is annotated `big` on its type, then `[[=rbe::little]] Head
 ### Implicit Annotations
 
 - **REQ-075**: The library MUST support implicit annotations for member convenience
-- **REQ-076**: Members without explicit annotations should get reasonable defaults (native endianness and standard alignment)
-- **REQ-077**: Implicit endianness IS ALLOWED (members without explicit endianness annotation use platform native endianness)
+- **REQ-076**: Members without explicit annotations should get reasonable defaults (little-endian byte order and standard alignment)
+- **REQ-077**: Implicit endianness IS ALLOWED (members without an explicit endianness annotation are little-endian). The default is a *fixed* byte order and deliberately not the host's: a host-dependent default makes the wire format of the same program differ between a little-endian and a big-endian build, so two machines running the same code cannot interoperate. The host's order stays reachable explicitly, via `=rbe::order(rbe::endian::order::native)`, for data that never leaves the machine
 - **REQ-078**: Configuration mechanism MUST exist to enforce explicit endianness mode for safety-critical contexts where platform independence is required
 - **REQ-079**: Implicit behavior must be well-documented and its dangers for network communication clearly warned
