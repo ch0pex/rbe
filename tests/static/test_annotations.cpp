@@ -302,4 +302,9 @@ static_assert(id_of_callable<MsgWithIdValue>);
 static_assert(not id_of_callable<IdHeader>);
 static_assert(not id_of_callable<PlainRecord>);
 
+// --- id_type_of: the type the id was written as, with the value it was written as ---
+static_assert(std::same_as<rbe::id_type<MsgWithIdValue>, test_msg_type_t>);
+static_assert(std::same_as<rbe::id_type<MsgWithInlineId>, test_msg_type_t>);
+static_assert(std::same_as<rbe::id_type<MsgWithIntId>, int>);
+
 } // namespace

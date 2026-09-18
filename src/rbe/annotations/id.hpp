@@ -114,4 +114,7 @@ consteval auto id_of() {
   return detail::value_of<id_annotation.value()>();
 }
 
+template<typename T>
+using id_type = std::remove_cvref_t<decltype(id_of<T>())>;
+
 } // namespace rbe
