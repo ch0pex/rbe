@@ -10,7 +10,9 @@
 
 // --- Includes ---
 #include "common_structs.hpp"
+#include "rbe/annotations/detail/utils.hpp"
 
+#include <concepts>
 #include <rbe/annotations/detail/annotated_nsdm.hpp>
 #include <rbe/annotations/detail/annotation.hpp>
 
@@ -262,5 +264,23 @@ static_assert(rbe::detail::resolve_in_scope<rbe::endian::order>(^^TestPack) == s
 static_assert(rbe::detail::resolve_in_scope<rbe::alignment_mode>(^^TestPack) == rbe::alignment_mode::pack);
 static_assert(rbe::detail::resolve_in_scope<rbe::endian::order>(^^Parent::child) == rbe::endian::order::big);
 static_assert(rbe::detail::resolve_in_scope<rbe::alignment_mode>(^^Parent::child) == rbe::alignment_mode::pack);
+
+
+// --- 
+enum class test_case { add, remove, };
+struct [[=test_case::remove, =rbe::id(test_case::add)]] Message { };
+
+static_assert(rbe::detail::resolve_in_scope<test_case>(^^Message) == test_case::add);
+
+
+
+template<std::meta::info 
+consteval auto get() {
+
+}
+
+
+static_assert(type_id<Message, test_case>() == test_case::add);
+
 
 } // namespace
