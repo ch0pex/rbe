@@ -53,12 +53,8 @@ struct struct_layout {
  * `pack` propagate correctly through arbitrarily deep unannotated nesting, exactly like endianness.
  */
 consteval auto wire_size_of(std::meta::info const info, detail::context const ctx) -> std::size_t {
-  auto const local = detail::merge_context(ctx, info); // info's own annotation overrides the ambient
-  // remove_all_extents: an array of primitives (e.g. std::array's own raw C-array member, reached one
-  // recursion hop below) is a leaf here too -- it has no inter-element padding to strip regardless of
-  // packing, and unlike a genuine aggregate it has no reflectable non-static data members to recurse
-  // into at all.
-  if (local.alignment == alignment_mode::native or is_trivially_wirable_primitive(remove_all_extents(info))) {
+  auto const local = detail::merge_context(ctx, info);
+  if (local.alignment == alignment_mode::align or is_trivially_wirable_primitive(remove_all_extents(info))) {
     return size_of(info);
   }
 
@@ -76,13 +72,6 @@ consteval auto wire_size_of(std::meta::info const info, detail::context const ct
 consteval auto wire_size_of(std::meta::info const info) -> std::size_t {
   return wire_size_of(info, detail::context {});
 }
-
-// NOTE: at some point if compile times get really bad maybe we should consider caching the results
-// of these functions in static constexpr variables. Referencing to static constexpr however is
-// buggy in clang so returning by value is the only safe option for now.
-// Related threads:
-// - https://github.com/llvm/llvm-project/issues/82994
-// - https://github.com/llvm/llvm-project/issues/61425
 
 consteval auto get_struct_layout(std::meta::info const info) -> struct_layout {
   auto const members = detail::nsdm(info);
@@ -164,7 +153,7 @@ consteval auto get_wire_layout_packed(std::meta::info const info, detail::contex
  * `pack` propagate correctly through arbitrarily deep unannotated nesting, exactly like endianness.
  */
 consteval auto get_wire_layout(std::meta::info const info, detail::context const ctx) -> struct_layout {
-  if (detail::merge_context(ctx, info).alignment != alignment_mode::native) {
+  if (detail::merge_context(ctx, info).alignment != alignment_mode::align) {
     return get_wire_layout_packed(info, ctx);
   }
   return get_wire_layout_padded(info, ctx);
@@ -178,9 +167,22 @@ consteval auto get_wire_layout(std::meta::info const info) -> struct_layout {
   return get_wire_layout(info, detail::context {});
 }
 
+// NOTE: at some point if compile times get really bad maybe we should consider caching the results
+// of these functions in static constexpr variables. Referencing to static constexpr however is
+// buggy in clang so returning by value is the only safe option for now.
+// Related threads:
+// - https://github.com/llvm/llvm-project/issues/82994
+// - https://github.com/llvm/llvm-project/issues/61425
+//
+// NOTE: The time has come, so these functions are now cached;
+// the compilation times for the market examples have been reduced by 5
+// // TODO: and I should be the only functions visible to the user of thise module.
+//
+
 template<wirable T, detail::context Ctx = detail::context {}>
 consteval auto wire_size_of() -> std::size_t {
-  return wire_size_of(^^T, Ctx);
+  static constexpr auto size = wire_size_of(^^T, Ctx);
+  return size;
 }
 
 template<wirable_primitive T, detail::context Ctx = detail::context {}>
@@ -190,12 +192,14 @@ consteval auto wire_size_of() -> std::size_t {
 
 template<wirable_class T>
 consteval auto get_struct_layout() -> struct_layout {
-  return get_struct_layout(^^T);
+  static constexpr auto layout = get_struct_layout(^^T);
+  return layout;
 }
 
 template<wirable_class T, detail::context Ctx = detail::context {}>
 consteval auto get_wire_layout() -> struct_layout {
-  return get_wire_layout(^^T, Ctx);
+  static constexpr auto layout = get_wire_layout(^^T, Ctx);
+  return layout;
 }
 
 } // namespace rbe

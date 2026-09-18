@@ -20,12 +20,7 @@ namespace rbe {
 
 namespace detail {
 
-/**
- * The alignment strategies a type or member can be annotated with. `native` (regular padded layout)
- * is the default and is only ever reached implicitly, as the value nothing along the way overrode;
- * `align` is how it is said out loud.
- */
-enum class alignment_mode : std::uint8_t { native, pack, align };
+enum class alignment_mode : std::uint8_t { pack, align };
 
 /**
  * At most one alignment-dimension annotation may appear within a single annotation range. The
@@ -33,7 +28,7 @@ enum class alignment_mode : std::uint8_t { native, pack, align };
  */
 struct alignment_dim {
   static constexpr auto kind          = dimension_kind::exclusive;
-  static constexpr auto default_value = alignment_mode::native;
+  static constexpr auto default_value = alignment_mode::align;
 };
 
 /// Layout semantics: `rbe::alignment(alignment_mode::pack)`, or the `pack`/`align` aliases.
