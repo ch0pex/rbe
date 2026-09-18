@@ -10,7 +10,9 @@
 
 // --- Includes ---
 #include "common_structs.hpp"
+#include "rbe/annotations/detail/utils.hpp"
 
+#include <concepts>
 #include <rbe/annotations/detail/annotated_nsdm.hpp>
 #include <rbe/annotations/detail/annotation.hpp>
 
@@ -28,6 +30,7 @@
 // --- STD ---
 #include <array>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 namespace {
@@ -262,5 +265,41 @@ static_assert(rbe::detail::resolve_in_scope<rbe::endian::order>(^^TestPack) == s
 static_assert(rbe::detail::resolve_in_scope<rbe::alignment_mode>(^^TestPack) == rbe::alignment_mode::pack);
 static_assert(rbe::detail::resolve_in_scope<rbe::endian::order>(^^Parent::child) == rbe::endian::order::big);
 static_assert(rbe::detail::resolve_in_scope<rbe::alignment_mode>(^^Parent::child) == rbe::alignment_mode::pack);
+
+
+// --- identifiable: the type declares the id it answers to ---
+static_assert(rbe::identifiable<MsgWithIdValue>);
+static_assert(rbe::identifiable<MsgWithInlineId>);
+static_assert(rbe::identifiable<MsgWithIntId>);
+static_assert(not rbe::identifiable<IdHeader>); // carries the field, declares no value of its own
+static_assert(not rbe::identifiable<PlainRecord>);
+static_assert(not rbe::identifiable<IdValueOnScalar>); // the value sits on a member, not on the type
+
+// --- identifying: a field of the type's own carries the id ---
+static_assert(rbe::identifying<IdHeader>);
+static_assert(rbe::identifying<MsgWithInlineId>);
+static_assert(not rbe::identifying<MsgWithIdValue>); // the marker is nested one level down, not its own
+static_assert(not rbe::identifying<MsgWithIntId>);
+static_assert(not rbe::identifying<PlainRecord>);
+
+// --- self_identifying: both halves, so nothing else is needed to recognize it ---
+static_assert(rbe::self_identifying<MsgWithInlineId>);
+static_assert(not rbe::self_identifying<MsgWithIdValue>); // declares its id, but composes the field
+static_assert(not rbe::self_identifying<IdHeader>); // carries the field, but answers to no id
+static_assert(not rbe::self_identifying<PlainRecord>);
+
+// --- id_of: the declared value, with the type it was written as ---
+static_assert(rbe::id_of<MsgWithIdValue>() == test_msg_type_t::heartbeat);
+static_assert(rbe::id_of<MsgWithInlineId>() == test_msg_type_t::add_order);
+static_assert(std::same_as<decltype(rbe::id_of<MsgWithIdValue>()), test_msg_type_t>);
+static_assert(rbe::id_of<MsgWithIntId>() == 7); // deduced: an id need not be an enum
+static_assert(std::same_as<decltype(rbe::id_of<MsgWithIntId>()), int>);
+
+template<typename T>
+concept id_of_callable = requires { rbe::id_of<T>(); };
+
+static_assert(id_of_callable<MsgWithIdValue>);
+static_assert(not id_of_callable<IdHeader>);
+static_assert(not id_of_callable<PlainRecord>);
 
 } // namespace

@@ -493,6 +493,22 @@ struct [[=rbe::id(test_msg_type_t::heartbeat), =rbe::id]] IdValueAndMarker {
 
 struct [[=rbe::id(test_msg_type_t::heartbeat), =rbe::id(test_msg_type_t::add_order)]] TwoIdValues { };
 
+// both halves on one type: the id it answers to, and a field of its own to read it from
+struct [[=rbe::id(test_msg_type_t::add_order)]] MsgWithInlineId {
+  [[=rbe::id]] test_msg_type_t type;
+  std::uint32_t                timestamp;
+};
+
+// the id's type is deduced from the annotation: not every id is an enum
+struct [[=rbe::id(7)]] MsgWithIntId {
+  std::uint32_t timestamp;
+};
+
+// carries neither half
+struct PlainRecord {
+  std::uint32_t timestamp;
+};
+
 // --- bits ---
 struct BitsField {
   [[=rbe::bits(3, 0)]] std::uint8_t flags;

@@ -25,8 +25,10 @@
 
 namespace rbe::detail {
 
-class annotation_info {
-public:
+// NOTE: annotation_info is kept as a struct instead of a class
+// because it's convinietn to keep it as an structural type so it
+// can be used as a template parameter
+struct annotation_info {
   /// @throws std::meta::exception if `info` does not reflect a single RBE annotation
   consteval explicit annotation_info(std::meta::info const info) : info_ {info} {
     if (is_annotation_list(info)) {
@@ -61,10 +63,7 @@ public:
       return std::nullopt;
     }
     auto const payload = static_member_function(type(), "payload");
-    if (not payload) {
-      return std::nullopt;
-    }
-    using payload_fn = T (*)(std::meta::info);
+    using payload_fn   = T (*)(std::meta::info);
     return extract<payload_fn>(*payload)(info_);
   }
 
@@ -99,13 +98,19 @@ public:
     return identity_of_tag(tag()) == identity_kind::kind ? type() == other.type() : *this == other;
   }
 
-private:
   std::meta::info info_;
 };
 
 /// Filter predicate factory: keep only annotations belonging to dimension `dim`.
 consteval auto by_dimension(std::meta::info const dim) {
   return [dim](annotation_info const a) { return a.dimension() == dim; };
+}
+
+template<detail::annotation_info Ann>
+  requires(Ann.has_value())
+consteval auto value_of() {
+  using value_type = [:Ann.value_type():];
+  return *Ann.value<value_type>();
 }
 
 } // namespace rbe::detail
