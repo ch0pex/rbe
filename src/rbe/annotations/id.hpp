@@ -52,6 +52,35 @@ consteval auto declared_id(std::meta::info const type) -> std::optional<annotati
   return annotation and annotation->has_value() ? annotation : std::nullopt;
 }
 
+/// The type of the id `type` declares, as a reflection -- a null reflection if it declares none.
+consteval auto id_type_of(std::meta::info const type) -> std::meta::info {
+  auto const annotation = declared_id(type);
+  return annotation ? annotation->value_type() : std::meta::info {};
+}
+
+/**
+ * @brief The id `type` declares, read as an `Id`.
+ *
+ * The value type is named by the caller rather than deduced from `type`, which is what lets the type
+ * be an ordinary argument: `rbe::id_of<T>()` has to take it as a template parameter because its
+ * return type is whatever that one type declared. Use this where the id type is already pinned and
+ * the types are being walked -- a list of candidates known to agree on it.
+ *
+ * @throws std::meta::exception if `type` declares no id, or declares one of another type
+ */
+template<typename Id>
+consteval auto id_of(std::meta::info const type) -> Id {
+  auto const annotation = declared_id(type);
+  if (not annotation) {
+    throw std::meta::exception("type declares no `rbe::id(value)` annotation", type);
+  }
+  auto const value = annotation->value<Id>();
+  if (not value) {
+    throw std::meta::exception("the declared id is not of the requested type", type);
+  }
+  return *value;
+}
+
 } // namespace detail
 
 /**
@@ -110,11 +139,16 @@ concept self_identifying = identifiable<T> and identifying<T>;
 template<typename T>
   requires(identifiable<T>)
 consteval auto id_of() {
-  static constexpr auto id_annotation = detail::declared_id(^^T);
-  return detail::value_of<id_annotation.value()>();
+  return detail::id_of<typename [:detail::id_type_of(^^T):]>(^^T);
 }
 
+/**
+ * @brief The type of `T`'s id, as written in the annotation.
+ *
+ * For where an id has to be stored or compared rather than produced: the element type of a table of
+ * ids, or the field one is read into. Candidates belong in the same list only if they agree on it.
+ */
 template<typename T>
-using id_type = std::remove_cvref_t<decltype(id_of<T>())>;
+using id_type_of = std::remove_cvref_t<decltype(id_of<T>())>;
 
 } // namespace rbe
