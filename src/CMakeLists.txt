@@ -57,7 +57,7 @@ target_sources(
 
         # framing
         rbe/framing/detail/base_tags.hpp
-        rbe/framing/detail/message_list.hpp
+        rbe/framing/detail/candidate_list.hpp
         rbe/framing/detail/payload_extent.hpp
         rbe/framing/detail/to_dsrl_type.hpp
         rbe/framing/detail/to_srl_type.hpp

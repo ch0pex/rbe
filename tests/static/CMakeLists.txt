@@ -1,6 +1,7 @@
 
 add_library(unit_test_static STATIC
   test_annotations.cpp
+  test_candidate_list.cpp
   test_concepts.cpp
   test_dsrl_return_type.cpp
   test_framing.cpp
