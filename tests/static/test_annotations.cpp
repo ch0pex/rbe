@@ -15,6 +15,7 @@
 #include <rbe/annotations/detail/annotation.hpp>
 
 #include <rbe/annotations/alignment.hpp>
+#include <rbe/annotations/annotation_concepts.hpp>
 #include <rbe/annotations/bits.hpp>
 #include <rbe/annotations/derive.hpp>
 #include <rbe/annotations/detail/correctness.hpp>
@@ -22,7 +23,6 @@
 #include <rbe/annotations/format.hpp>
 #include <rbe/annotations/id.hpp>
 #include <rbe/annotations/length.hpp>
-#include <rbe/annotations/annotation_concepts.hpp>
 #include <rbe/core/detail/throw_check.hpp>
 
 // --- STD ---
@@ -196,13 +196,21 @@ static_assert(big_info.has_value());
 static_assert(big_info.value<rbe::endian::order>() == rbe::endian::order::big);
 static_assert(big_info.value<rbe::alignment_mode>() == std::nullopt); // right annotation, wrong value type
 
-// a marker carries nothing and belongs to no dimension
+// fmt marker carries nothing and belongs to no dimension
 inline constexpr auto fmt_info = rbe::detail::annotation_info {^^rbe::fmt};
 static_assert(not fmt_info.has_value());
 static_assert(fmt_info.tag() == ^^rbe::detail::fmt_tag);
 static_assert(fmt_info.dimension() == std::meta::info {});
 static_assert(fmt_info.value_type() == std::meta::info {});
 static_assert(fmt_info.value<int>() == std::nullopt);
+
+// id marker carries nothing and but belongs to id_dim dimension
+inline constexpr auto id_info = rbe::detail::annotation_info {^^rbe::id};
+static_assert(not id_info.has_value());
+static_assert(id_info.tag() == ^^rbe::detail::id_tag);
+static_assert(id_info.dimension() == ^^rbe::detail::id_dim);
+static_assert(id_info.value_type() == std::meta::info {});
+static_assert(id_info.value<int>() == std::nullopt);
 
 // is(): the needle's type is known statically, so the comparison never reflects it
 static_assert(big_info.is(rbe::big));
