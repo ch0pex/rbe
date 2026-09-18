@@ -83,6 +83,13 @@ struct static_string {
   consteval auto operator*() const -> target_type const& { return value; }
 
   consteval auto operator->() const -> target_type const* { return std::addressof(value); }
+
+  /// Compares the strings, not the objects. `constexpr` rather than `consteval` on purpose: the
+  /// conversion above is an immediate function, so it cannot be what a constrained algorithm
+  /// compares two of these with.
+  friend constexpr auto operator==(static_string const& lhs, static_string const& rhs) -> bool {
+    return lhs.value == rhs.value;
+  }
 };
 
 } // namespace rbe

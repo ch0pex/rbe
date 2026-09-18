@@ -556,9 +556,12 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::underlying_value)]] Underlying
 //       cannot be one of the alternatives. UnderlyingValueLastSale and
 //       UnderlyingValueBidOffer share msg_category 'Y' and are told apart by
 //       msg_type, which rbe::id cannot express yet.
+// TODO: `UnderlyingValueBidOffer` is left out because it answers to the same category as
+//       `UnderlyingValueLastSale`: telling them apart needs the composite discriminant the two
+//       structs above already flag, and a candidate list may not declare one id twice.
 using messages = rbe::any<
     EquityIndexLastSale, OpenInterest, EquityIndexEodSummary, LongQuote, ShortQuote, Administrative, SeriesMapping,
-    UnderlyingValueLastSale, UnderlyingValueBidOffer>;
+    UnderlyingValueLastSale>;
 
 /// One OPRA message: `Header` followed by the message selected by `msg_category`.
 /// TODO: the length is implied by the message category and the BBO indicator;

@@ -20,15 +20,59 @@
 #include <rbe/dsrl/proxy.hpp>
 
 // --- STD ---
+#include <algorithm>
 #include <array>
 #include <meta>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <vector>
+#include <version>
+
+#if __cpp_lib_constexpr_unordered_set >= 202502L
+#include <unordered_set>
+#endif
 
 // --- System ---
 
 namespace rbe::detail {
 
+/// NOTE: if unique_set constepxr is available it's used, otherwise a vector is
+/// used and the search is linear.
+/// If the id is not hashable, the vector is used even if unique_set is available.
+
+template<typename Id>
+concept hashable = requires(Id const& id) { std::hash<Id> {}(id); };
+
+template<typename Id>
+consteval auto insert_unique(std::vector<Id>& seen, Id const& id) -> bool {
+  if (std::ranges::contains(seen, id)) {
+    return false;
+  }
+  seen.push_back(id);
+  return true;
+}
+
+#if __cpp_lib_constexpr_unordered_set >= 202502L
+template<typename Id>
+consteval auto insert_unique(std::unordered_set<Id>& seen, Id const& id) -> bool {
+  return seen.insert(id).second;
+}
+
+template<typename Id>
+using seen_ids = std::conditional_t<hashable<Id>, std::unordered_set<Id>, std::vector<Id>>;
+#else
+template<typename Id>
+using seen_ids = std::vector<Id>;
+#endif
+
+/**
+ * @brief Verifies that these types can form a candidate list: all identifiable, all agreeing on the
+ * id type, and no id declared twice.
+ *
+ * @throws std::invalid_argument naming the candidate at fault -- this is what a rejected list reports
+ */
+template<typename IdType>
 consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> types) -> void {
   if (types.size() < 2) {
     throw std::invalid_argument("candidate list must have at least 2 candidates");
@@ -49,10 +93,20 @@ consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> t
       );
     }
   }
+
+  seen_ids<IdType> ids;
+  for (auto const candidate: types) {
+    if (not insert_unique(ids, id_of<IdType>(candidate))) {
+      throw std::invalid_argument(
+          "all candidates must have unique ids, but '" + std::string(display_string_of(candidate)) +
+          "' has the same id as another candidate"
+      );
+    }
+  }
 }
 
 template<typename... T>
-concept compatible_candidates = no_throw(diagnose_compatible_candidates, std::array {^^T...});
+concept compatible_candidates = no_throw(diagnose_compatible_candidates<rbe::id_type_of<T...[0]>>, std::array {^^T...});
 
 /**
  * @brief A list of wirable types, each declaring the id it answers to.
@@ -62,7 +116,7 @@ concept compatible_candidates = no_throw(diagnose_compatible_candidates, std::ar
  */
 template<typename... T>
 struct candidate_list {
-  consteval { diagnose_compatible_candidates(std::array {^^T...}); }
+  consteval { diagnose_compatible_candidates<rbe::id_type_of<T...[0]>>(std::array {^^T...}); }
 };
 
 template<identifiable... T>

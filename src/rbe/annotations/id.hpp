@@ -139,7 +139,8 @@ concept self_identifying = identifiable<T> and identifying<T>;
 template<typename T>
   requires(identifiable<T>)
 consteval auto id_of() {
-  return detail::id_of<typename [:detail::id_type_of(^^T):]>(^^T);
+  static constexpr auto id = detail::id_of<typename[:detail::id_type_of(^^T):]>(^^T);
+  return id;
 }
 
 /**

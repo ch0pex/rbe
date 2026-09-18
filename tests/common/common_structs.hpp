@@ -182,7 +182,7 @@ struct CommonHeader {
   bool operator==(CommonHeader const&) const = default;
 };
 
-struct MessageWithHeader {
+struct [[=rbe::id(1)]] MessageWithHeader {
   CommonHeader header;
   std::uint32_t price;
   std::uint32_t volume;
@@ -214,7 +214,7 @@ struct [[=rbe::pack]] CommonHeaderPack {
   bool operator==(CommonHeaderPack const&) const = default;
 };
 
-struct MessageWithHeaderPack {
+struct [[=rbe::id(2)]] MessageWithHeaderPack {
   CommonHeaderPack header;
   std::uint32_t price;
   std::uint32_t volume;
