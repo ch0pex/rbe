@@ -108,6 +108,12 @@ consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> t
 template<typename... T>
 concept compatible_candidates = no_throw(diagnose_compatible_candidates<rbe::id_type_of<T...[0]>>, std::array {^^T...});
 
+template<typename T, typename List>
+concept belongs_to = [] {
+  auto id = rbe::id_of<T>();
+  return std::ranges::find(List::ids, id) != std::ranges::end(List::ids);
+}();
+
 /**
  * @brief A list of wirable types, each declaring the id it answers to.
  *
@@ -136,20 +142,21 @@ struct candidate_list<T...> {
   static constexpr auto wire_size = std::array {rbe::wire_size_of<T>()...};
   static constexpr auto count     = sizeof...(T);
 
-  // NOTE: in the future we can optimize this bc we could sort those
-  // ids that are comparable and use a binary search instead of a linear
+  // NOTE: For now I believe linear search is fine, this allow us to
+  // tell the user to specify first in the list the most common candidates
+  // Usually market protocols have a few messages that are much more common
+  // than the rest, so this is a reasonable assumption
   static constexpr auto index_of(id_type const id) -> std::size_t {
     auto const it = std::ranges::find(ids, id);
     return it != std::ranges::end(ids) //
                ? std::ranges::distance(std::ranges::begin(ids), it) //
                : std::numeric_limits<std::size_t>::max(); //
   }
-};
 
-template<typename T, typename List>
-concept belongs_to = [] {
-  auto id = rbe::id_of<T>();
-  return std::ranges::find(List::ids, id) != std::ranges::end(List::ids);
-}();
+  template<belongs_to<candidate_list> U>
+  static consteval auto index_of() -> std::size_t {
+    return index_of(rbe::id_of<U>());
+  }
+};
 
 } // namespace rbe::detail

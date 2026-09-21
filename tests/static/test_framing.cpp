@@ -253,7 +253,7 @@ static_assert(not rbe::dispatch_delimited_frame<rbe::frame<WithFrameLength, rbe:
  static_assert(std::same_as<rbe::detail::to_dsrl_t<msg_frame>, rbe::dsrl::frame<CommonHeader, MessageWithHeader>>);
  // lowering is idempotent: an already lowered type has no dsrl_type of its own
  static_assert(std::same_as<rbe::detail::to_dsrl_t<rbe::detail::to_dsrl_t<msg_frame>>, rbe::detail::to_dsrl_t<msg_frame>>);
- static_assert(std::same_as<rbe::detail::to_dsrl_t<rbe::dsrl::any<MessageWithHeader>>, rbe::dsrl::any<MessageWithHeader>>);
+ static_assert(std::same_as<rbe::detail::to_dsrl_t<rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>, rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>);
 
  // the header is never lowered, only the payload is
  static_assert(std::same_as<msg_frame::dsrl_type, rbe::dsrl::frame<CommonHeader, MessageWithHeader>>);

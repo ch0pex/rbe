@@ -177,13 +177,13 @@ constexpr auto frame_length_of_partial_buffer() {
   auto const nested_prefix         = std::array {B {0x01}, B {0x00}, B {0x02}, B {0x00}, B {0x07}, B {0x0A}, B {0x00}};
 
   // only the fixed-size header prefix is needed for length fields and static sizes
-  RBE_CHECK(rbe::dsrl::frame<FrameLengthHeader, blob>::length_of(frame_length_prefix) == 10);
-  RBE_CHECK(rbe::dsrl::frame<PayloadLengthHeader, blob>::length_of(payload_length_prefix) == 7);
-  RBE_CHECK(rbe::dsrl::frame<PlainHeader, std::uint32_t>::length_of(plain_prefix) == 8);
+  RBE_CHECK(rbe::dsrl::frame<FrameLengthHeader, blob>::parse_length(frame_length_prefix) == 10);
+  RBE_CHECK(rbe::dsrl::frame<PayloadLengthHeader, blob>::parse_length(payload_length_prefix) == 7);
+  RBE_CHECK(rbe::dsrl::frame<PlainHeader, std::uint32_t>::parse_length(plain_prefix) == 8);
   // a nested frame payload also needs the nested header
-  RBE_CHECK(rbe::dsrl::frame<PlainHeader, rbe::dsrl::frame<FrameLengthHeader, blob>>::length_of(nested_prefix) == 14);
+  RBE_CHECK(rbe::dsrl::frame<PlainHeader, rbe::dsrl::frame<FrameLengthHeader, blob>>::parse_length(nested_prefix) == 14);
   // a buffer-delimited frame has no length of its own: it is the whole buffer
-  RBE_CHECK(rbe::dsrl::frame<PlainHeader, blob>::length_of(buffer({0x01, 0x00, 0x02, 0x00})) == buffer_size);
+  RBE_CHECK(rbe::dsrl::frame<PlainHeader, blob>::parse_length(buffer({0x01, 0x00, 0x02, 0x00})) == buffer_size);
 }
 
 // ============================================================
@@ -198,7 +198,7 @@ constexpr auto frame_narrows_at_construction() {
   RBE_CHECK(with_frame.as_span().size() == 10);
   RBE_CHECK(with_frame.as_span().data() == larger.data());
   RBE_CHECK(with_frame.payload_span().size() == 7);
-  RBE_CHECK(with_frame.length() == rbe::dsrl::frame<FrameLengthHeader, blob>::length_of(larger));
+  RBE_CHECK(with_frame.length() == rbe::dsrl::frame<FrameLengthHeader, blob>::parse_length(larger));
 }
 
 // clang-format off
