@@ -20,5 +20,7 @@ template<typename... Args>
 struct overload : Args... {
   using Args::operator()...;
 };
+template<typename... Args>
+overload(Args...) -> overload<Args...>;
 
 } // namespace rbe
