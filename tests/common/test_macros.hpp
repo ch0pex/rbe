@@ -103,3 +103,14 @@ struct compiletime_error : std::logic_error {
     }                                                                                                                  \
   }                                                                                                                    \
   while (false)
+
+#define RBE_FAIL(msg)                                                                                                  \
+  do {                                                                                                                 \
+    if consteval {                                                                                                     \
+      throw rbe::compiletime_error(RBE_LOCATION "Compile-time fail: " #msg);                                           \
+    }                                                                                                                  \
+    else {                                                                                                             \
+      FAIL(msg);                                                                                                       \
+    }                                                                                                                  \
+  }                                                                                                                    \
+  while (false)
