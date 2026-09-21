@@ -17,9 +17,9 @@
 
 // --- Includes ---
 #include <rbe/core/wirable_concepts.hpp>
-#include <rbe/framing/dsrl/frame_concepts.hpp>
+#include <rbe/framing/dsrl/concepts.hpp>
 #include <rbe/framing/frame_concepts.hpp>
-#include <rbe/framing/srl/frame_concepts.hpp>
+#include <rbe/framing/srl/concepts.hpp>
 
 // --- STD ---
 #include <concepts>

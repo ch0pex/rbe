@@ -3,21 +3,21 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file frame_concepts.hpp
- * @date 11/09/2026
- * @brief Deserialization level of the framing concepts
+ * @file concepts.hpp
+ * @date 20/09/2026
+ * @brief Short description
  *
- * Only what the dsrl lowering adds on top of the shared core (rbe/framing/frame_concepts.hpp) lives here:
- * the API a frame deserializer must offer. The shape (rbe::is_frame), the header (rbe::frame_header) and the
- * payload (rbe::frame_payload) are used as-is from the enclosing namespace.
+ * Longer description
  */
 
 #pragma once
 
 // --- Includes ---
+#include <rbe/core/detail/throw_check.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/return_type.hpp>
 #include <rbe/dsrl/tags.hpp>
+#include <rbe/framing/dsrl/detail/any_dispatcher.hpp>
 #include <rbe/framing/frame_concepts.hpp>
 
 // --- STD ---
@@ -46,14 +46,40 @@ concept is_frame = rbe::is_frame<T> and requires(T const ct) {
   { ct.header_span() } -> std::same_as<typename T::buffer_type>;
   { ct.payload_span() } -> std::same_as<typename T::buffer_type>;
   { ct.length() } -> std::same_as<typename T::size_type>;
-  { T::length_of(ct.as_span()) } -> std::same_as<typename T::size_type>;
+  { T::parse_length(ct.as_span()) } -> std::same_as<typename T::size_type>;
   { ct.header_length() } -> std::same_as<typename T::size_type>;
   { ct.payload_length() } -> std::same_as<typename T::size_type>;
   { ct.as_span() } -> std::same_as<typename T::buffer_type>;
   { ct.data() } -> std::same_as<std::byte const*>;
 
   requires std::constructible_from<T, typename T::buffer_type>;
+  requires frame_header<typename T::header_type>;
   requires frame_payload<typename T::payload_type>;
 };
+
+
+/**
+ * @brief Checks whether Overload is an unambiguous dispatcher for every message in MsgList
+ *
+ * Satisfied when, for every message type `T` in MsgList, Overload is invocable with at most one of
+ * `T` (eager) or `dsrl::msg<T>` (lazy), and Overload additionally provides exactly one fallback
+ * overload for unrecognized messages: either `[](id_type id) {...}` or `[]() {...}`.
+ *
+ * @code
+ * rbe::overload{
+ *     [](FooMsg const& foo) { ... },        // eager form for FooMsg
+ *     [](dsrl::msg<BarMsg> const& bar) { ... }, // lazy form for BarMsg
+ *     [](MsgList::id_type id) { ... },      // fallback for unrecognized ids
+ * };
+ * @endcode
+ *
+ * @tparam Overload Candidate dispatcher, typically built with rbe::overload
+ * @tparam MsgList Message list the dispatcher must be able to handle
+ */
+template<typename Overload, typename CandidateList>
+concept any_dispatcher = rbe::detail::no_throw(detail::diagnose_any_dispatcher<Overload, CandidateList>);
+
+template<typename T>
+concept is_any = true;
 
 } // namespace rbe::dsrl

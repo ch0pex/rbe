@@ -14,7 +14,6 @@
 #include <rbe/framing/detail/to_dsrl_type.hpp>
 #include <rbe/framing/detail/to_srl_type.hpp>
 #include <rbe/framing/dsrl/frame.hpp>
-#include <rbe/framing/frame_serder_concepts.hpp>
 #include <rbe/framing/srl/frame.hpp>
 #include <rbe/framing/value_type.hpp>
 
@@ -23,7 +22,7 @@
 namespace rbe {
 
 /**
- * @brief Framer serder builder class
+ * @brief Frame serder builder class
  *
  * This empty class's sole purpose is to offer a single type with both serialization
  * and deserialization type aliases following serder_traits. This way, the user can define

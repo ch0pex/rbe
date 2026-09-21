@@ -14,7 +14,7 @@
 
 // --- Includes ---
 #include <rbe/core/wirable_concepts.hpp>
-#include <rbe/framing/srl/frame_concepts.hpp>
+#include <rbe/framing/srl/concepts.hpp>
 #include <rbe/dsrl/deserialize.hpp>
 #include <rbe/dsrl/tags.hpp>
 

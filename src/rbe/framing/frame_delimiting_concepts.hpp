@@ -14,8 +14,8 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/length.hpp>
 #include <rbe/annotations/annotation_concepts.hpp>
+#include <rbe/annotations/length.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/framing/detail/payload_extent.hpp>
 #include <rbe/framing/frame_concepts.hpp>
@@ -69,7 +69,8 @@ concept explicitly_delimited_frame = //
  *
  * @note Determining the length of this kind of frame might be slower when the
  * payload is arbitrary (e.g., `std::any`), as it requires dynamic type
- * dispatching to calculate the total size.
+ * dispatching to calculate the total size. The `dispatch_delimited_frame` concept
+ * is provided for cases where the payload is of type `rbe::any`.
  *
  * @tparam T The frame type to be evaluated.
  */
@@ -80,7 +81,7 @@ concept implicitly_delimited_frame = //
             contains_annotation<frame_header_t<T>, rbe::payload_length>);
 
 /**
- * @brief A frame whose length is resolved dynamiclaly at runtime, typically because its payload is of type `rbe::any`.
+ * @brief A frame whose length is resolved dynamically at runtime, typically because its payload is of type `rbe::any`.
  */
 template<typename T>
 concept dispatch_delimited_frame = self_delimiting_frame<T> and detail::is_dispatch_delimited<T>();
