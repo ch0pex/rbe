@@ -14,6 +14,7 @@
 #include <rbe/dsrl/deserialize.hpp>
 #include <rbe/dsrl/proxy.hpp>
 #include <rbe/dsrl/tags.hpp>
+#include <rbe/framing/dsrl/any_unmatched.hpp>
 
 // --- STD ---
 #include <concepts>
@@ -28,17 +29,10 @@ template<typename Overload, typename CandidateList>
 consteval auto diagnose_any_dispatcher() -> void {
   using id_type = CandidateList::id_type;
 
-  if (not std::invocable<Overload&, id_type> and not std::invocable<Overload&>) {
+  if (not std::invocable<Overload&, rbe::detail::unmatched<id_type>>) {
     throw std::invalid_argument(
         "overload set must contain a fallback callback (invocable with the observed id, or with no "
         "arguments at all) to handle unrecognized messages"
-    );
-  }
-
-  if (std::invocable<Overload&, id_type> and std::invocable<Overload&>) {
-    throw std::invalid_argument(
-        "overload set is ambiguous: it has both an id-based fallback and a no-argument fallback for "
-        "unrecognized messages -- keep only one"
     );
   }
 
@@ -54,14 +48,9 @@ consteval auto diagnose_any_dispatcher() -> void {
   }
 }
 
-template<class Overload, class IdType>
-constexpr auto dispatch_unmatched(Overload&& overload_set, IdType id) -> decltype(auto) {
-  if constexpr (std::invocable<Overload&, IdType>) {
-    return std::invoke(std::forward<Overload>(overload_set), id);
-  }
-  else {
-    return std::invoke(std::forward<Overload>(overload_set));
-  }
+template<class Overload, rbe::unmatched T>
+constexpr auto dispatch_unmatched(Overload&& overload_set, T&& unmatched) -> decltype(auto) {
+  return std::invoke(std::forward<Overload>(overload_set), std::forward<T>(unmatched));
 }
 
 /// Called once `CandidateType` is known to be the candidate matching the observed id -- what's left is
@@ -78,7 +67,7 @@ constexpr auto dispatch_matched(Overload overload_set, IdType id, std::span<std:
     return std::invoke(std::forward<Overload>(overload_set), rbe::deserialize<CandidateType>(buffer, dsrl::eager));
   }
   else {
-    return dispatch_unmatched(std::forward<Overload>(overload_set), id);
+    return dispatch_unhandled(std::forward<Overload>(overload_set), id);
   }
 }
 

@@ -42,6 +42,7 @@ target_sources(
         rbe/core/endian.hpp
         rbe/core/fmt.hpp
         rbe/core/memory_layout.hpp
+        rbe/core/overload_set.hpp
         rbe/core/trivially_wirable_concepts.hpp
         rbe/core/wirable_concepts.hpp
         rbe/core/wirable_primitives.hpp
@@ -64,6 +65,7 @@ target_sources(
         rbe/framing/detail/to_value_type.hpp
         rbe/framing/dsrl/detail/any_dispatcher.hpp
         rbe/framing/dsrl/any.hpp
+        rbe/framing/dsrl/any_unmatched.hpp
         rbe/framing/dsrl/flatten.hpp
         rbe/framing/dsrl/frame.hpp
         rbe/framing/dsrl/concepts.hpp

@@ -25,7 +25,6 @@
 
 // --- STD ---
 
-
 namespace rbe::dsrl {
 
 template<wirable_class... Args>
@@ -59,26 +58,45 @@ public:
     return match(rbe::overload {std::forward<T>(callbacks)...});
   }
 
+  /**
+   * @brief Dispatches the `any` object to the corresponding overload based on its ID.
+   *
+   * Evaluates the internal ID against the available candidate types, deserializes
+   * the matching candidate, and invokes the appropriate overload from the provided set.
+   *
+   * Overload Set Rules
+   * - Unambiguous matching: Eager and lazy overloads can be freely mixed, but must
+   *   remain strictly unambiguous. For any given candidate type, exactly one overload
+   *   must be invocable (either with the eager type or its lazy proxy).
+   *
+   * - Mandatory fallback: The overload set must provide a fallback handler constrained
+   *   by the `rbe::unhandled` concept.
+   *
+   * - Unrecognized IDs: To distinguish between known-but-unhandled IDs and completely
+   *   unrecognized IDs, an optional fallback constrained by `rbe::unknown` can be provided additionally.
+   *
+   * - Concept grouping: Custom C++ concepts can be used to group multiple candidate types
+   *   into a single overload. However, if a concept is satisfied by both the eager and lazy
+   *   forms of the same type, the dispatch will be ambiguous and fail to compile.
+   *
+   * @tparam T The overload set type. Must satisfy the `any_dispatcher` concept for the candidates of this `any`.
+   * @param overload_set The visitor or overload set to dispatch to.
+   * @return The result of the invoked overload. All invocable overloads must share the same return type.
+   */
   template<any_dispatcher<candidates> T>
   constexpr auto match(T&& overload_set) const -> decltype(auto) {
     using std::ranges::to;
-    static constexpr auto handled_candidates = detail::handled_types<T, candidates>() | to<static_array>();
-
-    // TODO: create rbe::unknown and rbe::ignored
-    // Unrecognized id: dispatch to the fallback overload
-    if (not known_id()) {
-      return detail::dispatch_unmatched(std::forward<T>(overload_set), id_);
-    }
-
-    template for (constexpr auto candidate: handled_candidates) {
+    template for (constexpr auto candidate: detail::handled_types<T, candidates>() | to<static_array>()) {
       using candidate_type = [:candidate:];
       if (candidates::template index_of<candidate_type>() == index_) {
         return detail::dispatch_matched<candidate_type>(std::forward<T>(overload_set), id_, data_);
       }
     }
 
-    // Not handled konwn id is dispatched to the fallback overload too
-    return detail::dispatch_unmatched(std::forward<T>(overload_set), id_);
+    return detail::dispatch_unmatched(
+        std::forward<T>(overload_set), //
+        rbe::detail::unmatched {.id = id_, .known_id = known_id(), .data = data_}
+    );
   }
 
   template<typename T>

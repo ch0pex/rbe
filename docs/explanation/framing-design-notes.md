@@ -48,13 +48,13 @@ actually differs between levels:
 
 | Concept | Where | Holds for |
 | --- | --- | --- |
-| `frame_header` | `frame_concepts.hpp` | every level — a header is never lowered |
-| `is_frame` | `frame_concepts.hpp` | every level — `header_type` + `payload_type`, nothing else |
-| `frame_payload` | `frame_concepts.hpp` | `dsrl` and `srl` — the payload categories over the bytes |
+| `frame_header` | `concepts.hpp` | every level — a header is never lowered |
+| `is_frame` | `concepts.hpp` | every level — `header_type` + `payload_type`, nothing else |
+| `frame_payload` | `concepts.hpp` | `dsrl` and `srl` — the payload categories over the bytes |
 | `self_delimiting_frame`, `buffer_delimited_frame`, `dispatch_delimited_frame`, … | `frame_delimiting_concepts.hpp` | every level, via `is_frame` |
 | `frame_serder_payload`, `serder_traits`, `frame_serder` | `frame_serder_concepts.hpp` | the vocabulary level |
-| `dsrl::is_frame` | `dsrl/frame_concepts.hpp` | the deserializer API |
-| `srl::is_frame` | `srl/frame_concepts.hpp` | the serializer API (TODO) |
+| `dsrl::is_frame` | `dsrl/concepts.hpp` | the deserializer API |
+| `srl::is_frame` | `srl/concepts.hpp` | the serializer API (TODO) |
 
 - `is_frame` is the weakest thing worth calling a frame, and the only thing the delimiting classification
   needs. Everything a level adds on top (traits to lower itself, an API to offer) stays with that level.
@@ -112,13 +112,13 @@ Constructor preconditions (documented on `dsrl::frame::frame`):
 - buffer-delimited frames: the span covers exactly the frame
 - `wire_size_of<header_type>() <= header_length <= frame_length`
 
-**Implemented — `length_of(buffer)`.** A static `frame::length_of(data)` resolves the length without constructing
+**Implemented — `length_of(buffer)`.** A static `frame::parse_length(data)` resolves the length without constructing
 the frame, so a partially received buffer can still tell how many bytes it needs (stream reassembly). It only
 reads what the length depends on: the fixed-size header prefix for length fields and static sizes, plus the
 nested frames' headers for a nested frame payload. For a buffer-delimited frame it returns `data.size()`. The
 constructor narrows with it (`data.first(length_of(data))`); members cannot be used there, since they read
 `data_` before it is initialized. `dsrl::is_frame` requires it, because a nested frame payload is resolved
-through `payload_type::length_of()`.
+through `payload_type::parse_length()`.
 
 **Proposed — checked construction.** Keep the constructor unchecked (a contract, checked in hardened builds)
 and add a validating factory, used internally by `many`:
@@ -171,7 +171,7 @@ computed layout. Remaining inconsistency:
 - **`payload_length()`** — `length() - header_length()`, by the identity above.
 
 The classification is a single compile-time function, `rbe::detail::payload_extent_of<H, P>()` in
-`rbe/framing/detail/payload_extent.hpp`. `dsrl::frame::length_of()` branches on it with `if constexpr`,
+`rbe/framing/detail/payload_extent.hpp`. `dsrl::frame::parse_length()` branches on it with `if constexpr`,
 and the concepts in [§4](#4-self-delimiting-and-buffer-delimited-frames) are built on it, so the runtime
 resolution and the compile-time classification cannot drift apart.
 

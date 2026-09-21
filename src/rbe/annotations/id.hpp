@@ -128,6 +128,12 @@ template<typename T>
 concept self_identifying = identifiable<T> and identifying<T>;
 
 /**
+ * @brief A type that can be compared for equality, which is what an id has to be.
+ */
+template<typename T>
+concept id_like = std::equality_comparable<T> and std::copyable<T>;
+
+/**
  * @brief The id `T` declares, as the type it was written with.
  *
  * `id_tag` deduces its value type, so the id comes back exactly as spelled in the annotation --
@@ -136,8 +142,7 @@ concept self_identifying = identifiable<T> and identifying<T>;
  * @note A static_assert rather than a `requires` clause: it can name the annotation that is missing,
  * where a failed constraint would report only that no overload matched.
  */
-template<typename T>
-  requires(identifiable<T>)
+template<identifiable T>
 consteval auto id_of() {
   static constexpr auto id = detail::id_of<typename[:detail::id_type_of(^^T):]>(^^T);
   return id;
@@ -149,7 +154,7 @@ consteval auto id_of() {
  * For where an id has to be stored or compared rather than produced: the element type of a table of
  * ids, or the field one is read into. Candidates belong in the same list only if they agree on it.
  */
-template<typename T>
+template<identifiable T>
 using id_type_of = std::remove_cvref_t<decltype(id_of<T>())>;
 
 } // namespace rbe

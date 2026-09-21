@@ -11,6 +11,7 @@
  */
 
 // --- Includes ---
+#include "rbe/framing/dsrl/any_unmatched.hpp"
 #include "test_macros.hpp"
 
 //
@@ -92,25 +93,25 @@ constexpr auto match_known_id() {
   any_test any {0, buffer};
 
   any.match(
-      [](msg_1 const& m) { RBE_CHECK(m.value1 == static_cast<int>(0xCCCCCCCC)); },
-      [](msg_2 const&) { RBE_FAIL("Should not match msg_2"); },
-      [](msg_3 const&) { RBE_FAIL("Should not match msg_3"); }, //
-      []() { RBE_FAIL("Should not match unknown id"); }
+      [](msg_1 m) { RBE_CHECK(m.value1 == static_cast<int>(0xCCCCCCCC)); },
+      [](msg_2 /**/) { RBE_FAIL("Should not match msg_2"); }, //
+      [](msg_3 /**/) { RBE_FAIL("Should not match msg_3"); }, //
+      [](rbe::unmatched auto /**/) { RBE_FAIL("Should not match unknown id"); }
   );
 
   // any works with proxy
   any.match(
-      [](rbe::dsrl::proxy<msg_1> const& m) { RBE_CHECK(m.field<"value1">() == static_cast<int>(0xCCCCCCCC)); },
-      [](msg_2 const&) { RBE_FAIL("Should not match msg_2"); },
-      [](msg_3 const&) { RBE_FAIL("Should not match msg_3"); }, //
-      []() { RBE_FAIL("Should not match unknown id"); }
+      [](rbe::dsrl::proxy<msg_1> m) { RBE_CHECK(m.field<"value1">() == static_cast<int>(0xCCCCCCCC)); },
+      [](msg_2 /**/) { RBE_FAIL("Should not match msg_2"); }, //
+      [](msg_3 /**/) { RBE_FAIL("Should not match msg_3"); }, //
+      [](rbe::unmatched auto /**/) { RBE_FAIL("Should not match unknown id"); }
   );
 
-  // any don't require all overloads to be present
+  // any don't require all overloads to be present, but there must be a fallback overload for unhandled types
   any.match(
-      [](msg_1 const& m) { RBE_CHECK(m.value1 == static_cast<int>(0xCCCCCCCC)); },
+      [](msg_1 m) { RBE_CHECK(m.value1 == static_cast<int>(0xCCCCCCCC)); },
       [](rbe::dsrl::proxy<msg_2> const& /**/) { RBE_FAIL("Should not match msg_2"); },
-      []() { RBE_FAIL("Should not match unknown id"); }
+      [](rbe::unmatched auto /**/) { RBE_FAIL("Should not match unknown"); }
   );
 
   // any works with template lambdas, all known types will be called with the first callback
@@ -123,8 +124,7 @@ constexpr auto match_known_id() {
       },
       // Be aware that if fallback is not explicitly provided with id parameter
       // id will be deduced to the first callback parameter type,
-      // TODO: rbe::unknown
-      [](int /**/) { RBE_FAIL("Should not match unknown id"); } // fallback
+      [](rbe::unmatched auto /**/) { RBE_FAIL("Should not match unknown id"); } // fallback
   );
 
   auto handle_msg_1_and_2 = [](msgs_1_and_2 auto msg) {
@@ -139,12 +139,12 @@ constexpr auto match_known_id() {
     }
   };
 
-  any.match(handle_msg_1_and_2, []() { RBE_FAIL("Should not match unknown id"); });
+  any.match(handle_msg_1_and_2, [](rbe::unmatched auto /**/) { RBE_FAIL("Should not match unknown id"); });
 
   // theoretically in a real world case this could lead to UB, here it is safe because we know the buffer is large
   // enough to hold msg_2
   any = {1, buffer};
-  any.match(handle_msg_1_and_2, []() { RBE_FAIL("Should not match unknown id"); });
+  any.match(handle_msg_1_and_2, [](rbe::unmatched auto /**/) { RBE_FAIL("Should not match unknown id"); });
 }
 
 constexpr auto match_unknown_id() {
@@ -154,13 +154,14 @@ constexpr auto match_unknown_id() {
       [](msg_1 const&) { RBE_FAIL("Should not match msg_1"); },
       [](msg_2 const&) { RBE_FAIL("Should not match msg_2"); },
       [](msg_3 const&) { RBE_FAIL("Should not match msg_3"); }, //
-      []() { RBE_CHECK(true); }
+      [](rbe::unmatched auto unknown_msg) { RBE_CHECK_FALSE(unknown_msg.known_id); }
   );
 
+  any = {2, buffer};
   any.match(
       [](msg_1 const&) { RBE_FAIL("Should not match msg_1"); },
       [](msg_2 const&) { RBE_FAIL("Should not match msg_2"); }, //
-      [](int id) { RBE_CHECK(id == 3); }
+      [](rbe::unmatched auto unhandled) { RBE_CHECK(unhandled.known_id); }
   );
 
   // any.match([](auto msg) { RBE_FAIL("Should not match known types"); }, []() { RBE_CHECK(true); }););
