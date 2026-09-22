@@ -11,6 +11,7 @@
 // --- Includes ---
 #include "common_structs.hpp"
 
+#include <rbe/annotations/annotation_concepts.hpp>
 #include <rbe/core/detail/invoke_concept.hpp>
 #include <rbe/core/trivially_wirable_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
@@ -97,9 +98,9 @@ static_assert(not test_concept(^^rbe::trivially_wirable, non_trivially_wirable_s
 static_assert(not test_concept(^^rbe::trivially_wirable, custom_wirable));
 static_assert(not test_concept(^^rbe::trivially_wirable, wirable_structs));
 
-// static_assert(test_concept(^^rbe::well_annotated, trivially_wirable_primitives));
-// static_assert(test_concept(^^rbe::well_annotated, non_trivially_wirable_structs));
-// static_assert(test_concept(^^rbe::well_annotated, wirable_structs));
+static_assert(test_concept(^^rbe::well_annotated, trivially_wirable_primitives));
+static_assert(test_concept(^^rbe::well_annotated, non_trivially_wirable_structs));
+static_assert(test_concept(^^rbe::well_annotated, wirable_structs));
 
 // clang-format on
 
