@@ -27,6 +27,7 @@
 // --- STD ---
 #include <cstddef>
 #include <span>
+#include "rbe/annotations/empty.hpp"
 
 namespace rbe::dsrl {
 
@@ -85,6 +86,12 @@ public:
     requires(wirable<payload_type>)
   [[nodiscard]] constexpr auto payload(S strategy = lazy) const -> return_type<S, payload_type> {
     return rbe::deserialize<payload_type>(payload_span(), strategy);
+  }
+
+  [[nodiscard]] constexpr auto payload() const -> payload_type
+    requires(explicitly_empty<payload_type>)
+  {
+    return payload_type {};
   }
 
   [[nodiscard]] constexpr auto payload() const -> payload_type

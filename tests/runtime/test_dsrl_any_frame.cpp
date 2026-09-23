@@ -11,6 +11,7 @@
  */
 
 // --- Includes ---
+#include "rbe/core/memory_layout.hpp"
 #include "rbe/framing/dsrl/any_unmatched.hpp"
 #include "test_macros.hpp"
 
@@ -41,10 +42,15 @@ struct[[= rbe::id(2)]] msg_3 {
   constexpr auto operator==(msg_3 const&) const -> bool = default;
 };
 
+struct[[ = rbe::id(42), = rbe::empty ]] heartbeat {
+  constexpr auto operator==(heartbeat const&) const -> bool = default;
+};
+
 template<typename T>
 concept msgs_1_and_2 = std::same_as<T, msg_1> or std::same_as<T, msg_2>;
 
-using any_test = rbe::dsrl::any<msg_1, msg_2, msg_3>;
+using any_test                = rbe::dsrl::any<msg_1, msg_2, msg_3>;
+using any_test_with_heartbeat = rbe::dsrl::any<msg_1, msg_2, msg_3, heartbeat>;
 
 inline constexpr std::array<std::byte, 1500> buffer {
   std::byte {0xCC}, std::byte {0xCC}, std::byte {0xCC}, std::byte {0xCC}
@@ -87,6 +93,25 @@ constexpr auto unknown_id() {
   RBE_CHECK(any.length() == buffer.size());
   RBE_CHECK_EQ(any.data(), buffer.data());
   RBE_CHECK(std::ranges::equal(any.as_span(), buffer));
+}
+
+constexpr auto any_with_empty_type() {
+  any_test_with_heartbeat any {42, buffer};
+
+  RBE_CHECK_FALSE(any.is<msg_1>());
+  RBE_CHECK_FALSE(any.is<msg_2>());
+  RBE_CHECK_FALSE(any.is<msg_3>());
+  RBE_CHECK(any.is<heartbeat>());
+  RBE_CHECK(any.known_id());
+  RBE_CHECK(any.id() == 42);
+  RBE_CHECK(any.as<msg_1>() == std::nullopt);
+  RBE_CHECK(any.as<msg_2>() == std::nullopt);
+  RBE_CHECK(any.as<msg_3>() == std::nullopt);
+  RBE_CHECK(any.as<heartbeat>() == heartbeat {});
+
+  RBE_CHECK(any.length() == 0);
+  RBE_CHECK_EQ(any.data(), buffer.data());
+  RBE_CHECK(any.as_span().empty());
 }
 
 constexpr auto match_known_id() {
@@ -167,12 +192,41 @@ constexpr auto match_unknown_id() {
   // any.match([](auto msg) { RBE_FAIL("Should not match known types"); }, []() { RBE_CHECK(true); }););
 }
 
+constexpr auto match_with_empty_types() {
+  any_test_with_heartbeat any {2, buffer};
+  any.match(
+      [](msg_1 const&) { RBE_FAIL("Should not match msg_1"); },
+      [](msg_2 const&) { RBE_FAIL("Should not match msg_2"); }, //
+      [](rbe::unmatched auto unhandled) { RBE_CHECK(unhandled.known_id); }
+  );
+
+  any = {42, buffer};
+  any.match(
+      [](msg_1 const&) { RBE_FAIL("Should not match msg_1"); },
+      [](msg_2 const&) { RBE_FAIL("Should not match msg_2"); }, //
+      [](rbe::unmatched auto unhandled) {
+        RBE_CHECK(unhandled.known_id);
+        RBE_CHECK(unhandled.data.empty());
+      }
+  );
+
+  any = {42, buffer};
+  any.match(
+      [](msg_1 const&) { RBE_FAIL("Should not match msg_1"); },
+      [](msg_2 const&) { RBE_FAIL("Should not match msg_2"); }, //
+      [](heartbeat const& m) { RBE_CHECK(rbe::wire_size_of<decltype(m)>() == 0); },
+      [](rbe::unmatched auto /**/) { RBE_FAIL("Should not match unknown id"); }
+  );
+}
+
 
 TEST_SUITE("dsrl_frame_any") {
   RBE_TEST_CASE("dsrl_frame_any - identity_accessors", identity_accessors);
   RBE_TEST_CASE("dsrl_frame_any - unknown_id", unknown_id);
   RBE_TEST_CASE("dsrl_frame_any - match_known_id", match_known_id);
   RBE_TEST_CASE("dsrl_frame_any - match_known_id", match_unknown_id);
+  RBE_TEST_CASE("dsrl_frame_any - any_with_empty_type", any_with_empty_type)
+  RBE_TEST_CASE("dsrl_frame_any - match_with_empty_types", match_with_empty_types)
 }
 
 } // namespace

@@ -19,7 +19,7 @@
 
 namespace rbe {
 
-template<wirable_class... Args>
+template<frame_wirable_class... Args>
 struct any : detail::any_tag {
   using dsrl_type = dsrl::any<Args...>;
   // using srl_type  = srl::any<Args...>;

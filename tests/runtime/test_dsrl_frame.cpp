@@ -9,6 +9,7 @@
  */
 
 // --- Includes ---
+#include "common_structs.hpp"
 #include "test_macros.hpp"
 
 #include <rbe/annotations/alignment.hpp>
@@ -181,7 +182,9 @@ constexpr auto frame_length_of_partial_buffer() {
   RBE_CHECK(rbe::dsrl::frame<PayloadLengthHeader, blob>::parse_length(payload_length_prefix) == 7);
   RBE_CHECK(rbe::dsrl::frame<PlainHeader, std::uint32_t>::parse_length(plain_prefix) == 8);
   // a nested frame payload also needs the nested header
-  RBE_CHECK(rbe::dsrl::frame<PlainHeader, rbe::dsrl::frame<FrameLengthHeader, blob>>::parse_length(nested_prefix) == 14);
+  RBE_CHECK(
+      rbe::dsrl::frame<PlainHeader, rbe::dsrl::frame<FrameLengthHeader, blob>>::parse_length(nested_prefix) == 14
+  );
   // a buffer-delimited frame has no length of its own: it is the whole buffer
   RBE_CHECK(rbe::dsrl::frame<PlainHeader, blob>::parse_length(buffer({0x01, 0x00, 0x02, 0x00})) == buffer_size);
 }
@@ -199,6 +202,28 @@ constexpr auto frame_narrows_at_construction() {
   RBE_CHECK(with_frame.as_span().data() == larger.data());
   RBE_CHECK(with_frame.payload_span().size() == 7);
   RBE_CHECK(with_frame.length() == rbe::dsrl::frame<FrameLengthHeader, blob>::parse_length(larger));
+}
+
+constexpr auto frame_with_empty_payload() {
+  std::array<std::byte, 2> empty_payload_buffer {std::byte {0x00}, std::byte {0x00}};
+  auto const with_empty_payload = rbe::dsrl::frame<PayloadLengthHeader, ExplictlyEmpty> {empty_payload_buffer};
+
+  RBE_CHECK(with_empty_payload.header_length() == 2);
+  RBE_CHECK(with_empty_payload.payload_length() == 0);
+  RBE_CHECK(with_empty_payload.length() == 2);
+  RBE_CHECK(with_empty_payload.payload_span().size() == 0);
+  RBE_CHECK(with_empty_payload.as_span().size() == 2);
+
+  std::array<std::byte, 4> empty_payload_buffer2 {
+    std::byte {0x00}, std::byte {0x00}, std::byte {0xCC}, std::byte {0xCC}
+  };
+  auto const with_empty_payload2 = rbe::dsrl::frame<PlainHeader, ExplictlyEmpty> {empty_payload_buffer2};
+
+  RBE_CHECK(with_empty_payload2.header_length() == 4);
+  RBE_CHECK(with_empty_payload2.payload_length() == 0);
+  RBE_CHECK(with_empty_payload2.length() == 4);
+  RBE_CHECK(with_empty_payload2.payload_span().size() == 0);
+  RBE_CHECK(with_empty_payload2.as_span().size() == 4);
 }
 
 // clang-format off

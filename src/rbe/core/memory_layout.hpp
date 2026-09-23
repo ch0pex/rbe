@@ -22,6 +22,7 @@
 // --- STD ---
 #include <cstddef>
 #include <ranges>
+#include <type_traits>
 
 // --- System ---
 
@@ -188,6 +189,12 @@ consteval auto wire_size_of() -> std::size_t {
 template<wirable_primitive T, detail::context Ctx = detail::context {}>
 consteval auto wire_size_of() -> std::size_t {
   return sizeof(T);
+}
+
+template<typename T>
+  requires(std::is_empty_v<std::remove_cvref_t<T>>)
+consteval auto wire_size_of() -> std::size_t {
+  return 0;
 }
 
 template<wirable_class T>

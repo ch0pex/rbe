@@ -41,8 +41,6 @@ struct [[=rbe::id(rbe::static_string {"heartbeat"})]] msg_str_again { int hb; };
 
 struct non_identifiable { int x; };
 
-
-
 static_assert(rbe::detail::compatible_candidates<msg_a, msg_b, msg_c>);
 static_assert(rbe::detail::compatible_candidates<msg_hb, msg_st, msg_cmd>);
 static_assert(rbe::detail::compatible_candidates<msg_str, msg_str2, msg_str3>);
@@ -61,12 +59,6 @@ static_assert(candidate_list_hb::ids == std::array {custom_id{.x = 0, .y = 1}, c
 static_assert(candidate_list_str::ids[0].get() == "heartbeat");
 static_assert(candidate_list_str::ids[1].get() == "status");
 static_assert(candidate_list_str::ids[2].get() == "command");
-static_assert(std::same_as<candidate_list_t::variant_type, std::variant<msg_a, msg_b, msg_c>>);
-static_assert(std::same_as<candidate_list_hb::variant_type, std::variant<msg_hb, msg_st, msg_cmd>>);
-static_assert(std::same_as<candidate_list_str::variant_type, std::variant<msg_str, msg_str2, msg_str3>>);
-static_assert(std::same_as<candidate_list_t::proxy_variant_type, std::variant<rbe::dsrl::proxy<msg_a>, rbe::dsrl::proxy<msg_b>, rbe::dsrl::proxy<msg_c>>>);
-static_assert(std::same_as<candidate_list_hb::proxy_variant_type, std::variant<rbe::dsrl::proxy<msg_hb>, rbe::dsrl::proxy<msg_st>, rbe::dsrl::proxy<msg_cmd>>>);
-static_assert(std::same_as<candidate_list_str::proxy_variant_type, std::variant<rbe::dsrl::proxy<msg_str>, rbe::dsrl::proxy<msg_str2>, rbe::dsrl::proxy<msg_str3>>>);
 static_assert(std::same_as<candidate_list_t::id_type, int>);
 static_assert(std::same_as<candidate_list_hb::id_type, custom_id>);
 static_assert(std::same_as<candidate_list_str::id_type, rbe::static_string>);

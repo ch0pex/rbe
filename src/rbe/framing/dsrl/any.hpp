@@ -13,6 +13,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/annotations/empty.hpp>
 #include <rbe/core/overload_set.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/deserialize.hpp>
@@ -27,7 +28,7 @@
 
 namespace rbe::dsrl {
 
-template<wirable_class... Args>
+template<frame_wirable_class... Args>
 class any : public rbe::detail::any_tag {
 public:
   using candidates  = rbe::detail::candidate_list<Args...>;
@@ -89,7 +90,7 @@ public:
     template for (constexpr auto candidate: detail::handled_types<T, candidates>() | to<static_array>()) {
       using candidate_type = [:candidate:];
       if (candidates::template index_of<candidate_type>() == index_) {
-        return detail::dispatch_matched<candidate_type>(std::forward<T>(overload_set), id_, data_);
+        return detail::dispatch_matched<candidate_type>(std::forward<T>(overload_set), data_);
       }
     }
 
@@ -111,8 +112,15 @@ public:
   }
 
   template<rbe::detail::belongs_to<candidates> T, strategy S = lazy_t>
+    requires(wirable_class<T>)
   [[nodiscard]] constexpr auto as(S strategy = lazy) const -> std::optional<return_type<S, T>> {
     return is<T>() ? std::optional<return_type<S, T>>(rbe::deserialize<T>(data_, strategy)) : std::nullopt;
+  }
+
+  template<rbe::detail::belongs_to<candidates> T, strategy S = lazy_t>
+    requires(explicitly_empty<T>)
+  [[nodiscard]] constexpr auto as() const -> std::optional<T> {
+    return is<T>() ? std::optional<T>(T {}) : std::nullopt;
   }
 
   [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_; }

@@ -29,6 +29,7 @@
 #include <concepts>
 #include <cstddef>
 #include <span>
+#include "rbe/annotations/empty.hpp"
 
 namespace rbe {
 
@@ -62,6 +63,12 @@ concept is_frame = requires {
   requires frame_header<typename T::header_type>;
 };
 
+template<typename T>
+concept frame_wirable = wirable<T> or explicitly_empty<T>;
+
+template<typename T>
+concept frame_wirable_class = wirable_class<T> or explicitly_empty<T>;
+
 /**
  * @brief The payload of a lowered frame, shared by rbe::dsrl and rbe::srl
  *
@@ -72,7 +79,7 @@ concept is_frame = requires {
  */
 template<typename T>
 concept frame_payload = //
-    wirable<T> // a fixed-layout message
+    frame_wirable<T> // wirable or explicitly_empty
     or is_frame<T> // a nested frame
     or is_any<T> // a set of alternatives resolved by an id
     or is_many<T> // a sequence of frames

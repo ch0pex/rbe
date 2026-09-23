@@ -24,6 +24,8 @@
 #include <rbe/rbe.hpp>
 
 #include <cstdint>
+#include "rbe/annotations/empty.hpp"
+#include "rbe/core/memory_layout.hpp"
 
 namespace aquis {
 
@@ -146,8 +148,10 @@ struct[[= rbe::pack_le]] Header {
 
 // clang-format off
 
-// TODO: header-only message: empty payloads are not wirable yet, so it is left out of `messages`.
-struct [[=rbe::pack_le, =rbe::id(message_type_t::heartbeat)]] Heartbeat {};
+// Empty messages are supported by explicitly annotating them as empty
+struct [[=rbe::pack_le, =rbe::id(message_type_t::heartbeat), =rbe::empty]] Heartbeat {};
+static_assert(rbe::explicitly_empty<Heartbeat>);
+static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Heartbeat>() == rbe::wire_size_of<Header>());
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::order_add)]] OrderAdd {
   security_id_t security_id;
@@ -391,10 +395,9 @@ static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ReplayResponse>() 
 // Framing
 // ─────────────────────────────────────────────────────────────────────
 
-// TODO: Heartbeat is header-only, and empty payloads are not wirable yet,
-//       so it cannot be one of the alternatives.
+
 using messages = rbe::any<
-    OrderAdd, OrderCancel, OrderModify, QuoteAddReplace, QuoteCancel, Trade, TradeReport, TradeReportModify,
+    Heartbeat, OrderAdd, OrderCancel, OrderModify, QuoteAddReplace, QuoteCancel, Trade, TradeReport, TradeReportModify,
     TradeReportCancel, TradeBust, SecurityStatistics, TraderDefinition, TickTableData, SecurityDefinition,
     SecurityStatus, AoDUpdate, SnapshotStart, BookStatus, BookEntry, Login, ReplayRequest, ReplayResponse>;
 

@@ -128,9 +128,7 @@ struct candidate_list {
 template<identifiable... T>
   requires(compatible_candidates<T...>)
 struct candidate_list<T...> {
-  using variant_type       = std::variant<T...>;
-  using proxy_variant_type = std::variant<dsrl::proxy<T>...>;
-  using id_type            = rbe::id_type_of<T...[0]>;
+  using id_type = rbe::id_type_of<T...[0]>;
 
   // The type and canonical id of every candidate
   static constexpr auto types = std::array {^^T...};
