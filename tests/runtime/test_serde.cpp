@@ -77,7 +77,10 @@ constexpr void test_case(Test const& test_case) {
     test_inplace(test_case.wire, test_case.structure);
   }
 
-  if constexpr (not rbe::custom_wirable<typename Test::structure_type>) {
+  if constexpr (
+      not rbe::custom_wirable<typename Test::structure_type> and
+      not rbe::wirable_primitive<typename Test::structure_type>
+  ) {
     test_lazy(test_case.wire, test_case.structure);
   }
 }
@@ -145,7 +148,7 @@ constexpr void test_case(T const& value) {
     test_inplace(value);
   }
 
-  if constexpr (not rbe::custom_wirable<T>) {
+  if constexpr (not rbe::custom_wirable<T> and not rbe::wirable_primitive<T>) {
     test_lazy(value);
   }
 }
@@ -178,6 +181,8 @@ SERDE_TEST_CASE(message_with_array_test);
 SERDE_TEST_CASE(message_with_array_be_test);
 SERDE_TEST_CASE(nested_propagation_test);
 SERDE_TEST_CASE(nested_pack_propagation_test);
+SERDE_TEST_CASE(integer_test);
+SERDE_TEST_CASE(enum_test);
 
 // Every accessor must decode under the proxy's own context, not just field<>(): a proxy built with
 // an ambient big-endian/packed context sees a 5 byte packed message, not the 8 byte native layout.

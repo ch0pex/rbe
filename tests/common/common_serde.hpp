@@ -34,7 +34,7 @@ inline constexpr auto ignore_padding = [](std::byte const lhs, std::byte const r
   return lhs == rhs or lhs == pad or rhs == pad;
 };
 
-constexpr TestCase trivially_wirable_no_padding {
+inline constexpr TestCase trivially_wirable_no_padding {
   .structure = NonPaddedStruct2 {.a = 1, .b = 2, .c = 'a'},
   .wire      = bytes(
       0x01, 0x00, 0x00, 0x00, // a
@@ -44,7 +44,7 @@ constexpr TestCase trivially_wirable_no_padding {
 };
 
 
-constexpr TestCase padded_struct_test {
+inline constexpr TestCase padded_struct_test {
   .structure = PaddedStruct {.a = 1, .b = 2, .c = 'c'},
   .wire      = bytes(
       0x01, 0x00, 0x00, 0x00, // a
@@ -55,7 +55,7 @@ constexpr TestCase padded_struct_test {
   ),
 };
 
-constexpr TestCase trivially_wirable_with_paddings {
+inline constexpr TestCase trivially_wirable_with_paddings {
   .structure =
       ReduceSize {
         .length           = 0xAA,
@@ -75,13 +75,13 @@ constexpr TestCase trivially_wirable_with_paddings {
   ),
 };
 
-constexpr TestCase wirable_custom_serder {
+inline constexpr TestCase wirable_custom_serder {
   .structure = NoAggregateCustomSerder {bytes(0x00, 0x01, 0x02, 0x03)},
   .wire      = bytes(0x00, 0x01, 0x02, 0x03),
 };
 
 // Packed structure test case
-constexpr TestCase packed_test {
+inline constexpr TestCase packed_test {
   .structure =
       Packed {
         .a = 0x42,
@@ -94,7 +94,7 @@ constexpr TestCase packed_test {
 };
 
 // MixedEndian structure test case
-constexpr TestCase mixed_endian_test {
+inline constexpr TestCase mixed_endian_test {
   .structure =
       MixedEndian {
         .a = 0x12345678, // little endian
@@ -109,7 +109,7 @@ constexpr TestCase mixed_endian_test {
 };
 
 // MessageWithHeader structure test case
-constexpr TestCase message_with_header_test {
+inline constexpr TestCase message_with_header_test {
   .structure =
       MessageWithHeader {
         .header =
@@ -136,7 +136,7 @@ constexpr TestCase message_with_header_test {
 };
 
 // CommonHeaderPackBe structure test case
-constexpr TestCase common_header_pack_be_test {
+inline constexpr TestCase common_header_pack_be_test {
   .structure =
       CommonHeaderPackBe {
         .version   = 2,
@@ -153,7 +153,7 @@ constexpr TestCase common_header_pack_be_test {
 };
 
 // MessageWithHeaderPackBe structure test case
-constexpr TestCase message_with_header_pack_be_test {
+inline constexpr TestCase message_with_header_pack_be_test {
   .structure =
       MessageWithHeaderPackBe {
         .header =
@@ -180,7 +180,7 @@ constexpr TestCase message_with_header_pack_be_test {
 };
 
 // CommonHeaderPack structure test case
-constexpr TestCase common_header_pack_test {
+inline constexpr TestCase common_header_pack_test {
   .structure =
       CommonHeaderPack {
         .version = 100,
@@ -197,7 +197,7 @@ constexpr TestCase common_header_pack_test {
 };
 
 // MessageWithHeaderPack structure test case
-constexpr TestCase message_with_header_pack_test {
+inline constexpr TestCase message_with_header_pack_test {
   .structure =
       MessageWithHeaderPack {
         .header =
@@ -223,7 +223,7 @@ constexpr TestCase message_with_header_pack_test {
 };
 
 // CommonHeaderMemberBe structure test case
-constexpr TestCase common_header_member_be_test {
+inline constexpr TestCase common_header_member_be_test {
   .structure =
       CommonHeaderMemberBe {
         .version = 0xDEADBEEF, // big-endian
@@ -237,7 +237,7 @@ constexpr TestCase common_header_member_be_test {
 };
 
 // MessageWithHeaderMemberBe structure test case
-constexpr TestCase message_with_header_member_be_test {
+inline constexpr TestCase message_with_header_member_be_test {
   .structure =
       MessageWithHeaderMemberBe {
         .header =
@@ -272,7 +272,7 @@ constexpr TestCase message_with_header_member_be_test {
 // };
 
 // MessageWithCArray structure test case
-constexpr TestCase message_with_c_array_test {
+inline constexpr TestCase message_with_c_array_test {
   .structure =
       MessageWithCArray {
         .header =
@@ -298,7 +298,7 @@ constexpr TestCase message_with_c_array_test {
 };
 
 // MessageWithArray structure test case
-constexpr TestCase message_with_array_test {
+inline constexpr TestCase message_with_array_test {
   .structure =
       MessageWithArray {
         .header =
@@ -323,7 +323,7 @@ constexpr TestCase message_with_array_test {
   ),
 };
 
-constexpr TestCase message_with_array_be_test {
+inline constexpr TestCase message_with_array_be_test {
   .structure =
       MessageWithArrayBe {
         .header =
@@ -356,7 +356,7 @@ constexpr TestCase message_with_array_be_test {
 // NestedMiddle nor NestedLeaf carry an endianness annotation of their own, so both must inherit
 // big-endian transitively from NestedParent, two and one levels up respectively, rather than
 // silently defaulting to native the moment an intermediate level in the chain has nothing explicit.
-constexpr TestCase nested_propagation_test {
+inline constexpr TestCase nested_propagation_test {
   .structure =
       NestedParent {
         .node   = {.leaf = {.valor = 0x11223344}, .valor2 = 0xAABBCCDD},
@@ -372,7 +372,7 @@ constexpr TestCase nested_propagation_test {
 // NestedPackParent structure test case -- regression for N-level pack propagation: NestedPackLeaf
 // carries no pack annotation of its own, so it must inherit packing transitively from
 // NestedPackParent, one level up, and drop its own inter-member padding on the wire.
-constexpr TestCase nested_pack_propagation_test {
+inline constexpr TestCase nested_pack_propagation_test {
   .structure =
       NestedPackParent {
         .leaf = {.a = 0x11, .b = 0x22334455},
@@ -383,4 +383,15 @@ constexpr TestCase nested_pack_propagation_test {
       0x55, 0x44, 0x33, 0x22, // leaf.b (little-endian, no padding despite its own native layout)
       0xAA // tail
   ),
+};
+
+inline constexpr TestCase integer_test {
+  .structure = std::size_t {0xAABBCCDDEEFF0011ULL},
+  .wire      = bytes(0x11, 0x00, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA),
+};
+
+enum class enum_test_type : std::uint16_t { };
+constexpr TestCase enum_test {
+  .structure = enum_test_type {0xAABB},
+  .wire      = bytes(0xBB, 0xAA),
 };
