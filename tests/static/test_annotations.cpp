@@ -307,4 +307,8 @@ static_assert(std::same_as<rbe::id_type_of<MsgWithIdValue>, test_msg_type_t>);
 static_assert(std::same_as<rbe::id_type_of<MsgWithInlineId>, test_msg_type_t>);
 static_assert(std::same_as<rbe::id_type_of<MsgWithIntId>, int>);
 
+// --- empty ---
+static_assert(not rbe::explicitly_empty<Empty>);
+static_assert(rbe::explicitly_empty<ExplictlyEmpty>);
+
 } // namespace

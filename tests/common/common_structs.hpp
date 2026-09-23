@@ -14,6 +14,7 @@
 #include <rbe/annotations/bits.hpp>
 #include <rbe/annotations/derive.hpp>
 #include <rbe/annotations/detail/annotation.hpp>
+#include <rbe/annotations/empty.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/format.hpp>
 #include <rbe/annotations/id.hpp>
@@ -23,6 +24,8 @@
 #include <type_traits>
 
 struct[[= rbe::fmt]] Empty { };
+
+struct[[= rbe::empty]] ExplictlyEmpty { };
 
 struct[[= rbe::fmt]] B {
   int m0 = 0;
