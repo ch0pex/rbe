@@ -20,12 +20,14 @@
 // --- STD ---
 #include <concepts>
 #include <stdexcept>
+#include "rbe/annotations/detail/dimension.hpp"
 
 namespace rbe {
 
 namespace detail {
 
-/// The `rbe::id(value)` annotation written on `type`, or nullopt -- the bare marker does not count.
+// NOTE: since rbe::id has rbe::id(value) and rbe::id as marker type_only cannot be used
+// in the dimmension kinds. It's checked manually in the check function
 struct id_dim {
   static constexpr auto kind = dimension_kind::exclusive | dimension_kind::unique;
 };
@@ -39,10 +41,10 @@ struct id_tag { // clang-format off
 
   static consteval auto check(annotation_info const ann, std::meta::info const entity) -> bool {
     if (ann.has_value()) { // rbe::id(value): declares the id of a message type
-      return is_class_type(normalize_type(entity))
+      return is_type(entity) // id::value can only exist on types no member variables
              and invoke_concept(^^std::equality_comparable, {ann.value_type()});
     }
-    // rbe::id: marks the field the id is read from
+    // rbe::id marker can only be used with equality_comparable types 
     return invoke_concept(^^std::equality_comparable, {normalize_type(entity)});
   }
 }; // clang-format on

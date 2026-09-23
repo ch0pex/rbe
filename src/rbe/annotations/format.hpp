@@ -17,7 +17,13 @@ namespace rbe {
 
 namespace detail {
 
-struct fmt_tag { };
+struct fmt_dim {
+  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::unique | dimension_kind::type_only;
+};
+
+struct fmt_tag {
+  using dimension = fmt_dim;
+};
 
 } // namespace detail
 

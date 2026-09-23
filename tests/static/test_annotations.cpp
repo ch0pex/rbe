@@ -146,6 +146,7 @@ static_assert(rbe::well_annotated<Parent>);
 static_assert(not rbe::well_annotated<ConflictingAnnotations>);
 static_assert(not rbe::well_annotated<DuplicatedAnnotations>);
 static_assert(not rbe::well_annotated<BadParent>);
+static_assert(not rbe::well_annotated<EmptyInMemberIsWrong>);
 
 // --- Length annotation correctness ---
 
@@ -168,7 +169,10 @@ static_assert(not rbe::well_annotated<IdValueAndMarker>); // marker and value sh
 static_assert(not rbe::well_annotated<TwoIdValues>); // two id values in one annotation range, fails dimension check
 static_assert(not rbe::well_annotated<IdValueOnScalar>); // id(value) on a non class type, fails check
 static_assert(not rbe::well_annotated<TwoIdValuesNested>); // one id per message whatever its value, fails uniqueness
-                                                         //
+static_assert(not rbe::well_annotated<IdValueOnStructMember>); // id(value) on a member is wrong
+static_assert(rbe::well_annotated<IdMarkerOnTypeIsAllowed>); // rbe::id marker can be used on types 
+static_assert(not rbe::well_annotated<IdValueAndMarkerCannotShareConstruct>); // rbe::id marker and value don't make sense in the same construct 
+
 
 // --- annotated_nsdm ---
 static_assert(rbe::detail::annotated_nsdm(^^AllLengths, rbe::frame_length) == ^^AllLengths::frame);
@@ -203,7 +207,7 @@ static_assert(big_info.value<rbe::alignment_mode>() == std::nullopt); // right a
 inline constexpr auto fmt_info = rbe::detail::annotation_info {^^rbe::fmt};
 static_assert(not fmt_info.has_value());
 static_assert(fmt_info.tag() == ^^rbe::detail::fmt_tag);
-static_assert(fmt_info.dimension() == std::meta::info {});
+static_assert(fmt_info.dimension() == ^^rbe::detail::fmt_dim);
 static_assert(fmt_info.value_type() == std::meta::info {});
 static_assert(fmt_info.value<int>() == std::nullopt);
 

@@ -15,6 +15,7 @@
 
 // --- STD ---
 #include <ranges>
+#include "rbe/annotations/detail/dimension.hpp"
 
 namespace rbe::detail::annotations {
 
@@ -43,8 +44,8 @@ consteval auto verify_global_unique_dimension(std::meta::info const type, std::m
   auto const in_dim = deep_annotations(type) | std::views::filter(by_dimension(dim)) | std::ranges::to<std::vector>();
   return std::ranges::all_of(in_dim, [&in_dim](annotation_info const one) {
     return std::ranges::count_if(in_dim, [one](annotation_info const other) { //
-      return one.identity_equals(other);
-    }) <= 1;
+             return one.identity_equals(other);
+           }) <= 1;
   });
 }
 
@@ -71,6 +72,15 @@ consteval auto verify_no_local_duplications(std::meta::info info) -> bool {
   return is_class_type(info) ? std::ranges::all_of(nsdm(info), verify_no_local_duplications) : true;
 }
 
+// --- Verify annotations scope ---
+
+consteval auto verify_type_only_scope(std::meta::info const type, std::meta::info const dim) {
+  // if annotation is not in the type then deep and type_only sizes will be different
+  auto deep      = deep_annotations(type) | std::views::filter(by_dimension(dim)) | std::ranges::to<std::vector>();
+  auto type_only = annotation_range(type) | std::views::filter(by_dimension(dim)) | std::ranges::to<std::vector>();
+  return std::ranges::size(deep) == std::ranges::size(type_only);
+}
+
 // --- Generic dispatch: discover which dimensions are actually used, verify each per its kind ---
 
 consteval auto dimensions_used_in(std::meta::info const type) -> std::vector<std::meta::info> {
@@ -89,6 +99,9 @@ consteval auto verify_dimension(std::meta::info const type, std::meta::info cons
     return false;
   }
   if (enforces(kind, dimension_kind::unique) and not verify_global_unique_dimension(type, dim)) {
+    return false;
+  }
+  if (enforces(kind, dimension_kind::type_only) and not verify_type_only_scope(type, dim)) {
     return false;
   }
   return true;

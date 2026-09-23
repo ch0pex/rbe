@@ -27,6 +27,10 @@ struct[[= rbe::fmt]] Empty { };
 
 struct[[= rbe::empty]] ExplictlyEmpty { };
 
+struct EmptyInMemberIsWrong {
+  [[= rbe::empty]] int number;
+};
+
 struct[[= rbe::fmt]] B {
   int m0 = 0;
 };
@@ -535,7 +539,21 @@ struct [[=rbe::id(test_msg_type_t::add_order)]] TwoIdValuesNested {
 };
 
 struct IdValueOnScalar {
-  [[=rbe::id(test_msg_type_t::heartbeat)]] std::uint8_t x; // id(value) is struct-level
+  [[=rbe::id(test_msg_type_t::heartbeat)]] std::uint8_t x;
+};
+
+struct IdValueOnStructMember {
+  [[=rbe::id(test_msg_type_t::heartbeat)]] BitsField bits; 
+};
+
+struct [[=rbe::id]] IdMarkerOnTypeIsAllowed {
+  int number;
+  constexpr auto operator==(IdMarkerOnTypeIsAllowed const&) const -> bool = default;
+};
+
+struct [[=rbe::id(test_msg_type_t::heartbeat), =rbe::id]] IdValueAndMarkerCannotShareConstruct {
+  int number;
+  constexpr auto operator==(IdValueAndMarkerCannotShareConstruct const&) const -> bool = default;
 };
 
 struct [[=rbe::little, =rbe::pack]] WithFrameLength {

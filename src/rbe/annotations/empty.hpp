@@ -23,7 +23,7 @@ namespace rbe {
 namespace detail {
 
 struct empty_dim {
-  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::unique;
+  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::unique | dimension_kind::type_only;
 };
 
 struct empty_tag {
