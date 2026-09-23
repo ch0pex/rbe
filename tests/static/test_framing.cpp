@@ -9,12 +9,8 @@
  */
 
 // --- Includes ---
-#include "common_structs.hpp"
+#include "common_frame.hpp"
 
-#include <rbe/annotations/alignment.hpp>
-#include <rbe/annotations/endianness.hpp>
-#include <rbe/annotations/length.hpp>
-#include <rbe/framing.hpp>
 #include <rbe/framing/frame_delimiting_concepts.hpp>
 #include <rbe/framing/frame_serder_concepts.hpp>
 
@@ -25,19 +21,6 @@
 #include <span>
 
 namespace {
-
-// clang-format off
-
-// ============================================================
-// Shorthands
-// ============================================================
-using candidates  = rbe::any<MessageWithHeader, MessageWithHeaderPack>;
-using msg_frame   = rbe::frame<CommonHeader, MessageWithHeader>;   // one wirable payload
-using any_frame   = rbe::frame<CommonHeader, candidates>;          // candidate set payload
-using blob_frame  = rbe::frame<CommonHeader, rbe::blob>;           // opaque bytes payload
-using nested      = rbe::frame<NestedPackParent, msg_frame>;       // nested frame payload
-using packet      = rbe::frame<NestedPackParent, rbe::many<any_frame>>; // two-level protocol
-
 
 // ============================================================
 // frame header
@@ -73,8 +56,13 @@ static_assert(rbe::frame_serder_payload<MessageWithHeader>); // wirable
 static_assert(rbe::frame_serder_payload<rbe::any<MessageWithHeader, MessageWithHeaderPack>>); // any
 static_assert(rbe::frame_serder_payload<rbe::many<rbe::frame<CommonHeader, MessageWithHeader>>>); // many
 static_assert(rbe::frame_serder_payload<rbe::blob>); // blob
-static_assert(rbe::frame_serder_payload<rbe::frame<CommonHeader, rbe::many<rbe::frame<CommonHeader, MessageWithHeader>>>>);
-static_assert(rbe::frame_serder_payload<rbe::frame<CommonHeader, rbe::many<rbe::frame<CommonHeader, rbe::any<MessageWithHeader, MessageWithHeaderPack>>>>>);
+static_assert(
+    rbe::frame_serder_payload<rbe::frame<CommonHeader, rbe::many<rbe::frame<CommonHeader, MessageWithHeader>>>>
+);
+static_assert(
+    rbe::frame_serder_payload<rbe::frame<
+        CommonHeader, rbe::many<rbe::frame<CommonHeader, rbe::any<MessageWithHeader, MessageWithHeaderPack>>>>>
+);
 // neither wirable nor serder_traits
 static_assert(not rbe::frame_serder_payload<Empty>);
 static_assert(not rbe::frame_serder_payload<AggregateWithPtr>);
@@ -226,59 +214,79 @@ static_assert(not rbe::dispatch_delimited_frame<rbe::frame<WithPayloadLength, ca
 static_assert(rbe::dispatch_delimited_frame<rbe::frame<CommonHeader, rbe::frame<CommonHeader, candidates>>>);
 static_assert(not rbe::dispatch_delimited_frame<rbe::frame<WithFrameLength, rbe::frame<CommonHeader, candidates>>>);
 
- // ============================================================
- // frame member types
- // ============================================================
- static_assert(std::same_as<msg_frame::header_type, CommonHeader>);
- static_assert(std::same_as<msg_frame::payload_type, MessageWithHeader>);
- static_assert(std::same_as<packet::header_type, NestedPackParent>);
- static_assert(std::same_as<packet::payload_type, rbe::many<any_frame>>);
+// ============================================================
+// frame member types
+// ============================================================
+static_assert(std::same_as<msg_frame::header_type, CommonHeader>);
+static_assert(std::same_as<msg_frame::payload_type, MessageWithHeader>);
+static_assert(std::same_as<packet::header_type, NestedPackParent>);
+static_assert(std::same_as<packet::payload_type, rbe::many<any_frame>>);
 
- // the payload of a nested frame is the frame itself, not its lowering
- static_assert(std::same_as<nested::payload_type, msg_frame>);
-
-
- // ============================================================
- // to_dsrl_type
- // ============================================================
-
- // a wirable payload is its own dsrl type -- deserialization is driven by the strategy, not the type
- static_assert(std::same_as<rbe::detail::to_dsrl_t<MessageWithHeader>, MessageWithHeader>);
- static_assert(std::same_as<rbe::detail::to_dsrl_t<std::uint32_t>, std::uint32_t>);
-
- // vocabulary types lower to their rbe::dsrl counterpart
- static_assert(std::same_as<rbe::detail::to_dsrl_t<candidates>, rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>); 
- static_assert(std::same_as<rbe::detail::to_dsrl_t<rbe::many<msg_frame>>, rbe::dsrl::many<rbe::dsrl::frame<CommonHeader, MessageWithHeader>>>);
- static_assert(std::same_as<rbe::detail::to_dsrl_t<rbe::blob>, std::span<std::byte const>>);
- static_assert(std::same_as<rbe::detail::to_dsrl_t<msg_frame>, rbe::dsrl::frame<CommonHeader, MessageWithHeader>>);
- // lowering is idempotent: an already lowered type has no dsrl_type of its own
- static_assert(std::same_as<rbe::detail::to_dsrl_t<rbe::detail::to_dsrl_t<msg_frame>>, rbe::detail::to_dsrl_t<msg_frame>>);
- static_assert(std::same_as<rbe::detail::to_dsrl_t<rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>, rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>);
-
- // the header is never lowered, only the payload is
- static_assert(std::same_as<msg_frame::dsrl_type, rbe::dsrl::frame<CommonHeader, MessageWithHeader>>);
- static_assert(std::same_as<any_frame::dsrl_type, rbe::dsrl::frame<CommonHeader, rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>>); 
- static_assert(std::same_as<blob_frame::dsrl_type, rbe::dsrl::frame<CommonHeader, std::span<std::byte const>>>);
-
-  // lowering recurses through nesting: frame -> dsrl::frame, many<frame> -> dsrl::many<dsrl::frame>
- static_assert(std::same_as<nested::dsrl_type, rbe::dsrl::frame<NestedPackParent, rbe::dsrl::frame<CommonHeader, MessageWithHeader>>>); 
- static_assert(std::same_as<packet::dsrl_type, rbe::dsrl::frame<NestedPackParent, rbe::dsrl::many<rbe::dsrl::frame<CommonHeader, rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>>>>); // the lowered frame keeps the header, and carries the lowered payload
- static_assert(std::same_as<packet::dsrl_type::header_type, NestedPackParent>);
- static_assert(std::same_as<packet::dsrl_type::payload_type, rbe::detail::to_dsrl_t<packet::payload_type>>);
- static_assert(std::same_as<packet::dsrl_type::buffer_type, std::span<std::byte const>>);
+// the payload of a nested frame is the frame itself, not its lowering
+static_assert(std::same_as<nested::payload_type, msg_frame>);
 
 
- // ============================================================
- // frame_serder_traits
- // ============================================================
- static_assert(std::same_as<rbe::frame_header_t<msg_frame>, msg_frame::header_type>);
- static_assert(std::same_as<rbe::frame_payload_t<msg_frame>, msg_frame::payload_type>);
- static_assert(std::same_as<rbe::frame_dsrl_t<msg_frame>, msg_frame::dsrl_type>);
- static_assert(std::same_as<rbe::frame_header_t<packet>, NestedPackParent>);
- static_assert(std::same_as<rbe::frame_payload_t<packet>, rbe::many<any_frame>>);
- static_assert(std::same_as<rbe::frame_dsrl_t<packet>, packet::dsrl_type>);
- static_assert(std::same_as<rbe::frame_payload_t<rbe::frame_payload_t<nested>>, MessageWithHeader>);
- static_assert(std::same_as<rbe::frame_header_t<rbe::frame_payload_t<nested>>, CommonHeader>);
+// ============================================================
+// to_dsrl_type
+// ============================================================
+
+// a wirable payload is its own dsrl type -- deserialization is driven by the strategy, not the type
+static_assert(std::same_as<rbe::detail::to_dsrl_t<MessageWithHeader>, MessageWithHeader>);
+static_assert(std::same_as<rbe::detail::to_dsrl_t<std::uint32_t>, std::uint32_t>);
+
+// vocabulary types lower to their rbe::dsrl counterpart
+static_assert(
+    std::same_as<rbe::detail::to_dsrl_t<candidates>, rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>
+);
+static_assert(std::same_as<
+              rbe::detail::to_dsrl_t<rbe::many<msg_frame>>,
+              rbe::dsrl::many<rbe::dsrl::frame<CommonHeader, MessageWithHeader>>>);
+static_assert(std::same_as<rbe::detail::to_dsrl_t<rbe::blob>, std::span<std::byte const>>);
+static_assert(std::same_as<rbe::detail::to_dsrl_t<msg_frame>, rbe::dsrl::frame<CommonHeader, MessageWithHeader>>);
+// lowering is idempotent: an already lowered type has no dsrl_type of its own
+static_assert(
+    std::same_as<rbe::detail::to_dsrl_t<rbe::detail::to_dsrl_t<msg_frame>>, rbe::detail::to_dsrl_t<msg_frame>>
+);
+static_assert(std::same_as<
+              rbe::detail::to_dsrl_t<rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>,
+              rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>);
+
+// the header is never lowered, only the payload is
+static_assert(std::same_as<msg_frame::dsrl_type, rbe::dsrl::frame<CommonHeader, MessageWithHeader>>);
+static_assert(
+    std::same_as<
+        any_frame::dsrl_type, rbe::dsrl::frame<CommonHeader, rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>>
+);
+static_assert(std::same_as<blob_frame::dsrl_type, rbe::dsrl::frame<CommonHeader, std::span<std::byte const>>>);
+
+// lowering recurses through nesting: frame -> dsrl::frame, many<frame> -> dsrl::many<dsrl::frame>
+static_assert(
+    std::same_as<
+        nested::dsrl_type, rbe::dsrl::frame<NestedPackParent, rbe::dsrl::frame<CommonHeader, MessageWithHeader>>>
+);
+static_assert(
+    std::same_as<
+        packet::dsrl_type,
+        rbe::dsrl::frame<
+            NestedPackParent,
+            rbe::dsrl::many<rbe::dsrl::frame<CommonHeader, rbe::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>>>>
+); // the lowered frame keeps the header, and carries the lowered payload
+static_assert(std::same_as<packet::dsrl_type::header_type, NestedPackParent>);
+static_assert(std::same_as<packet::dsrl_type::payload_type, rbe::detail::to_dsrl_t<packet::payload_type>>);
+static_assert(std::same_as<packet::dsrl_type::buffer_type, std::span<std::byte const>>);
+
+
+// ============================================================
+// frame_serder_traits
+// ============================================================
+static_assert(std::same_as<rbe::frame_header_t<msg_frame>, msg_frame::header_type>);
+static_assert(std::same_as<rbe::frame_payload_t<msg_frame>, msg_frame::payload_type>);
+static_assert(std::same_as<rbe::frame_dsrl_t<msg_frame>, msg_frame::dsrl_type>);
+static_assert(std::same_as<rbe::frame_header_t<packet>, NestedPackParent>);
+static_assert(std::same_as<rbe::frame_payload_t<packet>, rbe::many<any_frame>>);
+static_assert(std::same_as<rbe::frame_dsrl_t<packet>, packet::dsrl_type>);
+static_assert(std::same_as<rbe::frame_payload_t<rbe::frame_payload_t<nested>>, MessageWithHeader>);
+static_assert(std::same_as<rbe::frame_header_t<rbe::frame_payload_t<nested>>, CommonHeader>);
 
 // clang-format on
 
