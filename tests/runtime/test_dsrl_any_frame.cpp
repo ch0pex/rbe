@@ -11,46 +11,20 @@
  */
 
 // --- Includes ---
-#include "rbe/core/memory_layout.hpp"
-#include "rbe/framing/dsrl/any_unmatched.hpp"
+#include "common_frame.hpp"
 #include "test_macros.hpp"
 
-//
-#include "common_structs.hpp"
-
-//
 #include <rbe/annotations/id.hpp>
+#include <rbe/core/memory_layout.hpp>
 #include <rbe/framing/dsrl/any.hpp>
+#include <rbe/framing/dsrl/any_unmatched.hpp>
 
 //
 #include <optional>
 
 namespace {
 
-struct[[= rbe::id(0)]] msg_1 {
-  int value1;
-  constexpr auto operator==(msg_1 const&) const -> bool = default;
-};
-
-struct[[= rbe::id(1)]] msg_2 {
-  std::array<int, 25> numbers;
-  constexpr auto operator==(msg_2 const&) const -> bool = default;
-};
-
-struct[[= rbe::id(2)]] msg_3 {
-  char type;
-  constexpr auto operator==(msg_3 const&) const -> bool = default;
-};
-
-struct[[ = rbe::id(42), = rbe::empty ]] heartbeat {
-  constexpr auto operator==(heartbeat const&) const -> bool = default;
-};
-
-template<typename T>
-concept msgs_1_and_2 = std::same_as<T, msg_1> or std::same_as<T, msg_2>;
-
-using any_test                = rbe::dsrl::any<msg_1, msg_2, msg_3>;
-using any_test_with_heartbeat = rbe::dsrl::any<msg_1, msg_2, msg_3, heartbeat>;
+using namespace dsrl;
 
 inline constexpr std::array<std::byte, 1500> buffer {
   std::byte {0xCC}, std::byte {0xCC}, std::byte {0xCC}, std::byte {0xCC}

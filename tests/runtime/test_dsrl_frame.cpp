@@ -9,7 +9,7 @@
  */
 
 // --- Includes ---
-#include "common_structs.hpp"
+#include "common_frame.hpp"
 #include "test_macros.hpp"
 
 #include <rbe/annotations/alignment.hpp>
@@ -26,32 +26,6 @@
 #include <span>
 
 namespace {
-
-// clang-format off
-
-// ============================================================
-// Test headers
-// ============================================================
-struct [[=rbe::little, =rbe::pack]] PlainHeader {
-  std::uint16_t type;
-  std::uint16_t sequence;
-};
-
-struct [[=rbe::little, =rbe::pack]] FrameLengthHeader {
-  std::uint8_t type;
-  [[=rbe::frame_length]] std::uint16_t length;
-};
-
-struct [[=rbe::little, =rbe::pack]] PayloadLengthHeader {
-  [[=rbe::payload_length]] std::uint16_t length;
-};
-
-struct [[=rbe::little, =rbe::pack]] HeaderLengthHeader {
-  [[=rbe::header_length]] std::uint8_t length;
-  std::uint8_t flags;
-};
-
-// clang-format on
 
 using blob                        = std::span<std::byte const>;
 inline constexpr auto buffer_size = std::size_t {32};
@@ -85,7 +59,7 @@ static_assert(payload_extent_of<PayloadLengthHeader, std::uint32_t>() == payload
 
 constexpr auto static_sizes() {
   auto const plain_buffer = buffer({0x01, 0x00, 0x02, 0x00});
-  auto const plain        = rbe::dsrl::frame<PlainHeader, std::uint32_t> {plain_buffer};
+  auto const plain        = rbe::dsrl::frame<PlainHeader, std::uint32_t>::parse(plain_buffer).value();
 
   RBE_CHECK(plain.header_length() == 4);
   RBE_CHECK(plain.payload_length() == 4);
@@ -115,7 +89,7 @@ constexpr auto no_annotations_blob() {
 
 constexpr auto frame_hdr_length() {
   auto const frame_length_buffer = buffer({0x07, 0x0A, 0x00});
-  auto const with_frame_length   = rbe::dsrl::frame<FrameLengthHeader, blob> {frame_length_buffer};
+  auto const with_frame_length   = rbe::dsrl::frame<FrameLengthHeader, blob>::parse(frame_length_buffer).value();
 
   RBE_CHECK(with_frame_length.header_length() == 3);
   RBE_CHECK(with_frame_length.length() == 10);
@@ -127,7 +101,7 @@ constexpr auto frame_hdr_length() {
 
 constexpr auto frame_length_hdr_plus_payload() {
   auto const payload_length_buffer = buffer({0x05, 0x00});
-  auto const with_payload_length   = rbe::dsrl::frame<PayloadLengthHeader, blob> {payload_length_buffer};
+  auto const with_payload_length   = rbe::dsrl::frame<PayloadLengthHeader, blob>::parse(payload_length_buffer).value();
 
   RBE_CHECK(with_payload_length.header_length() == 2);
   RBE_CHECK(with_payload_length.payload_length() == 5);
@@ -140,7 +114,8 @@ constexpr auto frame_length_hdr_plus_payload() {
 
 constexpr auto frame_payload_starts_after_header_length() {
   auto const header_length_buffer = buffer({0x06, 0x00});
-  auto const with_header_length   = rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t> {header_length_buffer};
+  auto const with_header_length =
+      rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::parse(header_length_buffer).value();
 
   RBE_CHECK(with_header_length.header_length() == 6);
   RBE_CHECK(with_header_length.header_span().size() == 6);
@@ -157,7 +132,7 @@ constexpr auto frame_nested_frame_length() {
   using inner_frame = rbe::dsrl::frame<FrameLengthHeader, blob>;
 
   auto const nested_buffer = buffer({0x01, 0x00, 0x02, 0x00, 0x07, 0x0A, 0x00});
-  auto const nested        = rbe::dsrl::frame<PlainHeader, inner_frame> {nested_buffer};
+  auto const nested        = rbe::dsrl::frame<PlainHeader, inner_frame>::parse(nested_buffer).value();
 
   RBE_CHECK(nested.payload_length() == 10);
   RBE_CHECK(nested.length() == 14);
@@ -195,7 +170,7 @@ constexpr auto frame_length_of_partial_buffer() {
 
 constexpr auto frame_narrows_at_construction() {
   auto const larger     = buffer({0x07, 0x0A, 0x00}); // buffer_size bytes, the frame is 10
-  auto const with_frame = rbe::dsrl::frame<FrameLengthHeader, blob> {larger};
+  auto const with_frame = rbe::dsrl::frame<FrameLengthHeader, blob>::parse(larger).value();
 
   RBE_CHECK(with_frame.length() == 10);
   RBE_CHECK(with_frame.as_span().size() == 10);
@@ -226,6 +201,14 @@ constexpr auto frame_with_empty_payload() {
   RBE_CHECK(with_empty_payload2.as_span().size() == 4);
 }
 
+// constexpr auto frame_message_id_any_doesnt_fit() {
+//   auto buff        = buffer({0x01, 0x00, 0x00, 0x00, 0xDD, 0xCC, 0xBB, 0xAA});
+//   using frame_type = rbe::dsrl::frame<MessageIdHeader, rbe::dsrl::any<msg_1, msg_2>>;
+//   RBE_CHECK(frame_type::parse_length(buff) == rbe::wire_size_of<MessageIdHeader>() + rbe::wire_size_of<msg_1>());
+//   // msg_1 doesn't fit in the buffer, so the frame cannot be constructed
+//   RBE_CHECK_FALSE(frame_type::parse(buff).has_value());
+// }
+
 // clang-format off
 TEST_SUITE("dsrl_frame - length and buffer accessors") {
   RBE_TEST_CASE("dsrl_frame - length and buffer: length_of works over a partially received buffer", frame_length_of_partial_buffer);
@@ -236,6 +219,8 @@ TEST_SUITE("dsrl_frame - length and buffer accessors") {
   RBE_TEST_CASE("dsrl_frame - length and buffer: frame_length = header_length + payload_length", frame_length_hdr_plus_payload);
   RBE_TEST_CASE("dsrl_frame - length and buffer: payload starts after the annotated header length, not the static header size", frame_payload_starts_after_header_length);
   RBE_TEST_CASE("dsrl_frame - length and buffer: the outer payload narrows to the inner frame length", frame_nested_frame_length);
+  RBE_TEST_CASE("dsrl_frame - length and buffer: frame with empty payload", frame_with_empty_payload);
+  // RBE_TEST_CASE("dsrl_frame - length and buffer: frame with message_id and any payload doesn't fit", frame_message_id_any_doesnt_fit);
 }
 // clang-format on
 

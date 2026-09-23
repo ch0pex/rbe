@@ -38,11 +38,18 @@ public:
 
     explicit constexpr iterator(parent_type* parent) : parent_(parent) { }
 
-    [[nodiscard]] constexpr auto operator*() const -> frame_type { return parent_->current(); }
+    [[nodiscard]] constexpr auto operator*() const -> frame_type {
+      assert(parent_->current_.has_value());
+      return parent_->current();
+    }
 
-    [[nodiscard]] constexpr auto operator->() const -> frame_type { return parent_->current(); }
+    [[nodiscard]] constexpr auto operator->() const -> frame_type const* {
+      assert(parent_->current_.has_value());
+      return std::addressof(parent_->current());
+    }
 
     constexpr auto operator++() -> iterator& {
+      assert(not parent_->done());
       parent_->next();
       return *this;
     }
@@ -55,12 +62,12 @@ public:
     parent_type* parent_;
   };
 
-  constexpr many(buffer_type const data) : current_(frame_type::make(data)), data_(data) { }
+  constexpr many(buffer_type const data) : current_(frame_type::parse(data)), data_(data) { }
 
   constexpr auto next() {
     assert(not done());
     data_    = data_.subspan(current_->length());
-    current_ = frame_type::make(data_);
+    current_ = frame_type::parse(data_);
   }
 
   [[nodiscard]] constexpr auto current() const -> frame_type {

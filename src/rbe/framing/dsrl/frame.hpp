@@ -49,6 +49,82 @@ public:
   using buffer_type  = std::span<std::byte const>;
   using size_type    = std::size_t;
 
+  // --- Static member functions ---
+
+  /**
+   * Costs of parsing frame lengths:
+   * - explicit delimited frames: length parsing is free
+   * - implicit delimited frames:
+   *     - fixed length -> length parsing is free and known at compile time
+   *     - variable length -> offset table parsing
+   *     - any:
+   *       - fixed length -> dispatching to the type
+   *       - variable length -> dispatching to the type + offset table parsing
+   *
+   * We can cache this 'heavy' computations by trimming the span on construction
+   * To do so I can think two ways:
+   *   - make factory function that returns std::optional<frame> and returns nullopt
+   *     if the operation fails
+   *   - a constructor that throws an exception if the operation fails
+   *
+   */
+
+  /**
+   * @brief Resolve the length of the frame starting at `data`, without constructing it
+   *
+   * Usable over a partially received buffer, e.g. to know how many bytes to wait for while reassembling a
+   * stream: it only reads the bytes the length depends on, which are the fixed-size header prefix for length
+   * fields and static sizes, plus the nested frames' headers when the payload is a nested frame.
+   *
+   * The length is gathered from (wire values take precedence over static sizes, see
+   * rbe::detail::payload_extent_of()):
+   *  - header length + the payload_length annotated field value if specified
+   *  - otherwise the frame_length annotated field value if specified
+   *  - otherwise header length + the nested frame's own parse_length() if the payload is a frame
+   *  - otherwise header length + rbe::wire_size_of<payload_type>() if the payload is wirable
+   *  - otherwise (span constructible, any, many) the whole buffer, which makes the frame buffer-delimited
+   *
+   * Length fields are read over the fixed-size header prefix, never over a span that depends on a length.
+   *
+   * @return The length of the frame in bytes
+   */
+  [[nodiscard]] static constexpr auto parse_length(buffer_type const data) -> std::optional<size_type> {
+    static constexpr auto extent = rbe::detail::payload_extent_of<header_type, payload_type>();
+
+    if (data.size() < rbe::wire_size_of<header_type>()) {
+      return std::nullopt;
+    }
+
+    if constexpr (extent == rbe::detail::payload_extent::payload_length_field) {
+      return header_length_of(data) + fixed_header(data).template field<rbe::payload_length>();
+    }
+    else if constexpr (extent == rbe::detail::payload_extent::frame_length_field) {
+      return fixed_header(data).template field<rbe::frame_length>();
+    }
+    else if constexpr (extent == rbe::detail::payload_extent::nested_frame) {
+      auto const header_length = header_length_of(data);
+      auto const payload_len   = payload_type::parse_length(data.subspan(header_length));
+      return payload_len.has_value() ? std::optional {header_length + *payload_len} : std::nullopt;
+    }
+    else if constexpr (extent == rbe::detail::payload_extent::static_size) {
+      return header_length_of(data) + wire_size_of<payload_type>();
+    }
+    else {
+      return data.size();
+    }
+  }
+
+  [[nodiscard]] static constexpr auto trim(buffer_type const data) -> std::optional<buffer_type> {
+    auto const length = parse_length(data);
+    return data.size() >= length ? std::optional {data.first(*length)} : std::nullopt;
+  }
+
+  [[nodiscard]] static constexpr auto parse(buffer_type const data) -> std::optional<frame> {
+    return trim(data) //
+        .transform([](buffer_type const buffer) { return frame {buffer}; }) //
+        .or_else([]() -> std::optional<frame> { return std::nullopt; }); //
+  }
+
   // --- Constructors ---
 
   /**
@@ -69,11 +145,11 @@ public:
    * To find out how many bytes a partially received frame needs before constructing it, use parse_length().
    *
    * Preconditions:
-   *   - data.size() >= parse_length(data)
+   *   - data.size() == parse_length(data)
    *   - buffer-delimited frames: the span covers exactly the frame
    *   - annotated lengths are consistent: wire_size_of<header_type>() <= header_length <= frame_length
    */
-  constexpr explicit frame(buffer_type const data) : data_(data.first(parse_length(data))) { }
+  constexpr explicit frame(buffer_type const data) : data_(data) { }
 
   // --- Member accessors ---
 
@@ -159,79 +235,6 @@ public:
   [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_; }
 
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
-
-  // --- Static member functions ---
-
-  /**
-   * Costs of parsing frame lengths:
-   * - explicit delimited frames: length parsing is free
-   * - implicit delimited frames:
-   *     - fixed length -> length parsing is free and known at compile time
-   *     - variable length -> offset table parsing
-   *     - any:
-   *       - fixed length -> dispatching to the type
-   *       - variable length -> dispatching to the type + offset table parsing
-   *
-   * We can cache this 'heavy' computations by trimming the span on construction
-   * To do so I can think two ways:
-   *   - make factory function that returns std::optional<frame> and returns nullopt
-   *     if the operation fails
-   *   - a constructor that throws an exception if the operation fails
-   *
-   */
-
-  /**
-   * @brief Resolve the length of the frame starting at `data`, without constructing it
-   *
-   * Usable over a partially received buffer, e.g. to know how many bytes to wait for while reassembling a
-   * stream: it only reads the bytes the length depends on, which are the fixed-size header prefix for length
-   * fields and static sizes, plus the nested frames' headers when the payload is a nested frame.
-   *
-   * The length is gathered from (wire values take precedence over static sizes, see
-   * rbe::detail::payload_extent_of()):
-   *  - header length + the payload_length annotated field value if specified
-   *  - otherwise the frame_length annotated field value if specified
-   *  - otherwise header length + the nested frame's own parse_length() if the payload is a frame
-   *  - otherwise header length + rbe::wire_size_of<payload_type>() if the payload is wirable
-   *  - otherwise (span constructible, any, many) the whole buffer, which makes the frame buffer-delimited
-   *
-   * Length fields are read over the fixed-size header prefix, never over a span that depends on a length.
-   *
-   * @return The length of the frame in bytes
-   */
-  [[nodiscard]] static constexpr auto parse_length(buffer_type const data) -> size_type {
-    static constexpr auto extent = rbe::detail::payload_extent_of<header_type, payload_type>();
-
-    if constexpr (extent == rbe::detail::payload_extent::payload_length_field) {
-      return header_length_of(data) + fixed_header(data).template field<rbe::payload_length>();
-    }
-    else if constexpr (extent == rbe::detail::payload_extent::frame_length_field) {
-      return fixed_header(data).template field<rbe::frame_length>();
-    }
-    else if constexpr (extent == rbe::detail::payload_extent::nested_frame) {
-      auto const header_length = header_length_of(data);
-      return header_length + payload_type::parse_length(data.subspan(header_length));
-    }
-    else if constexpr (extent == rbe::detail::payload_extent::static_size) {
-      return header_length_of(data) + wire_size_of<payload_type>();
-    }
-    else {
-      return data.size();
-    }
-  }
-
-  [[nodiscard]] static constexpr auto make(buffer_type const data) -> std::optional<frame> {
-    if (data.size() < rbe::wire_size_of<header_type>()) {
-      return std::nullopt;
-    }
-
-    auto const length = parse_length(data);
-    if (data.size() < length) {
-      return std::nullopt;
-    }
-
-    return frame {data.first(length), detail::factory_pass};
-  }
 
 private:
   constexpr explicit frame(buffer_type const data, detail::factory_pass_t /**/) : data_(data) { }

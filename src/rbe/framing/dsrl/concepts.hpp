@@ -46,7 +46,8 @@ concept is_frame = rbe::is_frame<T> and requires(T const ct) {
   { ct.header_span() } -> std::same_as<typename T::buffer_type>;
   { ct.payload_span() } -> std::same_as<typename T::buffer_type>;
   { ct.length() } -> std::same_as<typename T::size_type>;
-  { T::parse_length(ct.as_span()) } -> std::same_as<typename T::size_type>;
+  { T::parse_length(ct.as_span()) } -> std::same_as<std::optional<typename T::size_type>>;
+  { T::parse(ct.as_span()) } -> std::same_as<std::optional<T>>;
   { ct.header_length() } -> std::same_as<typename T::size_type>;
   { ct.payload_length() } -> std::same_as<typename T::size_type>;
   { ct.as_span() } -> std::same_as<typename T::buffer_type>;
@@ -78,8 +79,5 @@ concept is_frame = rbe::is_frame<T> and requires(T const ct) {
  */
 template<typename Overload, typename CandidateList>
 concept any_dispatcher = rbe::detail::no_throw(detail::diagnose_any_dispatcher<Overload, CandidateList>);
-
-template<typename T>
-concept is_any = true;
 
 } // namespace rbe::dsrl
