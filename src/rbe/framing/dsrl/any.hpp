@@ -41,37 +41,17 @@ public:
   using size_type   = std::size_t;
   using id_type     = candidates::id_type;
 
-  // --- Static function members ---
+  // --- Factory static member function ---
 
   /**
-   * @brief Resolve how many bytes the candidate selected by `id` takes in `data`, without constructing it
+   * @brief wide-contract counterpart of the constructor, construct an any over `data` after checking it's preconditions
    *
-   * A known id answers with that candidate's wire size, which makes the any self-delimiting: a frame
-   * carrying it knows where it ends and iteration can go on past it. An unknown id has no length to go by,
-   * so the any spans the rest of the buffer and iteration naturally stops at it.
+   * Preconditions:
+   *   - if the id is known, the candidate fits in the buffer: data.size() >= *parse_length(id, data)
    *
-   * @return The length of the candidate in bytes, nullopt if the buffer is too short to hold it
+   * @return The any, nullopt if the candidate does not fit in the buffer. If the id is unknown, any is always returned.
    */
-  [[nodiscard]] static constexpr auto parse_length(id_type const id, buffer_type const data)
-      -> std::optional<size_type> {
-    return length_of(candidates::index_of(id), data);
-  }
-
-  [[nodiscard]] static constexpr auto trim(id_type const id, buffer_type const data) -> std::optional<buffer_type> {
-    return parse_length(id, data) //
-        .transform([data](size_type const length) { return data.first(length); });
-  }
-
-  /**
-   * @brief Construct an any over `data` after checking everything the contract allows checking
-   *
-   * This is the wide-contract counterpart of the constructor: the only precondition it cannot check is the
-   * one nothing can, that the bytes really are the candidate `id` names. Construction through it costs no
-   * more than through the constructor, as the resolved index and the narrowed span are handed over.
-   *
-   * @return The any, nullopt if the candidate does not fit in the buffer
-   */
-  [[nodiscard]] static constexpr auto parse(id_type const id, buffer_type const data) -> std::optional<any> {
+  [[nodiscard]] static constexpr auto make(id_type const id, buffer_type const data) -> std::optional<any> {
     auto const index = candidates::index_of(id);
     return length_of(index, data) //
         .transform([&](size_type const length) { return any {index, data.first(length)}; });
@@ -95,18 +75,13 @@ public:
    *   - the bytes are the wire representation of the candidate the id selects, not of another one
    *   - the candidate fits in the buffer: data.size() >= *parse_length(id, data)
    *
-   * Over a buffer that may not hold a whole candidate yet use parse()
+   * Over a buffer that may not hold a whole candidate yet use make()
    * instead, which reports the violation rather than running into it.
    */
   constexpr any(id_type const id, buffer_type const data) :
     id_(id), //
     index_(candidates::index_of(id)), //
     data_(trim_to(index_, data)) { }
-
-  template<typename... T>
-  constexpr auto match(T&&... callbacks) const -> decltype(auto) {
-    return match(rbe::overload {std::forward<T>(callbacks)...});
-  }
 
   /**
    * @brief Dispatches the `any` object to the corresponding overload based on its ID.
@@ -149,6 +124,11 @@ public:
     );
   }
 
+  template<typename... T>
+  constexpr auto match(T&&... callbacks) const -> decltype(auto) {
+    return match(rbe::overload {std::forward<T>(callbacks)...});
+  }
+
   template<typename T>
     requires(not any_dispatcher<T, candidates>)
   constexpr auto match(T /**/) const -> decltype(auto) {
@@ -184,6 +164,13 @@ public:
 
 private:
   using index_type = rbe::detail::candidate_index;
+
+
+  /// NOTE: maybe I should expose this constructor. For now it's only used by the factory function
+  /// however if the id is dense and the user know it he could use it to avoid finding the index.
+  /// However this doesn't allow unkown ids, so  maybe it's not the solution.
+  /// TODO: A better solution is to label id's as dense by the user actually it's possible to
+  /// detect such a property at compile time, but it would be a bit more complex to implement.
   /**
    * @brief Construct from an index already resolved over a span already narrowed to the candidate
    *

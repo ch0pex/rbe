@@ -158,6 +158,7 @@ struct candidate_list<T...> {
   // tell the user to specify first in the list the most common candidates
   // Usually market protocols have a few messages that are much more common
   // than the rest, so this is a reasonable assumption
+  // TODO: use if consteval to use a hash map at runtime
   static constexpr auto index_of(id_type const id) -> candidate_index {
     auto const it = std::ranges::find(ids, id);
     return it != std::ranges::end(ids) //
