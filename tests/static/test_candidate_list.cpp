@@ -13,6 +13,9 @@
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/framing/detail/candidate_list.hpp>
 
+// --- STD ---
+#include <concepts>
+
 namespace {
 
 // clang-format off
@@ -53,6 +56,7 @@ static_assert(not rbe::detail::compatible_candidates<msg_str, msg_str2, msg_str_
 using candidate_list_t = rbe::detail::candidate_list<msg_a, msg_b, msg_c>;
 using candidate_list_hb = rbe::detail::candidate_list<msg_hb, msg_st, msg_cmd>;
 using candidate_list_str = rbe::detail::candidate_list<msg_str, msg_str2, msg_str3>;
+using index = rbe::detail::candidate_index;
 
 static_assert(candidate_list_t::ids == std::array {1, 2, 3});
 static_assert(candidate_list_hb::ids == std::array {custom_id{.x = 0, .y = 1}, custom_id{.x = 1, .y = 1}, custom_id{.x = 0, .y = 0}});
@@ -66,15 +70,21 @@ static_assert(std::same_as<candidate_list_str::id_type, rbe::static_string>);
 static_assert(candidate_list_t::count == 3);
 static_assert(candidate_list_hb::count == 3);
 static_assert(candidate_list_str::count == 3);
-static_assert(candidate_list_t::index_of(1) == 0);
-static_assert(candidate_list_t::index_of(2) == 1);
-static_assert(candidate_list_t::index_of(3) == 2);
-static_assert(candidate_list_hb::index_of(custom_id{.x = 0, .y = 1}) == 0);
-static_assert(candidate_list_hb::index_of(custom_id{.x = 1, .y = 1}) == 1);
-static_assert(candidate_list_hb::index_of(custom_id{.x = 0, .y = 0}) == 2);
-static_assert(candidate_list_str::index_of(rbe::static_string {"heartbeat"}) == 0);
-static_assert(candidate_list_str::index_of(rbe::static_string {"status"}) == 1);
-static_assert(candidate_list_str::index_of(rbe::static_string {"command"}) == 2);
+static_assert(candidate_list_t::index_of(1) == index {0});
+static_assert(candidate_list_t::index_of(2) == index {1});
+static_assert(candidate_list_t::index_of(3) == index {2});
+static_assert(candidate_list_hb::index_of(custom_id{.x = 0, .y = 1}) == index {0});
+static_assert(candidate_list_hb::index_of(custom_id{.x = 1, .y = 1}) == index {1});
+static_assert(candidate_list_hb::index_of(custom_id{.x = 0, .y = 0}) == index {2});
+static_assert(candidate_list_str::index_of(rbe::static_string {"heartbeat"}) == index {0});
+static_assert(candidate_list_str::index_of(rbe::static_string {"status"}) == index {1});
+static_assert(candidate_list_str::index_of(rbe::static_string {"command"}) == index {2});
+// an id no candidate declares selects no candidate, and an index is never mistaken for an id
+static_assert(candidate_list_t::index_of(4) == index::none);
+static_assert(not candidate_list_t::contains(index::none));
+static_assert(candidate_list_t::contains(candidate_list_t::index_of(1)));
+static_assert(not std::convertible_to<candidate_list_t::id_type, index>);
+static_assert(not std::convertible_to<index, candidate_list_t::id_type>);
 static_assert(candidate_list_t::wire_size == std::array {sizeof(msg_a), sizeof(msg_b), sizeof(msg_c)});
 
 // clang-format on

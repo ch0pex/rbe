@@ -22,10 +22,12 @@
 // --- STD ---
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <meta>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 #include <version>
 
@@ -114,6 +116,18 @@ concept belongs_to = [] {
   return std::ranges::find(List::ids, id) != std::ranges::end(List::ids);
 }();
 
+
+/**
+ * @brief The position a candidate occupies in a candidate_list, or `none` if the list has no such candidate.
+ *
+ * A type of its own rather than a bare index: ids are very often integers themselves, so on any interface
+ * that takes both -- notably any's index constructor, which exists precisely to skip the id lookup -- an
+ * index and an id would silently convert into one another.
+ */
+enum class candidate_index : std::size_t {
+  none = std::numeric_limits<std::size_t>::max(), ///< what index_of() reports for an id no candidate declares
+};
+
 /**
  * @brief A list of wirable types, each declaring the id it answers to.
  *
@@ -134,7 +148,7 @@ struct candidate_list<T...> {
   static constexpr auto types = std::array {^^T...};
   static constexpr auto ids   = std::array {rbe::id_of<T>()...};
 
-  // NOTE: for now Rbe only supports fixed-size wirables,
+  // NOTE: for now rbe only supports fixed-size wirables,
   // so we can store their sizes in a constexpr array
   // However keep in mind that in the future this will change
   static constexpr auto wire_size = std::array {rbe::wire_size_of<T>()...};
@@ -144,17 +158,20 @@ struct candidate_list<T...> {
   // tell the user to specify first in the list the most common candidates
   // Usually market protocols have a few messages that are much more common
   // than the rest, so this is a reasonable assumption
-  static constexpr auto index_of(id_type const id) -> std::size_t {
+  static constexpr auto index_of(id_type const id) -> candidate_index {
     auto const it = std::ranges::find(ids, id);
     return it != std::ranges::end(ids) //
-               ? std::ranges::distance(std::ranges::begin(ids), it) //
-               : std::numeric_limits<std::size_t>::max(); //
+               ? static_cast<candidate_index>(std::ranges::distance(std::ranges::begin(ids), it)) //
+               : candidate_index::none; //
   }
 
   template<belongs_to<candidate_list> U>
-  static consteval auto index_of() -> std::size_t {
+  static consteval auto index_of() -> candidate_index {
     return index_of(rbe::id_of<U>());
   }
+
+  /// Whether `index` selects a candidate of this list, i.e. it came from the id of one of them.
+  static constexpr auto contains(candidate_index const index) -> bool { return std::to_underlying(index) < count; }
 };
 
 } // namespace rbe::detail

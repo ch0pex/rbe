@@ -25,6 +25,11 @@
 #include <rbe/framing/dsrl/detail/any_dispatcher.hpp>
 
 // --- STD ---
+#include <cassert>
+#include <cstddef>
+#include <optional>
+#include <span>
+#include <utility>
 
 namespace rbe::dsrl {
 
@@ -36,23 +41,67 @@ public:
   using size_type   = std::size_t;
   using id_type     = candidates::id_type;
 
+  // --- Static function members ---
+
+  /**
+   * @brief Resolve how many bytes the candidate selected by `id` takes in `data`, without constructing it
+   *
+   * A known id answers with that candidate's wire size, which makes the any self-delimiting: a frame
+   * carrying it knows where it ends and iteration can go on past it. An unknown id has no length to go by,
+   * so the any spans the rest of the buffer and iteration naturally stops at it.
+   *
+   * @return The length of the candidate in bytes, nullopt if the buffer is too short to hold it
+   */
+  [[nodiscard]] static constexpr auto parse_length(id_type const id, buffer_type const data)
+      -> std::optional<size_type> {
+    return length_of(candidates::index_of(id), data);
+  }
+
+  [[nodiscard]] static constexpr auto trim(id_type const id, buffer_type const data) -> std::optional<buffer_type> {
+    return parse_length(id, data) //
+        .transform([data](size_type const length) { return data.first(length); });
+  }
+
+  /**
+   * @brief Construct an any over `data` after checking everything the contract allows checking
+   *
+   * This is the wide-contract counterpart of the constructor: the only precondition it cannot check is the
+   * one nothing can, that the bytes really are the candidate `id` names. Construction through it costs no
+   * more than through the constructor, as the resolved index and the narrowed span are handed over.
+   *
+   * @return The any, nullopt if the candidate does not fit in the buffer
+   */
+  [[nodiscard]] static constexpr auto parse(id_type const id, buffer_type const data) -> std::optional<any> {
+    auto const index = candidates::index_of(id);
+    return length_of(index, data) //
+        .transform([&](size_type const length) { return any {index, data.first(length)}; });
+  }
+
+  // --- Constructors ---
+
   /**
    * Any constructor takes an id and a span of bytes, and constructs an any object that can be used to dispatch
    * at runtime to the corresponding candidate.
    *
    * Any will interpet the span of bytes as the wire representation of the candidate type corresponding to the given id
-   * Providing unkonw ids is allowed and will be dispatched to the fallback overload. However providing
-   * a wrong id for a known candidate will result in undefined behavior and is considered a precondition violation.
+   * Providing unkonw ids is allowed and will be dispatched to the fallback overload.
    *
    * @note data is truncated to the wire_size of the candidate type if the id is known,
    * otherwise it is left as-is. This way iteration naturally stops at the end of an unknown
    * candidate for those frames whose length is implicitly extracted from any rather than
    * explicitly annotated in the header.
+   *
+   * Preconditions are narrow contract, violating either of them is undefined behavior:
+   *   - the bytes are the wire representation of the candidate the id selects, not of another one
+   *   - the candidate fits in the buffer: data.size() >= *parse_length(id, data)
+   *
+   * Over a buffer that may not hold a whole candidate yet use parse()
+   * instead, which reports the violation rather than running into it.
    */
   constexpr any(id_type const id, buffer_type const data) :
     id_(id), //
-    index_(candidates::template index_of(id)), //
-    data_(known_id() ? data.first(candidates::wire_size[index_]) : data) { }
+    index_(candidates::index_of(id)), //
+    data_(trim_to(index_, data)) { }
 
   template<typename... T>
   constexpr auto match(T&&... callbacks) const -> decltype(auto) {
@@ -127,15 +176,51 @@ public:
 
   [[nodiscard]] constexpr auto id() const -> id_type { return id_; }
 
-  [[nodiscard]] constexpr auto known_id() const -> bool { return index_ < candidates::count; }
+  [[nodiscard]] constexpr auto known_id() const -> bool { return candidates::contains(index_); }
 
   [[nodiscard]] constexpr auto length() const -> size_type { return data_.size(); }
 
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
 
 private:
+  using index_type = rbe::detail::candidate_index;
+  /**
+   * @brief Construct from an index already resolved over a span already narrowed to the candidate
+   *
+   * The factory path holds both, so going through the public constructor would pay a second time for the
+   * id lookup and for the narrowing. `index_type` is a type of its own precisely so this overload can never
+   * be selected by an id, which is an integer just as often as an index is.
+   *
+   * Preconditions:
+   *   - index == candidates::index_of(id)
+   *   - data is already narrowed: data.size() == *parse_length(id, data)
+   */
+  constexpr any(index_type const index, buffer_type const data) :
+    id_(candidates::ids[index]), //
+    index_(index), //
+    data_(data) { }
+
+  /// @return The candidate's wire size for a known id, the rest of the buffer for an unknown one
+  [[nodiscard]] static constexpr auto length_of(index_type const index, buffer_type const data)
+      -> std::optional<size_type> {
+    if (not candidates::contains(index)) {
+      return data.size();
+    }
+    auto const wire_size = candidates::wire_size[std::to_underlying(index)];
+    return wire_size <= data.size() ? std::optional<size_type> {wire_size} : std::nullopt;
+  }
+
+  /// Narrowing counterpart of length_of(), narrow contract: data must hold the candidate whole
+  [[nodiscard]] static constexpr auto trim_to(index_type const index, buffer_type const data) -> buffer_type {
+    if (not candidates::contains(index)) {
+      return data;
+    }
+    assert(candidates::wire_size[std::to_underlying(index)] <= data.size());
+    return data.first(candidates::wire_size[std::to_underlying(index)]);
+  }
+
   id_type id_;
-  size_type index_;
+  index_type index_;
   buffer_type data_;
 };
 
