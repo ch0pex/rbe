@@ -55,6 +55,7 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::eager_t
 // ──────────────────────────────────────────────────────────────────
 // in-place deserialization
 // ──────────────────────────────────────────────────────────────────
+
 /**
  * @brief In-place deserialization returning a const reference.
  *
