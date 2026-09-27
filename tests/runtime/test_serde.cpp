@@ -77,10 +77,8 @@ constexpr void test_case(Test const& test_case) {
     test_inplace(test_case.wire, test_case.structure);
   }
 
-  if constexpr (
-      not rbe::custom_wirable<typename Test::structure_type> and
-      not rbe::wirable_primitive<typename Test::structure_type>
-  ) {
+  if constexpr (not rbe::custom_wirable<typename Test::structure_type> and
+                not rbe::wirable_primitive<typename Test::structure_type>) {
     test_lazy(test_case.wire, test_case.structure);
   }
 }
@@ -254,6 +252,23 @@ TEST_CASE("serde - proxy equality comparison is value-based") {
   RBE_CHECK(view == view2);
   RBE_CHECK(view == view3);
   RBE_CHECK(view2 == view3);
+}
+
+TEST_CASE("serde - proxy make factory validates payload length") {
+  // conformant
+  auto const wire = message_with_array_be_test.wire;
+  auto view       = rbe::dsrl::proxy<MessageWithArrayBe>::make(wire).value();
+
+  RBE_CHECK(view.field<"header">() == message_with_array_be_test.structure.header);
+  RBE_CHECK(view.field<"traderID">() == message_with_array_be_test.structure.traderID);
+  RBE_CHECK(view.field<"senderID">() == message_with_array_be_test.structure.senderID);
+  RBE_CHECK(view == message_with_array_be_test.structure);
+  RBE_CHECK(view.length() == wire.size());
+
+  // non-conformant: buffer too short
+  auto const short_wire = std::span {wire.data(), wire.size() - 1};
+  auto const short_view = rbe::dsrl::proxy<MessageWithArrayBe>::make(short_wire);
+  RBE_CHECK(not short_view.has_value());
 }
 
 TEST_SUITE_END();

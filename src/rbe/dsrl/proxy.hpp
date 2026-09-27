@@ -11,10 +11,10 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/annotations/annotation_concepts.hpp>
 #include <rbe/annotations/detail/annotated_nsdm.hpp>
 #include <rbe/annotations/detail/annotation.hpp>
 #include <rbe/annotations/detail/utils.hpp>
-#include <rbe/annotations/annotation_concepts.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
@@ -41,6 +41,16 @@ public:
   using value_type  = T;
   using size_type   = std::size_t;
   using buffer_type = std::span<std::byte const>;
+
+  // --- Factory static member function ---
+
+  [[nodiscard]] static constexpr auto make(buffer_type const data) -> std::optional<proxy> {
+    // NOTE: specialize in the future when variable size types are supported
+    if (data.size() >= wire_size_of<value_type, local>()) {
+      return proxy {data};
+    }
+    return std::nullopt;
+  }
 
   // --- Constructors ---
 
