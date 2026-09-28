@@ -77,8 +77,10 @@ constexpr void test_case(Test const& test_case) {
     test_inplace(test_case.wire, test_case.structure);
   }
 
-  if constexpr (not rbe::custom_wirable<typename Test::structure_type> and
-                not rbe::wirable_primitive<typename Test::structure_type>) {
+  if constexpr (
+      not rbe::custom_wirable<typename Test::structure_type> and
+      not rbe::wirable_primitive<typename Test::structure_type>
+  ) {
     test_lazy(test_case.wire, test_case.structure);
   }
 }
@@ -269,6 +271,25 @@ TEST_CASE("serde - proxy make factory validates payload length") {
   auto const short_wire = std::span {wire.data(), wire.size() - 1};
   auto const short_view = rbe::dsrl::proxy<MessageWithArrayBe>::make(short_wire);
   RBE_CHECK(not short_view.has_value());
+}
+
+TEST_CASE("serde - hardened deserialize checks buffer size and alignment") {
+  auto const wire = message_with_array_be_test.wire;
+
+  // conformant
+  auto const view = rbe::try_deserialize<MessageWithArrayBe>(wire, rbe::dsrl::lazy);
+  RBE_CHECK(view.has_value());
+  RBE_CHECK(view.value() == message_with_array_be_test.structure);
+
+  // non-conformant: buffer too short
+  auto const short_wire = std::span {wire.data(), wire.size() - 1};
+  auto const short_view = rbe::try_deserialize<MessageWithArrayBe>(short_wire, rbe::dsrl::lazy);
+  RBE_CHECK(not short_view.has_value());
+
+  // non-conformant: misaligned buffer (for in-place strategy)
+  auto const misaligned_wire = std::span {wire.data() + 1, wire.size() - 1};
+  auto const misaligned_view = rbe::try_deserialize<CommonHeader>(misaligned_wire, rbe::dsrl::in_place);
+  RBE_CHECK(not misaligned_view.has_value());
 }
 
 TEST_SUITE_END();

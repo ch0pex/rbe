@@ -117,16 +117,16 @@ template<wirable_class T, context Ctx>
 constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   using std::ranges::to;
 
-  static constexpr auto local    = merge_context(Ctx, ^^T);
-  static constexpr auto wire     = get_wire_layout<T, local>();
-  static constexpr auto members  = nsdm(^^T) | std::ranges::to<static_array>();
+  static constexpr auto local   = merge_context(Ctx, ^^T);
+  static constexpr auto wire    = get_wire_layout<T, local>();
+  static constexpr auto members = nsdm(^^T) | std::ranges::to<static_array>();
 
   T value;
   template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
     using member_type = [:type_of(member):];
     value.[:member:]  = deserialize<member_type, merge_context(local, member)>(
-                         input.subspan<layout.offset.bytes, layout.size>()
-                     );
+                          input.subspan<layout.offset.bytes, layout.size>()
+                      );
   }
   return value;
 }
@@ -155,5 +155,21 @@ constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   }
   return value;
 }
+
+template<wirable T, dsrl::strategy S>
+constexpr auto satisfy_preconditions(std::span<std::byte const> const input, S /**/) -> bool {
+  // TODO: when variable types are supported will have to change wire_size_of<T>()
+  // to a query over the buffer wire_size_of<T>(buffer) ?
+  if (input.size() < wire_size_of<T, context {}>()) {
+    return false;
+  }
+  if constexpr (std::same_as<S, dsrl::in_place_t> or std::same_as<S, dsrl::in_place_mut_t>) {
+    std::uintptr_t const ptr = reinterpret_cast<std::uintptr_t>(input.data());
+    return (ptr & (alignof(T) - 1)) == 0;
+  }
+
+  return true;
+}
+
 
 } // namespace rbe::detail
