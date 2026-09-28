@@ -183,7 +183,7 @@ private:
    *   - data is already narrowed: data.size() == *parse_length(id, data)
    */
   constexpr any(index_type const index, buffer_type const data) :
-    id_(candidates::ids[index]), //
+    id_(candidates::ids[static_cast<std::size_t>(index)]), //
     index_(index), //
     data_(data) { }
 
