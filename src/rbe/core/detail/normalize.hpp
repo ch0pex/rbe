@@ -20,6 +20,20 @@
 
 namespace rbe::detail {
 
+template<trivially_wirable_primitive T>
+struct normalize_primitive_impl_t {
+  using type = T;
+};
+
+template<trivially_wirable_primitive T>
+  requires(std::is_enum_v<T>)
+struct normalize_primitive_impl_t<T> {
+  using type = std::underlying_type_t<T>;
+};
+
+template<trivially_wirable_primitive T>
+using normalize_primitive_type = typename normalize_primitive_impl_t<T>::type;
+
 /// Identity forwarder for non-enum trivially wirable types.
 auto normalize_primitive(trivially_wirable auto const value) { return value; }
 

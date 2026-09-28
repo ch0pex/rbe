@@ -18,6 +18,7 @@
 // --- Includes ---
 #include <rbe/core/custom.hpp>
 #include <rbe/core/detail/context.hpp>
+#include <rbe/core/detail/normalize.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/trivially_wirable_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
@@ -26,6 +27,7 @@
 // --- STD ---
 #include <cstddef>
 #include <span>
+#include <type_traits>
 
 namespace rbe::detail {
 
@@ -95,7 +97,7 @@ constexpr auto deserialize(std::span<std::byte const> const input) -> T {
 template<trivially_wirable_primitive T, context Ctx>
   requires(Ctx != context {})
 constexpr auto deserialize(std::span<std::byte const> const input) -> T {
-  return endian::load<T, Ctx.endianness>(input.data());
+  return T {endian::load<normalize_primitive_type<T>, Ctx.endianness>(input.data())};
 }
 
 /**
@@ -125,8 +127,8 @@ constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
     using member_type = [:type_of(member):];
     value.[:member:]  = deserialize<member_type, merge_context(local, member)>(
-                          input.subspan<layout.offset.bytes, layout.size>()
-                      );
+                         input.subspan<layout.offset.bytes, layout.size>()
+                     );
   }
   return value;
 }
