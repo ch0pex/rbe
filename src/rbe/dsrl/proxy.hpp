@@ -15,12 +15,14 @@
 #include <rbe/annotations/detail/annotated_nsdm.hpp>
 #include <rbe/annotations/detail/annotation.hpp>
 #include <rbe/annotations/detail/utils.hpp>
+#include <rbe/annotations/empty.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
+
 
 // --- STD ---
 #include <concepts>
@@ -30,8 +32,8 @@
 
 namespace rbe::dsrl {
 
-template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
-  requires(not custom_wirable<T>)
+template<typename T, rbe::detail::context Ctx = rbe::detail::context {}>
+  requires(wirable<T> or explicitly_empty<T>)
 class proxy {
   static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
 
@@ -55,7 +57,7 @@ public:
   // --- Constructors ---
 
   /// precondition: data.size() >= wire_size_of<value_type, local>()
-  constexpr explicit proxy(buffer_type const data) : data_(data.first(wire_size_of<value_type, local>())) { }
+  constexpr explicit proxy(buffer_type const data) : data_(data) { }
 
   template<static_string First, static_string... Rest>
     requires(wirable_class<value_type>)
@@ -102,16 +104,15 @@ public:
     }
   }
 
-
   [[nodiscard]] constexpr auto value() const -> value_type {
     return rbe::detail::deserialize<value_type, local>(data_);
   }
 
   [[nodiscard]] constexpr auto operator*() const -> value_type { return value(); }
 
-  [[nodiscard]] constexpr auto length() const -> size_type { return wire_size_of<value_type, local>(); }
+  [[nodiscard]] constexpr auto size() const -> size_type { return wire_size_of<value_type, local>(); }
 
-  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(length()); }
+  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(size()); }
 
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
 

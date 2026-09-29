@@ -13,247 +13,147 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/annotation_concepts.hpp>
-#include <rbe/annotations/id.hpp>
-#include <rbe/annotations/length.hpp>
-#include <rbe/core/memory_layout.hpp>
-#include <rbe/core/wirable_concepts.hpp>
-#include <rbe/dsrl/deserialize.hpp>
-#include <rbe/dsrl/tags.hpp>
-#include <rbe/framing/detail/payload_extent.hpp>
-#include <rbe/framing/dsrl/concepts.hpp>
-#include <rbe/framing/dsrl/flatten.hpp>
+#include <rbe/framing/dsrl/detail/payload_size.hpp>
+#include <rbe/framing/dsrl/frame_header.hpp>
+#include <rbe/framing/frame_concepts.hpp>
+#include <rbe/framing/frame_delimiting_concepts.hpp>
+
 
 // --- STD ---
 #include <cstddef>
 #include <span>
-#include "rbe/annotations/empty.hpp"
 
 namespace rbe::dsrl {
 
 namespace detail {
 
-struct factory_pass_t { };
-inline constexpr factory_pass_t factory_pass {};
+template<frame_payload T>
+struct normalize_payload {
+  using type = T;
+};
+
+template<frame_payload T>
+  requires(frame_wirable<T>)
+struct normalize_payload<T> {
+  using type = proxy<T>;
+};
+
+template<frame_payload T>
+using normalize_payload_t = typename normalize_payload<T>::type;
 
 } // namespace detail
 
 
+// TODO: compatible header and payload types concept
+// this will bring an awful error message if the header
+// does not have an id field and the payload type requires it
+//  TODO: rbe::exact_length constructor overload
+// Payload concept
+// - needs make as constexpr static member function
+// - needs length() as constexpr non static member function
+// - constructible from std::span<std::byte const> (or a compatible type)
 template<frame_header HeaderType, frame_payload PaylaodType>
 class frame {
 public:
   // --- Type traits ---
 
-  using header_type  = HeaderType;
-  using payload_type = PaylaodType;
-  using buffer_type  = std::span<std::byte const>;
-  using size_type    = std::size_t;
+  using header_type         = HeaderType;
+  using payload_type        = PaylaodType;
+  using header_proxy_type   = header_proxy<header_type>;
+  using payload_return_type = detail::normalize_payload_t<payload_type>;
+  using buffer_type         = std::span<std::byte const>;
+  using size_type           = std::size_t;
 
-  // --- Static member functions ---
+  // --- Factory static member function ---
 
-  /**
-   * Costs of parsing frame lengths:
-   * - explicit delimited frames: length parsing is free
-   * - implicit delimited frames:
-   *     - fixed length -> length parsing is free and known at compile time
-   *     - variable length -> offset table parsing
-   *     - any:
-   *       - fixed length -> dispatching to the type
-   *       - variable length -> dispatching to the type + offset table parsing
-   *
-   * We can cache this 'heavy' computations by trimming the span on construction
-   * To do so I can think two ways:
-   *   - make factory function that returns std::optional<frame> and returns nullopt
-   *     if the operation fails
-   *   - a constructor that throws an exception if the operation fails
-   *
-   */
-
-  /**
-   * @brief Resolve the length of the frame starting at `data`, without constructing it
-   *
-   * Usable over a partially received buffer, e.g. to know how many bytes to wait for while reassembling a
-   * stream: it only reads the bytes the length depends on, which are the fixed-size header prefix for length
-   * fields and static sizes, plus the nested frames' headers when the payload is a nested frame.
-   *
-   * The length is gathered from (wire values take precedence over static sizes, see
-   * rbe::detail::payload_extent_of()):
-   *  - header length + the payload_length annotated field value if specified
-   *  - otherwise the frame_length annotated field value if specified
-   *  - otherwise header length + the nested frame's own parse_length() if the payload is a frame
-   *  - otherwise header length + rbe::wire_size_of<payload_type>() if the payload is wirable
-   *  - otherwise (span constructible, any, many) the whole buffer, which makes the frame buffer-delimited
-   *
-   * Length fields are read over the fixed-size header prefix, never over a span that depends on a length.
-   *
-   * @return The length of the frame in bytes
-   */
-  [[nodiscard]] static constexpr auto parse_length(buffer_type const data) -> std::optional<size_type> {
-    static constexpr auto extent = rbe::detail::payload_extent_of<header_type, payload_type>();
-
-    if (data.size() < rbe::wire_size_of<header_type>()) {
+  [[nodiscard]] static constexpr auto make(buffer_type const data) -> std::optional<frame> {
+    auto const hdr = header_proxy_type::make(data);
+    if (not hdr.has_value() or data.size() < hdr->length()) {
       return std::nullopt;
     }
 
-    if constexpr (extent == rbe::detail::payload_extent::payload_length_field) {
-      return header_length_of(data) + fixed_header(data).template field<rbe::payload_length>();
-    }
-    else if constexpr (extent == rbe::detail::payload_extent::frame_length_field) {
-      return fixed_header(data).template field<rbe::frame_length>();
-    }
-    else if constexpr (extent == rbe::detail::payload_extent::nested_frame) {
-      auto const header_length = header_length_of(data);
-      auto const payload_len   = payload_type::parse_length(data.subspan(header_length));
-      return payload_len.has_value() ? std::optional {header_length + *payload_len} : std::nullopt;
-    }
-    else if constexpr (extent == rbe::detail::payload_extent::static_size) {
-      return header_length_of(data) + wire_size_of<payload_type>();
+    if constexpr (explicitly_delimited_frame<frame>) {
+      // Fast path: if the current frame is explicitly delimited we can skip bound checking
+      // for payload construction, as the payload is guaranteed to fit in the buffer.
+      return data.size() >= hdr->frame_length() //
+                 ? std::optional {frame {*hdr, frame::construct_payload(hdr.value(), data)}}
+                 : std::nullopt;
     }
     else {
-      return data.size();
+      auto const payload = frame::construct_payload_hardened(hdr.value(), data);
+      return payload.transform([&](auto const p) { return frame {*hdr, p}; });
     }
-  }
-
-  [[nodiscard]] static constexpr auto trim(buffer_type const data) -> std::optional<buffer_type> {
-    auto const length = parse_length(data);
-    return data.size() >= length ? std::optional {data.first(*length)} : std::nullopt;
-  }
-
-  [[nodiscard]] static constexpr auto parse(buffer_type const data) -> std::optional<frame> {
-    return trim(data) //
-        .transform([](buffer_type const buffer) { return frame {buffer}; }) //
-        .or_else([]() -> std::optional<frame> { return std::nullopt; }); //
   }
 
   // --- Constructors ---
 
-  /**
-   * @brief Construct a new frame object from a span of bytes
-   *
-   * The frame is a non-owning view. Construction resolves the frame's layout, not its values: it computes
-   * parse_length(data) and narrows the span to exactly the frame, while header and payload values are still
-   * decoded lazily by the accessors. How the span size is interpreted depends on how the frame is delimited,
-   * which is classified at compile time by rbe::detail::payload_extent_of() (lowering an rbe::frame never
-   * changes it):
-   *
-   *  - self-delimiting frames (rbe::self_delimiting_frame) know their length from a header field or from
-   *    static sizes. The span may be larger than the frame (e.g. a whole datagram, or the remainder of a
-   *    stream while iterating): trailing bytes are not kept.
-   *  - buffer-delimited frames (rbe::buffer_delimited_frame) have a payload that extends to the end of the
-   *    span, so the span size *is* the frame length: trailing bytes are taken as payload, never as padding.
-   *
-   * To find out how many bytes a partially received frame needs before constructing it, use parse_length().
-   *
-   * Preconditions:
-   *   - data.size() == parse_length(data)
-   *   - buffer-delimited frames: the span covers exactly the frame
-   *   - annotated lengths are consistent: wire_size_of<header_type>() <= header_length <= frame_length
-   */
-  constexpr explicit frame(buffer_type const data) : data_(data) { }
+  constexpr explicit frame(buffer_type const data) :
+    header_(data), payload_(frame::construct_payload(header_, data)) { }
 
-  // --- Member accessors ---
+  [[nodiscard]] constexpr auto header() const -> header_proxy_type { return header_; }
 
-  template<strategy S = lazy_t>
-  [[nodiscard]] constexpr auto header(S strategy = lazy) const -> return_type<S, header_type> {
-    return rbe::deserialize<header_type>(header_span(), strategy);
-  }
-
-  template<strategy S = lazy_t>
-    requires(wirable<payload_type>)
-  [[nodiscard]] constexpr auto payload(S strategy = lazy) const -> return_type<S, payload_type> {
-    return rbe::deserialize<payload_type>(payload_span(), strategy);
-  }
-
-  [[nodiscard]] constexpr auto payload() const -> payload_type
-    requires(explicitly_empty<payload_type>)
-  {
-    return payload_type {};
-  }
-
-  [[nodiscard]] constexpr auto payload() const -> payload_type
-    requires(std::constructible_from<payload_type, buffer_type>)
-  {
-    return payload_type {payload_span()};
-  }
+  [[nodiscard]] constexpr auto payload() const -> payload_return_type { return payload_; }
 
   [[nodiscard]] constexpr auto flatten(strategy auto strategy = lazy) { return flatten(*this, strategy); }
 
-  // --- Size accessors ---
+  [[nodiscard]] constexpr auto length() const -> size_type {
+    if constexpr (explicitly_delimited_frame<frame>) {
+      assert(header_.frame_length() == payload_length(payload_) + header_.length());
+      return header_.frame_length();
+    }
+    return header_.length() + payload_length(payload_);
+  }
 
-  /**
-   * @brief Return the length of the frame in bytes
-   *
-   * Resolved once at construction by parse_length(), so it is the size of the viewed span.
-   *
-   * @return The length of the frame in bytes
-   */
-  [[nodiscard]] constexpr auto length() const -> size_type { return data_.size(); }
+  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return std::span {header_.data(), length()}; }
 
-  /**
-   * @brief Return the length of the header in bytes
-   *
-   * header_length can either be gathered from:
-   *  - header_length annotated field value if specified
-   *  - otherwise from rbe::wire_size_of<header_type>() (variable-size header would be malformed)
-   *
-   * @return The length of the header in bytes
-   */
-  [[nodiscard]] constexpr auto header_length() const -> size_type { return header_length_of(data_); }
-
-  /**
-   * @brief Return the length of the payload in bytes
-   *
-   * Derived from the frame length resolved at construction: frame_length = header_length + payload_length.
-   *
-   * @return The length of the payload in bytes
-   */
-  [[nodiscard]] constexpr auto payload_length() const -> size_type { return length() - header_length(); }
-
-
-  // --- Buffer accessors ---
-
-  /**
-   * @brief Return a span of bytes representing the header portion of the frame
-   *
-   * Some protocols may specify a header length to avoid breaking compatibility when adding new fields,
-   * so the header may be larger than the wire size of the header type.
-   *
-   * @return A span of bytes representing the header portion of the frame
-   */
-  [[nodiscard]] constexpr auto header_span() const -> buffer_type { return data_.first(header_length()); }
-
-  /**
-   * @brief Return a span of bytes representing the payload portion of the frame
-   * @return A span of bytes representing the payload portion of the frame
-   */
-  [[nodiscard]] constexpr auto payload_span() const -> buffer_type { return data_.subspan(header_length()); }
-
-  /**
-   * @brief Return a span of bytes representing the entire frame
-   * @return A span of bytes representing the entire frame
-   */
-  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_; }
-
-  [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
+  [[nodiscard]] constexpr auto data() const -> std::byte const* { return header_.data(); }
 
 private:
-  constexpr explicit frame(buffer_type const data, detail::factory_pass_t /**/) : data_(data) { }
+  // The payload type is wrapped in a proxy if it is wirable, otherwise it is stored as-is.
 
-  // the length fields are read over the fixed-size header prefix, which never depends on a length itself
-  [[nodiscard]] static constexpr auto fixed_header(buffer_type const data) {
-    return rbe::deserialize<header_type>(data.first(rbe::wire_size_of<header_type>()), lazy);
-  }
+  constexpr frame(header_proxy_type const hdr, payload_return_type const payload) : header_(hdr), payload_(payload) { }
 
-  [[nodiscard]] static constexpr auto header_length_of(buffer_type const data) -> size_type {
-    if constexpr (contains_annotation<header_type, rbe::header_length>) {
-      return fixed_header(data).template field<rbe::header_length>();
+  // When the header declares a payload_length or a frame_length, that field is the one authoritative
+  // source for the payload's extent, whatever category the payload falls into -- a wirable proxy or
+  // an any narrow themselves anyway, a nested frame is self-delimiting regardless, and a blob or other
+  // opaque span-constructible payload has no other way to learn where it ends.
+  [[nodiscard]] static constexpr auto narrow_to_payload(header_proxy_type const hdr, buffer_type const data)
+      -> buffer_type {
+    auto const rest = data.subspan(hdr.length());
+    if constexpr (header_proxy_type::has_payload_length or header_proxy_type::has_frame_length) {
+      return rest.first(hdr.payload_length());
     }
     else {
-      return wire_size_of<header_type>();
+      return rest;
     }
   }
 
-  buffer_type data_;
+  [[nodiscard]] static constexpr auto construct_payload(header_proxy_type const hdr, buffer_type const data)
+      -> payload_return_type //
+  {
+    auto const payload_span = narrow_to_payload(hdr, data);
+    if constexpr (is_any<payload_return_type>) {
+      return payload_return_type {hdr.id(), payload_span};
+    }
+    else {
+      return payload_return_type {payload_span};
+    }
+  }
+
+  [[nodiscard]] static constexpr auto construct_payload_hardened(header_proxy_type const hdr, buffer_type const data)
+      -> std::optional<payload_return_type> //
+  {
+    auto const payload_span = narrow_to_payload(hdr, data);
+    if constexpr (is_any<payload_return_type>) {
+      return payload_return_type::make(hdr.id(), payload_span);
+    }
+    else {
+      return payload_return_type::make(payload_span);
+    }
+  }
+
+  header_proxy_type header_;
+  payload_return_type payload_;
 };
 
 } // namespace rbe::dsrl

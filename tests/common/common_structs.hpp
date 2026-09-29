@@ -184,7 +184,7 @@ struct EmptyStruct {
 struct CommonHeader {
   std::uint32_t version;
   std::uint16_t size;
-  std::uint16_t type;
+  [[=rbe::id]] std::uint16_t type;
   std::uint64_t timestamp;
   bool operator==(CommonHeader const&) const = default;
 };

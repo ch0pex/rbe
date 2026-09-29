@@ -63,9 +63,9 @@ constexpr void test_lazy(std::span<std::byte const> input, T const& expected) {
   }
 
   RBE_CHECK(msg.value() == expected);
-  RBE_CHECK(msg.length() == rbe::wire_size_of<T>());
+  RBE_CHECK(msg.size() == rbe::wire_size_of<T>());
   RBE_CHECK(std::ranges::equal(std::span {msg.data(), input.size()}, input));
-  RBE_CHECK(std::ranges::equal(msg.as_span(), input.first(msg.length())));
+  RBE_CHECK(std::ranges::equal(msg.as_span(), input.first(msg.size())));
 }
 
 template<typename Test>
@@ -196,7 +196,7 @@ TEST_CASE("serde - proxy accessors honor the ambient context") {
   RBE_CHECK(view.field<"b">() == 0x22334455);
   RBE_CHECK(view.value() == NestedPackLeaf {.a = 0x11, .b = 0x22334455});
 
-  RBE_CHECK(view.length() == 5); // packed: the 3 bytes of padding a native layout would add are gone
+  RBE_CHECK(view.size() == 5); // packed: the 3 bytes of padding a native layout would add are gone
   RBE_CHECK(view.as_span().size() == 5);
   RBE_CHECK(std::ranges::equal(std::span {view.data(), wire.size()}, wire));
 }
@@ -265,7 +265,7 @@ TEST_CASE("serde - proxy make factory validates payload length") {
   RBE_CHECK(view.field<"traderID">() == message_with_array_be_test.structure.traderID);
   RBE_CHECK(view.field<"senderID">() == message_with_array_be_test.structure.senderID);
   RBE_CHECK(view == message_with_array_be_test.structure);
-  RBE_CHECK(view.length() == wire.size());
+  RBE_CHECK(view.size() == wire.size());
 
   // non-conformant: buffer too short
   auto const short_wire = std::span {wire.data(), wire.size() - 1};
