@@ -205,11 +205,12 @@ packet::srl_type builder{buffer}
 ### Length semantics
 
 A length field says nothing until it says *what it counts*, so the single `rbe::length` splits into
-three annotations, one per quantity:
+four annotations, one per quantity:
 
 | Annotation | The field counts |
 | --- | --- |
-| `[[= rbe::header_length]]` | the header's own bytes |
+| `[[= rbe::self_length]]` | the annotated type's own bytes (same as `header_length` when used in a header) |
+| `[[= rbe::header_length]]` | the header's own bytes (alias for `self_length`, convenient in headers) |
 | `[[= rbe::payload_length]]` | the payload's bytes, header excluded |
 | `[[= rbe::frame_length]]` | header + payload — the frame's whole extent |
 
@@ -221,9 +222,7 @@ frame_length = header_length + payload_length
 
 so a header declares only the quantity it actually transmits, and `frame` derives the other two:
 
-- **`header_length()`** — the annotated field when present, otherwise `wire_size_of<Header>()`. Header
-  length is a quantity in its own right precisely so it can be *either*: implicit is the common case, but
-  a protocol that transmits it can say so, and this is what the payload offset is read from.
+- **`header_length()` / `self_length()`** — the annotated field when present (annotated as `=rbe::header_length` or `=rbe::self_length`), otherwise `wire_size_of<Header>()`. Header length is a quantity in its own right precisely so it can be *either*: implicit is the common case, but a protocol that transmits it can say so, and this is what the payload offset is read from.
 - **`payload_length()`** — the annotated field when present; otherwise `frame_length() - header_length()`;
   otherwise the payload's own extent (fixed size per candidate, a walked `many<...>`, or the remainder of
   the buffer, per the rules above).
@@ -253,12 +252,12 @@ Two consequences worth naming:
   in shape, though not yet in units (see below). A `header_length()` *smaller* than `wire_size_of<Header>()`
   is a malformed frame, reported like truncation rather than thrown; exactly which predicate reports it
   is left with the truncation API.
-- **A proxy exposes whichever of the three its own type carries**, each behind a `requires` — the same
-  rule `id()` already follows — so `proxy<Header>` gets `header_length()`/`payload_length()`/`frame_length()`
+- **A proxy exposes whichever of the four its own type carries**, each behind a `requires` — the same
+  rule `id()` already follows — so `proxy<Header>` gets `self_length()`/`header_length()`/`payload_length()`/`frame_length()`
   as annotated, and the *derivation* lives only in `frame`, which is the only thing that knows both
   halves. This replaces today's unconstrained, convention-free `msg::length()`.
 
-Still open: **units**. All three annotations above count bytes; IPv4's IHL counts 32-bit words and some
+Still open: **units**. All four annotations above count bytes; IPv4's IHL counts 32-bit words and some
 protocols count elements rather than octets, which needs a scale modifier on the annotation
 (`[[= rbe::header_length(rbe::in_words<4>)]]` in shape). Also open, smaller: whether declaring all three
 on one header is rejected as over-determined or accepted with the redundant field checked against the

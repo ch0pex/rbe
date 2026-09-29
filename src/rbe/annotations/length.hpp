@@ -26,7 +26,7 @@ namespace detail {
 enum class length_kind : std::uint8_t {
   frame, ///< total frame length: header + payload
   payload, ///< payload length: frame minus header
-  header, ///< header length
+  self, ///< self annotated type length
 };
 
 /**
@@ -64,13 +64,15 @@ using length_kind = detail::length_kind;
  * once; the annotated field must be convertible to `std::size_t`.
  *
  * Length ssemantics:
+ * - self_length: the length of the annotated type itself
  * - frame_length: the total frame length, header + payload
  * - payload_length: the payload length, frame minus header
- * - header_length: the header length
+ * - header_length: the header length (self_length alias)
  */
 inline constexpr detail::annotation_kind<detail::length_tag> length {};
+inline constexpr auto self_length    = length(length_kind::self);
 inline constexpr auto frame_length   = length(length_kind::frame);
 inline constexpr auto payload_length = length(length_kind::payload);
-inline constexpr auto header_length  = length(length_kind::header);
+inline constexpr auto header_length = self_length; ///< alias for self_length, convenient for use in a frame header type
 
 } // namespace rbe

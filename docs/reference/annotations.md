@@ -18,7 +18,7 @@ Annotations are grouped into orthogonal **dimensions**. At most one annotation f
 | Endianness | `little`, `big`, `bits(msb, lsb)` (little is the implicit default) | at most one per annotation range |
 | Alignment | `pack`, `align` | at most one per annotation range |
 | Id | `id`, `id(value)` | at most one per annotation range, and each may appear at most once across the whole (possibly nested) type |
-| Length | `frame_length`, `payload_length`, `header_length` | at most one per annotation range, and each may appear at most once across the whole (possibly nested) type |
+| Length | `self_length`, `frame_length`, `payload_length`, `header_length` | at most one per annotation range, and each may appear at most once across the whole (possibly nested) type |
 | — (unconstrained) | `fmt` | none — freely repeatable/combinable |
 
 Struct-level annotations are inherited by every member; a member's own annotations (or its type's annotations, for nested structs) take precedence and fully replace the inherited ones on a per-dimension basis.
@@ -72,11 +72,12 @@ Header: `rbe/annotations/length.hpp`
 
 | Annotation | Scope | Description |
 |---|---|---|
+| `=rbe::self_length` | member | Marks the field that encodes the length of the annotated type itself. Spelled in full: `=rbe::length(rbe::length_kind::self)`. |
 | `=rbe::frame_length` | member | Marks the field that encodes the total frame length on the wire — header + payload. Spelled in full: `=rbe::length(rbe::length_kind::frame)`. |
 | `=rbe::payload_length` | member | Marks the field that encodes the payload length — the frame minus its header. Spelled in full: `=rbe::length(rbe::length_kind::payload)`. |
-| `=rbe::header_length` | member | Marks the field that encodes the header length. Spelled in full: `=rbe::length(rbe::length_kind::header)`. |
+| `=rbe::header_length` | member | Alias for `self_length`, convenient for use in a frame header type. Spelled in full: `=rbe::length(rbe::length_kind::self)`. |
 
-The three are independent: a message may carry any combination of them, each at most once across the whole (possibly nested) type. The annotated field must be convertible to `std::size_t`. Like `id`, they currently only participate in their dimension's uniqueness check — **none of them is read by serialization/deserialization yet**.
+The four are independent: a message may carry any combination of them, each at most once across the whole (possibly nested) type. The annotated field must be convertible to `std::size_t`. Like `id`, they currently only participate in their dimension's uniqueness check — **none of them is read by serialization/deserialization yet**.
 
 ## Debugging
 

@@ -31,7 +31,7 @@ Two more concrete problems came from the same root:
    everything to *types*, `annotation_values()` preserved *values*, `rbe_annotation_values()` was a third
    variant, and every caller had to know which representation it was holding. Because identity was
    type-based, three annotations that are semantically three values of one thing
-   (`frame_length`/`payload_length`/`header_length`) were forced to be three distinct types.
+   (`self_length`/`frame_length`/`payload_length`/`header_length`) were forced to be three distinct types.
 2. **There was no way to ask "which annotation of this kind does this type carry, and what is its
    value?"** — the direction dispatch needs (`framing/dsrl/detail/candidate_list.hpp` was written against
    an API that did not exist). Nothing in the system represented *one whole annotation*.
@@ -95,8 +95,8 @@ enum class dimension_kind : std::uint8_t {
 Since annotations are compared by value now, `unique` needs to know what counts as a repetition. That is
 the one knob `identity_kind` provides:
 
-- `identity_kind::value` (the default) — the annotation *is* its value. `frame_length` and
-  `payload_length` are two values of one tag and are independently unique, which is exactly why the three
+- `identity_kind::value` (the default) — the annotation *is* its value. `self_length`, `frame_length` and
+  `payload_length` are multiple values of one tag and are independently unique, which is exactly why the four
   length annotations could collapse into a single type.
 - `identity_kind::kind` — the value is a payload, not an alternative. `rbe::id(1)` and `rbe::id(2)` are
   one id said twice, so a message carrying both (at any depth) is rejected.
@@ -121,7 +121,7 @@ in, which is what removed the type/value duality:
 consteval explicit annotation_info(std::meta::info);   // throws unless it is one rbe annotation
 reflection() -> std::meta::info     // the value, as written
 type()       -> std::meta::info     // annotation_kind<Tag> or annotation_value<Tag, T>
-tag()        -> std::meta::info     // what frame_length and payload_length share
+tag()        -> std::meta::info     // what self_length, frame_length and payload_length share
 dimension()  -> std::meta::info     // null reflection if it belongs to none
 has_value()  -> bool
 value_type() -> std::meta::info     // the payload's type -- what dispatch needs to recover an id's type
@@ -203,7 +203,7 @@ Before committing to this design, a set of standalone `.cpp` probes were compile
 
 Re-verified for v3, with a fresh probe (`spike_annotation.cpp`, GCC 16.2.1):
 
-- ✅ `static_member_function(type, "payload"/"equals")` + `extract<fn_t>` finds and calls a static member function of a **class template specialization**, so the payload of an annotation whose concrete type is only known as a reflection can be read back, and two such annotations compared by value. This is what lets `frame_length`/`payload_length`/`header_length` share a single type.
+- ✅ `static_member_function(type, "payload"/"equals")` + `extract<fn_t>` finds and calls a static member function of a **class template specialization**, so the payload of an annotation whose concrete type is only known as a reflection can be read back, and two such annotations compared by value. This is what lets `self_length`/`frame_length`/`payload_length`/`header_length` share a single type.
 - ✅ `annotation_value<Tag, T>` is a structural type: usable as an NTTP both in `derive<...>` and in `proxy::field<Annotation>()`.
 - ✅ `[[=rbe::order(endian::order::big)]]` (the factory called inline in the annotation) and `[[=rbe::big]]` (the named alias) produce annotations that compare equal by value, confirming the `info`-equality hazard above is fully contained.
 - ⚠️ **`^^` cannot be applied to a non-type template parameter, to a function parameter, or to an arbitrary expression.** Needles arrive as exactly those (`contains_annotation<T, Annotation>`, `has_annotations(entity, needle)`), so a needle is never reflected: its type is known statically at the call site, which is all `extract<needle_t>(a) == needle` needs.

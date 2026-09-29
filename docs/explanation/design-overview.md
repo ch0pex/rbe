@@ -30,9 +30,10 @@ Layout is expressed through the type system rather than annotations. Field sizes
 | Annotation | Description |
 |---|---|
 | `=rbe::id` | Marks the field the id is read from on the wire. Reserved for `any_msg` type-erased dispatch (🚧 **Planned**, see below). |
+| `=rbe::self_length` | Marks the field that encodes the length of the annotated type itself. Not yet read by serialization/deserialization. |
 | `=rbe::frame_length` | Marks the field that encodes the total frame length (header + payload). Not yet read by serialization/deserialization. |
 | `=rbe::payload_length` | Marks the field that encodes the payload length (frame minus header). Not yet read by serialization/deserialization. |
-| `=rbe::header_length` | Marks the field that encodes the header length. Not yet read by serialization/deserialization. |
+| `=rbe::header_length` | Alias for `self_length`, convenient for use in a frame header type. Not yet read by serialization/deserialization. |
 | `=rbe::little` / `=rbe::big` | Per-field endianness override, takes precedence over the struct-level annotation. |
 
 ### RBE types — 🚧 Planned

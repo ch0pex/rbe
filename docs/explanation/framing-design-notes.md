@@ -179,7 +179,7 @@ The classification is *structural*: it only needs `header_type` and `payload_typ
 (`rbe::is_frame`), so an `rbe::frame` and its `dsrl::frame` lowering classify identically. That
 invariant is static-asserted (`same_extent_when_lowered` in `tests/static/test_framing.cpp`).
 
-**Open — units.** All three annotations count bytes. IPv4's IHL counts 32-bit words, and some protocols count
+**Open — units.** All four annotations count bytes. IPv4's IHL counts 32-bit words, and some protocols count
 elements rather than bytes (see [framing.md](framing.md#length-semantics)).
 
 ---
