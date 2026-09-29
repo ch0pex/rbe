@@ -15,13 +15,14 @@
 #include <rbe/annotations/detail/annotated_nsdm.hpp>
 #include <rbe/annotations/detail/annotation.hpp>
 #include <rbe/annotations/detail/utils.hpp>
-#include <rbe/annotations/length.hpp>
+#include <rbe/annotations/empty.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
+
 
 // --- STD ---
 #include <concepts>
@@ -31,8 +32,8 @@
 
 namespace rbe::dsrl {
 
-template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
-  requires(not custom_wirable<T>)
+template<typename T, rbe::detail::context Ctx = rbe::detail::context {}>
+  requires(wirable<T> or explicitly_empty<T>)
 class proxy {
   static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
 
@@ -56,7 +57,7 @@ public:
   // --- Constructors ---
 
   /// precondition: data.size() >= wire_size_of<value_type, local>()
-  constexpr explicit proxy(buffer_type const data) : data_(data.first(wire_size_of<value_type, local>())) { }
+  constexpr explicit proxy(buffer_type const data) : data_(data) { }
 
   template<static_string First, static_string... Rest>
     requires(wirable_class<value_type>)
@@ -103,51 +104,18 @@ public:
     }
   }
 
-
   [[nodiscard]] constexpr auto value() const -> value_type {
     return rbe::detail::deserialize<value_type, local>(data_);
   }
 
   [[nodiscard]] constexpr auto operator*() const -> value_type { return value(); }
 
-  // Fixed length of the wire representation of the type, in bytes.
-  // Compile time known block size of the wire representation of the type.
-  [[nodiscard]] static constexpr auto fixed_length() -> size_type { return wire_size_of<value_type, local>(); }
+  [[nodiscard]] static constexpr auto fixed_size() -> size_type { return wire_size_of<value_type, local>(); }
 
-  // Length of the wire representation of the type, in bytes. Aka logical length.
-  // It can either be:
-  //   - A compile-time constant, if the type has a fixed length.
-  //   - A runtime value, if the type has a variable length. This can be determined by:
-  //      - rbe::self_length annotation (takes precedence)
-  //      - Layout table calculated value
-  [[nodiscard]] constexpr auto length() const -> size_type {
-    if constexpr (contains_annotation<value_type, self_length>) {
-      static constexpr auto self_len_member = rbe::detail::annotated_nsdm(^^T, self_length);
-      if constexpr (self_len_member) {
-        // self_length is directly on a member of this type
-        return field<identifier_of(self_len_member.value())>();
-      }
-      else {
-        // self_length is on a nested type member; find and delegate to it
-        template for (constexpr auto m: rbe::detail::nsdm(^^T) | std::ranges::to<static_array>()) {
-          if constexpr (rbe::detail::has_annotations_deep(m, self_length)) {
-            return this->template field<identifier_of(m)>().template length();
-          }
-        }
-      }
-    }
-    return fixed_length();
-  }
-
-  [[nodiscard]] constexpr auto variable_length() const -> size_type { return length() - fixed_length(); }
+  // NOTE: for now size and fixed_size are the same since variable size types are not supported yet
+  [[nodiscard]] constexpr auto size() const -> size_type { return wire_size_of<value_type, local>(); }
 
   [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(length()); }
-
-  [[nodiscard]] constexpr auto fixed_span() const -> buffer_type { return data_.first(fixed_length()); }
-
-  [[nodiscard]] constexpr auto variable_span() const -> buffer_type {
-    return data_.subspan(fixed_length(), variable_length());
-  }
 
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
 

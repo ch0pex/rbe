@@ -165,7 +165,6 @@ public:
 private:
   using index_type = rbe::detail::candidate_index;
 
-
   /// NOTE: maybe I should expose this constructor. For now it's only used by the factory function
   /// however if the id is dense and the user know it he could use it to avoid finding the index.
   /// However this doesn't allow unkown ids, so  maybe it's not the solution.

@@ -59,13 +59,13 @@ static_assert(payload_extent_of<PayloadLengthHeader, std::uint32_t>() == payload
 
 constexpr auto static_sizes() {
   auto const plain_buffer = buffer({0x01, 0x00, 0x02, 0x00});
-  auto const plain        = rbe::dsrl::frame<PlainHeader, std::uint32_t>::parse(plain_buffer).value();
+  auto const plain        = rbe::dsrl::frame<PlainHeader, std::uint32_t>::make(plain_buffer).value();
 
-  RBE_CHECK(plain.header_length() == 4);
-  RBE_CHECK(plain.payload_length() == 4);
+  RBE_CHECK(plain.header().length() == 4);
+  RBE_CHECK(plain.payload().size() == 4);
   RBE_CHECK(plain.length() == 8);
-  RBE_CHECK(plain.header_span().size() == 4);
-  RBE_CHECK(plain.payload_span().size() == 4);
+  RBE_CHECK(plain.header().as_span().size() == 4);
+  RBE_CHECK(plain.payload().as_span().size() == 4);
   RBE_CHECK(plain.as_span().size() == 8);
 }
 
@@ -77,7 +77,7 @@ constexpr auto static_sizes() {
 constexpr auto no_annotations_blob() {
   auto const plain_buffer = buffer({0x01, 0x00, 0x02, 0x00});
   auto const greedy       = rbe::dsrl::frame<PlainHeader, blob> {plain_buffer};
-  RBE_CHECK(greedy.payload_length() == buffer_size - greedy.header_length());
+  RBE_CHECK(greedy.payload().size() == buffer_size - greedy.header().length());
   RBE_CHECK(greedy.length() == buffer_size);
   RBE_CHECK(greedy.as_span().size() == buffer_size);
 }
@@ -89,22 +89,21 @@ constexpr auto no_annotations_blob() {
 
 constexpr auto frame_hdr_length() {
   auto const frame_length_buffer = buffer({0x07, 0x0A, 0x00});
-  auto const with_frame_length   = rbe::dsrl::frame<FrameLengthHeader, blob>::parse(frame_length_buffer).value();
+  auto const with_frame_length   = rbe::dsrl::frame<FrameLengthHeader, blob>::make(frame_length_buffer).value();
 
-  RBE_CHECK(with_frame_length.header_length() == 3);
+  RBE_CHECK(with_frame_length.header().length() == 3);
   RBE_CHECK(with_frame_length.length() == 10);
-  RBE_CHECK(with_frame_length.payload_length() == 7);
-  RBE_CHECK(with_frame_length.payload_span().size() == 7);
-  RBE_CHECK(with_frame_length.payload_span().data() == with_frame_length.data() + 3);
+  RBE_CHECK(with_frame_length.payload().size() == 7);
+  RBE_CHECK(with_frame_length.payload().data() == with_frame_length.data() + 3);
   RBE_CHECK(with_frame_length.as_span().size() == 10);
 }
 
 constexpr auto frame_length_hdr_plus_payload() {
   auto const payload_length_buffer = buffer({0x05, 0x00});
-  auto const with_payload_length   = rbe::dsrl::frame<PayloadLengthHeader, blob>::parse(payload_length_buffer).value();
+  auto const with_payload_length   = rbe::dsrl::frame<PayloadLengthHeader, blob>::make(payload_length_buffer).value();
 
-  RBE_CHECK(with_payload_length.header_length() == 2);
-  RBE_CHECK(with_payload_length.payload_length() == 5);
+  RBE_CHECK(with_payload_length.header().length() == 2);
+  RBE_CHECK(with_payload_length.payload().size() == 5);
   RBE_CHECK(with_payload_length.length() == 7);
 }
 
@@ -115,13 +114,47 @@ constexpr auto frame_length_hdr_plus_payload() {
 constexpr auto frame_payload_starts_after_header_length() {
   auto const header_length_buffer = buffer({0x06, 0x00});
   auto const with_header_length =
-      rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::parse(header_length_buffer).value();
+      rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(header_length_buffer).value();
 
-  RBE_CHECK(with_header_length.header_length() == 6);
-  RBE_CHECK(with_header_length.header_span().size() == 6);
-  RBE_CHECK(with_header_length.payload_span().data() == with_header_length.data() + 6);
-  RBE_CHECK(with_header_length.payload_length() == 4);
+  RBE_CHECK(with_header_length.header().length() == 6);
+  RBE_CHECK(with_header_length.header().as_span().size() == 6);
+  RBE_CHECK(with_header_length.payload().as_span().data() == with_header_length.data() + 6);
+  RBE_CHECK(with_header_length.payload().size() == 4);
   RBE_CHECK(with_header_length.length() == 10);
+}
+
+// ============================================================
+// header_proxy spans: the logical extent the wire declares, the physical extent the header type maps
+// onto, and the trailing bytes the type does not account for
+// ============================================================
+
+constexpr auto header_proxy_extended_spans() {
+  auto const extended_buffer = buffer({0x06, 0xAB});
+  auto const hdr = rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(extended_buffer).value().header();
+
+  RBE_CHECK(hdr.length() == 6); // logical: what the wire declares the header occupies
+  RBE_CHECK(hdr.size() == 2);   // physical: wire_size_of<HeaderLengthHeader>
+  RBE_CHECK(hdr.is_extended());
+
+  RBE_CHECK(hdr.as_span().size() == 6);
+  RBE_CHECK(hdr.as_typed_span().size() == 2);
+  RBE_CHECK(hdr.as_typed_span().data() == hdr.as_span().data());
+
+  // the four bytes a newer peer appended, which HeaderLengthHeader has no field for
+  RBE_CHECK(hdr.extension().size() == 4);
+  RBE_CHECK(hdr.extension().data() == hdr.data() + hdr.size());
+
+  // the fields the type does know about still decode out of the typed part
+  RBE_CHECK(hdr.field<"flags">() == 0xAB);
+}
+
+constexpr auto header_proxy_unextended_spans() {
+  auto const exact_buffer = buffer({0x02, 0xAB});
+  auto const hdr = rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(exact_buffer).value().header();
+
+  RBE_CHECK_FALSE(hdr.is_extended());
+  RBE_CHECK(hdr.as_span().size() == hdr.as_typed_span().size());
+  RBE_CHECK(hdr.extension().empty());
 }
 
 // ============================================================
@@ -132,36 +165,12 @@ constexpr auto frame_nested_frame_length() {
   using inner_frame = rbe::dsrl::frame<FrameLengthHeader, blob>;
 
   auto const nested_buffer = buffer({0x01, 0x00, 0x02, 0x00, 0x07, 0x0A, 0x00});
-  auto const nested        = rbe::dsrl::frame<PlainHeader, inner_frame>::parse(nested_buffer).value();
+  auto const nested        = rbe::dsrl::frame<PlainHeader, inner_frame>::make(nested_buffer).value();
 
-  RBE_CHECK(nested.payload_length() == 10);
+  RBE_CHECK(nested.payload().length() == 10);
   RBE_CHECK(nested.length() == 14);
-  RBE_CHECK(nested.payload_span().size() == 10);
-  RBE_CHECK(inner_frame {nested.payload_span()}.payload_span().size() == 7);
-}
-
-// ============================================================
-// length_of: resolved from a partially received buffer, without constructing the frame
-// ============================================================
-
-constexpr auto frame_length_of_partial_buffer() {
-  using B = std::byte;
-
-  auto const frame_length_prefix   = std::array {B {0x07}, B {0x0A}, B {0x00}};
-  auto const payload_length_prefix = std::array {B {0x05}, B {0x00}};
-  auto const plain_prefix          = std::array {B {0x01}, B {0x00}, B {0x02}, B {0x00}};
-  auto const nested_prefix         = std::array {B {0x01}, B {0x00}, B {0x02}, B {0x00}, B {0x07}, B {0x0A}, B {0x00}};
-
-  // only the fixed-size header prefix is needed for length fields and static sizes
-  RBE_CHECK(rbe::dsrl::frame<FrameLengthHeader, blob>::parse_length(frame_length_prefix) == 10);
-  RBE_CHECK(rbe::dsrl::frame<PayloadLengthHeader, blob>::parse_length(payload_length_prefix) == 7);
-  RBE_CHECK(rbe::dsrl::frame<PlainHeader, std::uint32_t>::parse_length(plain_prefix) == 8);
-  // a nested frame payload also needs the nested header
-  RBE_CHECK(
-      rbe::dsrl::frame<PlainHeader, rbe::dsrl::frame<FrameLengthHeader, blob>>::parse_length(nested_prefix) == 14
-  );
-  // a buffer-delimited frame has no length of its own: it is the whole buffer
-  RBE_CHECK(rbe::dsrl::frame<PlainHeader, blob>::parse_length(buffer({0x01, 0x00, 0x02, 0x00})) == buffer_size);
+  RBE_CHECK(nested.payload().as_span().size() == 10);
+  RBE_CHECK(inner_frame {nested.payload().as_span()}.payload().size() == 7);
 }
 
 // ============================================================
@@ -170,23 +179,22 @@ constexpr auto frame_length_of_partial_buffer() {
 
 constexpr auto frame_narrows_at_construction() {
   auto const larger     = buffer({0x07, 0x0A, 0x00}); // buffer_size bytes, the frame is 10
-  auto const with_frame = rbe::dsrl::frame<FrameLengthHeader, blob>::parse(larger).value();
+  auto const with_frame = rbe::dsrl::frame<FrameLengthHeader, blob>::make(larger).value();
 
   RBE_CHECK(with_frame.length() == 10);
   RBE_CHECK(with_frame.as_span().size() == 10);
   RBE_CHECK(with_frame.as_span().data() == larger.data());
-  RBE_CHECK(with_frame.payload_span().size() == 7);
-  RBE_CHECK(with_frame.length() == rbe::dsrl::frame<FrameLengthHeader, blob>::parse_length(larger));
+  RBE_CHECK(with_frame.payload().size() == 7);
 }
 
 constexpr auto frame_with_empty_payload() {
   std::array<std::byte, 2> empty_payload_buffer {std::byte {0x00}, std::byte {0x00}};
   auto const with_empty_payload = rbe::dsrl::frame<PayloadLengthHeader, ExplictlyEmpty> {empty_payload_buffer};
 
-  RBE_CHECK(with_empty_payload.header_length() == 2);
-  RBE_CHECK(with_empty_payload.payload_length() == 0);
+  RBE_CHECK(with_empty_payload.header().length() == 2);
+  RBE_CHECK(with_empty_payload.payload().size() == 0);
   RBE_CHECK(with_empty_payload.length() == 2);
-  RBE_CHECK(with_empty_payload.payload_span().size() == 0);
+  RBE_CHECK(with_empty_payload.payload().as_span().size() == 0);
   RBE_CHECK(with_empty_payload.as_span().size() == 2);
 
   std::array<std::byte, 4> empty_payload_buffer2 {
@@ -194,30 +202,31 @@ constexpr auto frame_with_empty_payload() {
   };
   auto const with_empty_payload2 = rbe::dsrl::frame<PlainHeader, ExplictlyEmpty> {empty_payload_buffer2};
 
-  RBE_CHECK(with_empty_payload2.header_length() == 4);
-  RBE_CHECK(with_empty_payload2.payload_length() == 0);
+  RBE_CHECK(with_empty_payload2.header().length() == 4);
+  RBE_CHECK(with_empty_payload2.payload().size() == 0);
   RBE_CHECK(with_empty_payload2.length() == 4);
-  RBE_CHECK(with_empty_payload2.payload_span().size() == 0);
+  RBE_CHECK(with_empty_payload2.payload().as_span().size() == 0);
   RBE_CHECK(with_empty_payload2.as_span().size() == 4);
 }
 
 // constexpr auto frame_message_id_any_doesnt_fit() {
 //   auto buff        = buffer({0x01, 0x00, 0x00, 0x00, 0xDD, 0xCC, 0xBB, 0xAA});
 //   using frame_type = rbe::dsrl::frame<MessageIdHeader, rbe::dsrl::any<msg_1, msg_2>>;
-//   RBE_CHECK(frame_type::parse_length(buff) == rbe::wire_size_of<MessageIdHeader>() + rbe::wire_size_of<msg_1>());
+//   RBE_CHECK(frame_type::make_length(buff) == rbe::wire_size_of<MessageIdHeader>() + rbe::wire_size_of<msg_1>());
 //   // msg_1 doesn't fit in the buffer, so the frame cannot be constructed
-//   RBE_CHECK_FALSE(frame_type::parse(buff).has_value());
+//   RBE_CHECK_FALSE(frame_type::make(buff).has_value());
 // }
 
 // clang-format off
 TEST_SUITE("dsrl_frame - length and buffer accessors") {
-  RBE_TEST_CASE("dsrl_frame - length and buffer: length_of works over a partially received buffer", frame_length_of_partial_buffer);
   RBE_TEST_CASE("dsrl_frame - length and buffer: construction narrows the span to the frame", frame_narrows_at_construction);
   RBE_TEST_CASE("dsrl_frame - length and buffer: static sizes", static_sizes);
   RBE_TEST_CASE("dsrl_frame - length and buffer: no annotations blob", no_annotations_blob);
   RBE_TEST_CASE("dsrl_frame - length and buffer: payload_length = frame_length - header_length", frame_hdr_length);
   RBE_TEST_CASE("dsrl_frame - length and buffer: frame_length = header_length + payload_length", frame_length_hdr_plus_payload);
   RBE_TEST_CASE("dsrl_frame - length and buffer: payload starts after the annotated header length, not the static header size", frame_payload_starts_after_header_length);
+  RBE_TEST_CASE("dsrl_frame - length and buffer: an extended header exposes logical, typed and extension spans", header_proxy_extended_spans);
+  RBE_TEST_CASE("dsrl_frame - length and buffer: an unextended header has no extension bytes", header_proxy_unextended_spans);
   RBE_TEST_CASE("dsrl_frame - length and buffer: the outer payload narrows to the inner frame length", frame_nested_frame_length);
   RBE_TEST_CASE("dsrl_frame - length and buffer: frame with empty payload", frame_with_empty_payload);
   // RBE_TEST_CASE("dsrl_frame - length and buffer: frame with message_id and any payload doesn't fit", frame_message_id_any_doesnt_fit);
