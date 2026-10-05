@@ -124,6 +124,40 @@ constexpr auto frame_payload_starts_after_header_length() {
 }
 
 // ============================================================
+// header_proxy spans: the logical extent the wire declares, the physical extent the header type maps
+// onto, and the trailing bytes the type does not account for
+// ============================================================
+
+constexpr auto header_proxy_extended_spans() {
+  auto const extended_buffer = buffer({0x06, 0xAB});
+  auto const hdr = rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(extended_buffer).value().header();
+
+  RBE_CHECK(hdr.length() == 6); // logical: what the wire declares the header occupies
+  RBE_CHECK(hdr.size() == 2);   // physical: wire_size_of<HeaderLengthHeader>
+  RBE_CHECK(hdr.is_extended());
+
+  RBE_CHECK(hdr.as_span().size() == 6);
+  RBE_CHECK(hdr.as_typed_span().size() == 2);
+  RBE_CHECK(hdr.as_typed_span().data() == hdr.as_span().data());
+
+  // the four bytes a newer peer appended, which HeaderLengthHeader has no field for
+  RBE_CHECK(hdr.extension().size() == 4);
+  RBE_CHECK(hdr.extension().data() == hdr.data() + hdr.size());
+
+  // the fields the type does know about still decode out of the typed part
+  RBE_CHECK(hdr.field<"flags">() == 0xAB);
+}
+
+constexpr auto header_proxy_unextended_spans() {
+  auto const exact_buffer = buffer({0x02, 0xAB});
+  auto const hdr = rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(exact_buffer).value().header();
+
+  RBE_CHECK_FALSE(hdr.is_extended());
+  RBE_CHECK(hdr.as_span().size() == hdr.as_typed_span().size());
+  RBE_CHECK(hdr.extension().empty());
+}
+
+// ============================================================
 // nested frame: the outer payload narrows to the inner frame length
 // ============================================================
 
@@ -191,6 +225,8 @@ TEST_SUITE("dsrl_frame - length and buffer accessors") {
   RBE_TEST_CASE("dsrl_frame - length and buffer: payload_length = frame_length - header_length", frame_hdr_length);
   RBE_TEST_CASE("dsrl_frame - length and buffer: frame_length = header_length + payload_length", frame_length_hdr_plus_payload);
   RBE_TEST_CASE("dsrl_frame - length and buffer: payload starts after the annotated header length, not the static header size", frame_payload_starts_after_header_length);
+  RBE_TEST_CASE("dsrl_frame - length and buffer: an extended header exposes logical, typed and extension spans", header_proxy_extended_spans);
+  RBE_TEST_CASE("dsrl_frame - length and buffer: an unextended header has no extension bytes", header_proxy_unextended_spans);
   RBE_TEST_CASE("dsrl_frame - length and buffer: the outer payload narrows to the inner frame length", frame_nested_frame_length);
   RBE_TEST_CASE("dsrl_frame - length and buffer: frame with empty payload", frame_with_empty_payload);
   // RBE_TEST_CASE("dsrl_frame - length and buffer: frame with message_id and any payload doesn't fit", frame_message_id_any_doesnt_fit);
