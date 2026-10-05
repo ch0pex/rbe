@@ -103,7 +103,7 @@ public:
   // so the user could have a reduced version of the header meaning
   // that header_length (value comming through the wire) could be bigger than the
   // wire size of the header type (size()). is_extended() can be used to check
-  // this condition, and extension() hands back the bytes T does not account for.
+  // this condition, and extension_span() hands back the bytes T does not account for.
   // The behaivour is undefined if logical length is smaller than the physical size of T (size()).
   [[nodiscard]] constexpr auto length() const -> size_type {
     if constexpr (has_header_length) {
@@ -158,8 +158,8 @@ public:
 
   // --- Spans ---
 
-  // Three distinct extents over the same data(): the logical one the wire declares, the physical one
-  // T maps onto, and whatever the wire declared past the end of T.
+  // Three extents over the same data(): the one the wire delimits, the part of it T knows how to
+  // decode, and the part it does not. as_span() == known_span() + extension_span().
 
   /// The header as the wire delimits it: what has to be skipped to reach the payload, and what has to
   /// be re-emitted to reproduce the header verbatim.
@@ -167,12 +167,13 @@ public:
   /// header_proxy came from make(), the caller's responsibility when it was built from a raw buffer.
   [[nodiscard]] constexpr auto as_span() const -> buffer_type { return buffer_type {data(), length()}; }
 
-  /// The bytes T maps onto, and therefore the only ones field() may read. Never longer than as_span().
-  [[nodiscard]] constexpr auto as_typed_span() const -> buffer_type { return base::as_span(); }
+  /// The bytes T declares fields for, and therefore the only ones field() may read. Never longer than
+  /// as_span().
+  [[nodiscard]] constexpr auto known_span() const -> buffer_type { return base::as_span(); }
 
-  /// The trailing bytes the wire declared but T does not know how to decode -- fields appended by a
-  /// newer version of the protocol. Empty unless is_extended().
-  [[nodiscard]] constexpr auto extension() const -> buffer_type {
+  /// The trailing bytes the wire declared but T has no field for, so there is no way to decode them --
+  /// appended by a newer version of the protocol. Empty unless is_extended().
+  [[nodiscard]] constexpr auto extension_span() const -> buffer_type {
     return is_extended() ? as_span().subspan(this->size()) : buffer_type {};
   }
 };
