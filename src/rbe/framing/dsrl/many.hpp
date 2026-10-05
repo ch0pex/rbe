@@ -62,12 +62,14 @@ public:
     parent_type* parent_;
   };
 
-  constexpr many(buffer_type const data) : current_(frame_type::parse(data)), data_(data) { }
+  [[nodiscard]] static constexpr auto make(buffer_type const data) -> std::optional<many> { return many {data}; }
+
+  constexpr many(buffer_type const data) : current_(frame_type::make(data)), data_(data) { }
 
   constexpr auto next() {
     assert(not done());
     data_    = data_.subspan(current_->length());
-    current_ = frame_type::parse(data_);
+    current_ = frame_type::make(data_);
   }
 
   [[nodiscard]] constexpr auto current() const -> frame_type {
