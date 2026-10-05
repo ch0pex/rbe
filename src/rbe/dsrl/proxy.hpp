@@ -57,7 +57,7 @@ public:
   // --- Constructors ---
 
   /// precondition: data.size() >= wire_size_of<value_type, local>()
-  constexpr explicit proxy(buffer_type const data) : data_(data.first(wire_size_of<value_type, local>())) { }
+  constexpr explicit proxy(buffer_type const data) : data_(data) { }
 
   template<static_string First, static_string... Rest>
     requires(wirable_class<value_type>)
