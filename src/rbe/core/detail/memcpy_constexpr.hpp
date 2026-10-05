@@ -44,7 +44,9 @@ template<typename T>
 constexpr T load(std::span<std::byte const> const source) {
   assert(source.size() >= sizeof(T));
   std::array<std::byte, sizeof(T)> buffer {};
-  std::ranges::copy(source, std::ranges::begin(buffer));
+  // copy_n, not copy: the precondition is >=, so source is routinely larger than T -- a view handed a
+  // buffer that outlives the value, or a payload whose declared extent exceeds the type it decodes.
+  std::ranges::copy_n(std::ranges::begin(source), sizeof(T), std::ranges::begin(buffer));
   return std::bit_cast<T>(buffer);
 }
 
