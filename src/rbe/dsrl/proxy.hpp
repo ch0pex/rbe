@@ -115,7 +115,12 @@ public:
   // NOTE: for now size and fixed_size are the same since variable size types are not supported yet
   [[nodiscard]] constexpr auto size() const -> size_type { return fixed_size(); }
 
-  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(size()); }
+  /// The buffer this view was handed. Not an extent of anything: proxy only requires the buffer to be
+  /// at least wire_size_of<T>, so it is routinely larger than the value. Use as_span() for the extent.
+  [[nodiscard]] constexpr auto buffer() const -> buffer_type { return data_; }
+
+  /// This value as a span, i.e. exactly the bytes T occupies. Invariant: buffer().first(size()).
+  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return buffer().first(size()); }
 
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
 
