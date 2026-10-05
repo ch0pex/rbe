@@ -104,16 +104,18 @@ public:
     }
   }
 
-
   [[nodiscard]] constexpr auto value() const -> value_type {
     return rbe::detail::deserialize<value_type, local>(data_);
   }
 
   [[nodiscard]] constexpr auto operator*() const -> value_type { return value(); }
 
-  [[nodiscard]] constexpr auto length() const -> size_type { return wire_size_of<value_type, local>(); }
+  [[nodiscard]] static constexpr auto fixed_size() -> size_type { return wire_size_of<value_type, local>(); }
 
-  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(length()); }
+  // NOTE: for now size and fixed_size are the same since variable size types are not supported yet
+  [[nodiscard]] constexpr auto size() const -> size_type { return fixed_size(); }
+
+  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_.first(size()); }
 
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
 
