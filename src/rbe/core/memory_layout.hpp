@@ -191,7 +191,7 @@ consteval auto wire_size_of() -> std::size_t {
   return sizeof(T);
 }
 
-template<typename T>
+template<typename T, detail::context Ctx = detail::context {}>
   requires(std::is_empty_v<std::remove_cvref_t<T>>)
 consteval auto wire_size_of() -> std::size_t {
   return 0;
