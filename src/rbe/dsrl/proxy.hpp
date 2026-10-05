@@ -15,12 +15,14 @@
 #include <rbe/annotations/detail/annotated_nsdm.hpp>
 #include <rbe/annotations/detail/annotation.hpp>
 #include <rbe/annotations/detail/utils.hpp>
+#include <rbe/annotations/empty.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
+
 
 // --- STD ---
 #include <concepts>
@@ -30,8 +32,8 @@
 
 namespace rbe::dsrl {
 
-template<wirable T, rbe::detail::context Ctx = rbe::detail::context {}>
-  requires(not custom_wirable<T>)
+template<typename T, rbe::detail::context Ctx = rbe::detail::context {}>
+  requires(wirable<T> or explicitly_empty<T>)
 class proxy {
   static constexpr auto local = rbe::detail::merge_context(Ctx, ^^T);
 
