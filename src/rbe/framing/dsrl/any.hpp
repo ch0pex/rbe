@@ -54,7 +54,7 @@ public:
   [[nodiscard]] static constexpr auto make(id_type const id, buffer_type const data) -> std::optional<any> {
     auto const index = candidates::index_of(id);
     return length_of(index, data) //
-        .transform([&](size_type const length) { return any {index, data.first(length)}; });
+        .transform([&](size_type const length) { return any {id, index, data.first(length)}; });
   }
 
   // --- Constructors ---
@@ -177,12 +177,16 @@ private:
    * id lookup and for the narrowing. `index_type` is a type of its own precisely so this overload can never
    * be selected by an id, which is an integer just as often as an index is.
    *
+   * The id is carried rather than recovered from candidates::ids, which has no entry for an
+   * unrecognized id: index_of() reports candidate_index::none for those, and indexing the table with
+   * it reads out of bounds.
+   *
    * Preconditions:
    *   - index == candidates::index_of(id)
    *   - data is already narrowed: data.size() == *parse_length(id, data)
    */
-  constexpr any(index_type const index, buffer_type const data) :
-    id_(candidates::ids[static_cast<std::size_t>(index)]), //
+  constexpr any(id_type const id, index_type const index, buffer_type const data) :
+    id_(id), //
     index_(index), //
     data_(data) { }
 
