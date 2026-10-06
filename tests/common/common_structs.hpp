@@ -10,15 +10,7 @@
  */
 #pragma once
 
-#include <rbe/annotations/alignment.hpp>
-#include <rbe/annotations/bits.hpp>
-#include <rbe/annotations/derive.hpp>
-#include <rbe/annotations/detail/annotation.hpp>
-#include <rbe/annotations/empty.hpp>
-#include <rbe/annotations/endianness.hpp>
-#include <rbe/annotations/format.hpp>
-#include <rbe/annotations/id.hpp>
-#include <rbe/annotations/length.hpp>
+#include <rbe/annotations.hpp>
 #include <rbe/core/custom.hpp>
 
 #include <type_traits>
@@ -568,6 +560,45 @@ struct [[=rbe::little, =rbe::pack]] WithPayloadLength {
 struct [[=rbe::little, =rbe::pack]] WithHeaderLength {
   [[=rbe::header_length]] std::uint8_t length;
   std::uint8_t flags;
+};
+
+// --- Count annotation ---
+
+struct CountAnnotated {
+  std::uint32_t num_values;
+  [[=rbe::count("num_values")]] std::vector<std::uint32_t> values;
+};
+
+// count field cannot be after the annotated field
+struct WrongCountAnnotationOrder {
+  [[=rbe::count("count")]] std::vector<std::uint32_t> values;
+  std::uint32_t count;
+};
+
+struct CountAnnotatedTwitce {
+  std::uint32_t count;
+  std::uint32_t count2;
+  [[=rbe::count("count"), =rbe::count("count2")]] std::vector<std::uint32_t> values;
+};
+
+struct CountAnnotationDoesntExist {
+  std::uint32_t count;
+  [[=rbe::count("wrong")]] std::vector<std::uint32_t> values;
+};
+
+struct CountAnnotationNotIntegral {
+  std::string count;
+  [[=rbe::count("count")]] std::vector<std::uint32_t> values;
+};
+
+struct CountAnnotatedNotDynamic {
+  std::uint32_t count;
+  [[=rbe::count("count")]] std::array<std::uint32_t, 3> values;
+};
+
+struct CountAnnotatedNotRange {
+  std::uint32_t count;
+  [[=rbe::count("count")]] int values;
 };
 
 // clang-format on

@@ -12,7 +12,9 @@
 
 #include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/bits.hpp>
+#include <rbe/annotations/count.hpp>
 #include <rbe/annotations/derive.hpp>
+#include <rbe/annotations/empty.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/format.hpp>
 #include <rbe/annotations/id.hpp>

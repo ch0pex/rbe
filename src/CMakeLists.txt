@@ -22,6 +22,7 @@ target_sources(
         rbe/annotations/detail/view.hpp
         rbe/annotations/alignment.hpp
         rbe/annotations/bits.hpp
+        rbe/annotations/count.hpp
         rbe/annotations/derive.hpp
         rbe/annotations/empty.hpp
         rbe/annotations/endianness.hpp

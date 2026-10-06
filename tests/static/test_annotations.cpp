@@ -315,4 +315,13 @@ static_assert(std::same_as<rbe::id_type_of<MsgWithIntId>, int>);
 static_assert(not rbe::explicitly_empty<Empty>);
 static_assert(rbe::explicitly_empty<ExplictlyEmpty>);
 
+// --- count ---
+static_assert(rbe::well_annotated<CountAnnotated>);
+static_assert(not rbe::well_annotated<WrongCountAnnotationOrder>);
+static_assert(not rbe::well_annotated<CountAnnotatedTwitce>);
+static_assert(not rbe::well_annotated<CountAnnotationDoesntExist>);
+static_assert(not rbe::well_annotated<CountAnnotationNotIntegral>);
+static_assert(not rbe::well_annotated<CountAnnotatedNotDynamic>);
+static_assert(not rbe::well_annotated<CountAnnotatedNotRange>);
+
 } // namespace
