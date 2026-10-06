@@ -575,6 +575,241 @@ Candidates:
 
 ---
 
+## 11. Custom frames: public building blocks and a minimal `base_frame`
+
+**Decided (direction), not implemented.** `rbe::frame<H, P>` composes well as long as a protocol fits the
+header-plus-payload shape and one of the payload categories `frame_payload` lists. What it does not offer is
+a way to *customize* a frame: `dsrl::frame` is the orchestrator that knows every payload category
+(`narrow_to_payload` / `construct_payload` branch on `is_any`, `explicitly_delimited_frame`, …), and those
+steps are private members, so a delimitation rule the library does not know about — a line-oriented
+ASCII protocol, OPRA's `(msg_category, msg_indicator)` discriminant, a length carried inside the body —
+cannot be expressed without editing `frame` or copying its internals.
+
+The motivating case is cboe TOP (`example/markets/cboe.hpp`), a line-oriented ASCII protocol: a `line`
+frame wants its length to include the `'\n'` bytes that follow the message, so that `many<line>` advances
+line by line rather than by candidate size — and, as a side effect, no longer stops at an unknown
+`msg_type`.
+
+The decision is to keep the payload contract as it is and open the *frame* instead: not through
+inheritance, but by lifting the steps `frame` performs out into public building blocks that any frame —
+the library's or the user's — composes.
+
+### Why not a richer payload contract
+
+A redesign was evaluated and is kept here so the analysis is not lost. Every payload view would carry two
+forms of construction — a wide `make(bytes)` / `make(header<H> const&, bytes)` ("find your own extent") and
+a narrow `{bytes, rbe::exact_length}` ("this span *is* you", REQ-141..144) — plus a `length()`, which
+header<H> would select at compile time: a header that declares a length builds the payload exactly, one
+that does not calls `make`, and a payload with no `make` is buffer-delimited. A wirable payload would be
+wrapped in a `payload<T>` mirroring `header<H>` (`proxy<T>` plus the length the frame assigned,
+with `known_span()` / `extension_span()` for SBE-style trailing bytes), `payload_extent_of` would gain a
+single `payload_resolved` enumerator ("the view offers `make`") in place of `static_size` / `nested_frame`
+/ `any_id`, and `any` would absorb its own special case through `make(header<H> const&, bytes)`.
+
+It does solve the `size()` / `length()` asymmetry and lets `frame` host a user payload with no
+`is_any`-style branch, but it puts a contract on *every* payload to serve cases that a custom frame covers
+just as well. It stays on the table if several protocols turn up that do not fit the frame-level
+extension below.
+
+### A frame is three steps, and each one is a public building block
+
+Everything `dsrl::frame::make` does decomposes into three steps. Today the first is public and the other
+two are private members of `frame`, which is exactly what makes writing a frame of one's own impossible
+without copying them.
+
+| Step | Today | Becomes | Who needs to replace it |
+| --- | --- | --- | --- |
+| 1. Where the payload starts | `header<H>::make(buf)` + `header<H>::length()` | unchanged, already public | nobody so far; header-length units (IPv4 IHL in words) would be the header's business |
+| 2. Where the payload ends | `frame::narrow_to_payload` (private) | `dsrl::payload_extent(hdr, rest) -> buffer_type` | TOP (`'\n'`), OPRA (`msg_category` + `msg_indicator`), OPRA `Administrative` (length inside the body) |
+| 3. What is built over those bytes | `frame::construct_payload[_hardened]` (private) | `dsrl::make_payload<P>(hdr, bytes) -> std::optional<P>` | anyone wanting a view of their own instead of `any` / `proxy<T>` |
+
+- `payload_extent(hdr, rest)` is today's `narrow_to_payload`: the header's `payload_length()` when it
+  declares one; otherwise the rest, and the view built in step 3 narrows itself if it can. Keeping it
+  separate from step 3 is what lets a custom frame swap the *extent* while keeping the *payload* — the
+  common case.
+- `make_payload<P>(hdr, bytes)` is today's `construct_payload_hardened`: wirable `T` → `proxy<T>::make`,
+  `any` → `any::make(hdr.id(), bytes)`, which checks the candidate fits and narrows to its wire size — an
+  `any` is a variant of `proxy`, a view over the candidate it knows, and the bytes a header declared beyond
+  it stay reachable through the frame's `payload_span()` — nested frame → `frame::make`, span → the span. It is
+  the one place that knows how each payload category is constructed from a header and its bytes, and
+  being public it is the one place a user frame has to call to interoperate with `any` and the rest.
+- `dsrl::frame<H, P>::make` becomes the canonical composition of the three, and nothing else:
+
+```cpp
+static constexpr auto make(buffer_type data) -> std::optional<frame> {
+  auto const hdr = header_type::make(data);
+  if (not hdr) return std::nullopt;
+  auto const bytes = payload_extent(*hdr, data.subspan(hdr->length()));
+  return make_payload<payload_return_type>(*hdr, bytes).transform([&](auto p) { return frame {*hdr, p}; });
+}
+```
+
+The "fast path" `make` takes today for explicitly delimited frames (skip the fit check) folds into
+`make_payload`, which can see `header<H>::has_payload_length` / `has_frame_length` itself.
+
+### `dsrl::base_frame<H, P>`: only what is common
+
+With the steps public, the base has nothing to resolve. It is the `std::ranges::view_interface` of frames,
+reduced to storage plus the derived operations, dispatching to the most derived type with deducing
+`this`:
+
+| | Primitives (the derived class) | Derived operations (`base_frame`) |
+| --- | --- | --- |
+| What | `static make(buffer) -> std::optional<D>`, `length() const` | `header()`, `payload()`, `data()`, `buffer()`, `as_span()`, `header_span()`, `payload_span()`, `flatten()` |
+| State | whatever it needs (e.g. `line_length_`) | `header_` + `payload_` |
+
+- `base_frame` has **neither `length()` nor `make()`**. Forgetting a primitive is a compile error in
+  `many<D>` or `dsrl::is_frame<D>`, not an iteration that silently advances by the wrong length. This is
+  the reason not to derive from `dsrl::frame` and shadow its members.
+- No `protected` helpers: a derived class that wants the default resolution calls the public building
+  blocks, the same ones `frame` calls. That also serves a user frame that *holds* a `frame` as a member
+  instead of deriving — the blocks do not care.
+- `buffer()` is `header_.buffer()`: the untrimmed buffer the view was constructed over, with the exact
+  semantics `proxy::buffer()` already has (not an extent of anything). No extra state; it only needs
+  `using base::buffer;` in `header`. It is the bound for any scan — terminators, padding.
+- `as_span()`, `header_span()` and `payload_span()` call `self.length()` through deducing `this`, so they
+  follow the derived class. `header_span()` / `payload_span()` come back here (REQ-128) because they are
+  pure derived operations.
+- `dsrl::frame<H, P>` is `base_frame<H, P>` plus the two default primitives (`make` as above, `length`
+  by precedence: a header length field, otherwise header + payload). Its behaviour does not change.
+
+### The vocabulary serder is the custom frame
+
+A custom frame is not "a class deriving from `dsrl::frame`". It is a **vocabulary struct**, exactly like
+`rbe::frame`, `rbe::blob` and `rbe::many`:
+
+```cpp
+namespace cboe::top {
+struct line {                                   // the serder: what the user actually writes
+  using header_type  = Header;
+  using payload_type = messages;
+  using dsrl_type    = line_view;               // derives from dsrl::base_frame<Header, messages::dsrl_type>
+  // using srl_type   = line_writer;            // once srl::base_frame exists
+  // using value_type = rbe::value_type<header_type, payload_type>;
+  static constexpr bool self_delimiting = true; // delimitation opt-in, see below
+};
+using lines = rbe::many<line>;                  // composes today: many only requires frame_serder
+}
+```
+
+The mechanism **already exists**: `serder_traits`, `to_dsrl_t`, `rbe::many<T>` and `frame_serder` compose
+over `dsrl_type` without knowing whether the library or the user wrote it. `rbe::blob` is the proof.
+
+The view replaces step 2 and reuses steps 1 and 3 untouched:
+
+```cpp
+class line_view : public rbe::dsrl::base_frame<Header, messages::dsrl_type> {
+  using base = rbe::dsrl::base_frame<Header, messages::dsrl_type>;
+
+public:
+  static constexpr auto make(buffer_type buf) -> std::optional<line_view> {
+    auto const hdr = rbe::dsrl::header<Header>::make(buf);                       // step 1
+    if (not hdr) return std::nullopt;
+    auto const rest = buf.subspan(hdr->length());
+    auto const n = line_extent(rest);                                            // step 2: the only custom part
+    if (not n) return std::nullopt;                                              // incomplete line: wait for more
+    auto const line = rest.first(*n);
+    return rbe::dsrl::make_payload<payload_type>(*hdr, line)                     // step 3
+        .transform([&](auto p) { return line_view {*hdr, p, hdr->length() + line.size()}; });
+  }
+  [[nodiscard]] constexpr auto length() const -> size_type { return line_length_; }
+
+private:
+  // up to and including the terminating '\n', then every '\n' that follows it. The id plays no part,
+  // which is what lets iteration continue past a msg_type this build does not know.
+  static constexpr auto line_extent(buffer_type rest) -> std::optional<size_type> {
+    auto const nl = std::ranges::find(rest, std::byte {'\n'});
+    if (nl == rest.end()) return std::nullopt;
+    auto n = static_cast<size_type>(nl - rest.begin());
+    while (n < rest.size() and rest[n] == std::byte {'\n'}) ++n;
+    return n;
+  }
+  constexpr line_view(header_type h, payload_type p, size_type n) : base(h, p), line_length_(n) { }
+  size_type line_length_;
+};
+```
+
+This supersedes the sketch currently at `example/markets/cboe.hpp:988-1003`, which derives from `message`
+(the empty vocabulary type rather than `message::dsrl_type`), scans *backwards* from `data() + length()`
+(reading at the frame boundary with no bound), and adds a `line_length()` accessor instead of the `length()`
+primitive `many` actually calls. It also follows that the LF is framing, not a message field: the TOP message
+types drop their trailing `newline` member, and the four that are left with no fields become `rbe::empty`
+candidates.
+
+OPRA is the same shape with a different step 2 — the extent follows from `(msg_category, msg_indicator)`
+— and keeps `any` as its payload, because `make_payload<any>` accepts a given extent. `Administrative`
+reads its own first two bytes in step 2. None of them touches `any`.
+
+`make_payload<any>` narrows a known candidate's `any` to its wire size, like any other payload view, while
+the line's extent lives in the frame's `length()` and `payload_span()`. An unknown id's `any` has nothing
+to narrow to and spans exactly the line it was handed, instead of running to the end of the buffer:
+`many<line>` steps over it and goes on.
+
+Known limit: `payload()` is whatever step 3 built; a derived class that wants something other than an
+`any` swaps step 3. Inheritance is static: a `line_view`
+seen through `base_frame const&` has no `length()` at all, which is the right outcome — there is no silent
+slice back to a default length.
+
+### Serialization
+
+`srl::frame` does not exist yet. The decision is to **design it with the same cut from the start**: the
+steps as public building blocks (write the header, reserve the payload, back-patch the length field),
+`srl::base_frame<H, P>` with the derived operations (`as_span()` of what was written, …) and
+`srl::frame<H, P>` composing the defaults. A `line_writer` would compose the same blocks and append the
+`'\n'` bytes. Until then `serder_traits` only requires `dsrl_type` (`srl_type` is commented out in
+`frame_serder_concepts.hpp`), so a custom frame is readable today and becomes writable when srl lands
+**without changing shape**.
+
+**Open:** the srl-side primitives, until `srl::frame` is designed (candidates: `begin(header_value)`,
+`finish()`).
+
+### Delimitation: the structural classification needs an opt-in
+
+`payload_extent_of<H, P>` and `is_self_delimiting<T>` classify by the *shape* `header_type` /
+`payload_type` ([§3](#3-length-resolution), [§4](#4-self-delimiting-and-buffer-delimited-frames)). A
+custom frame breaks that premise. `line` happens to be fine — `any_id` is already self-delimiting — but a
+custom frame shaped like `frame<PlainHeader, blob>` and delimited by a terminator would classify as
+buffer-delimited, and `rbe::many` would reject it.
+
+**Decided:** `is_self_delimiting<T>` first consults an optional member of the vocabulary type,
+`static constexpr bool self_delimiting`, and only falls back to the structure when it is absent.
+`explicitly_delimited_frame` / `dispatch_delimited_frame` stay structural: they speak about the header
+and about `any`, neither of which a custom frame changes. Without this opt-in, "write your own frame"
+does not close.
+
+### `value_type`
+
+- `rbe::value_type<H, P>` (`void` today, TODO) is `{ H header; value_of<P> payload; }`, with
+  `any<Ts...> → std::variant<Ts...>`, `many<F> → std::vector<value_of<F>>`, a nested frame recursing,
+  `explicitly_empty → T`. **Open:** `blob → std::vector<std::byte>` or a span.
+- **Derivable for a custom frame that keeps the header-plus-payload shape**: the vocabulary type aliases
+  it, `using value_type = rbe::value_type<header_type, payload_type>;`. The `'\n'` padding of `line` is
+  framing, not value: `srl_type` emits it, the value never carries it.
+- The eager conversion `dsrl_type → value_type` stays **generic** as long as the view exposes `header()`
+  and `payload()`, which is precisely what `base_frame` guarantees. This is the argument for `base_frame`
+  owning `header_` + `payload_` rather than being an empty interface.
+- Only a frame that abandons the header-plus-payload shape writes its `value_type` by hand. Acceptable.
+
+### What a custom frame still cannot change
+
+The inside of `any` — how an id selects a candidate — and the candidate list itself. Making a user view a
+candidate of `any` is a separate step (a third form next to `T` and `proxy<T>` in the dispatcher, and a
+non-total `candidate_list::wire_size`), the same one variable-size candidates need
+([§8](#8-variable-size-wirable-types)). It is independent of this section.
+
+### Rejected alternatives
+
+| Alternative | Why not |
+| --- | --- |
+| Derive from `dsrl::frame` and shadow `make` / `length` | Forgetting `length()` iterates wrongly in silence. `base_frame` without primitives turns it into a compile error. |
+| `base_frame` with a `protected` `resolve()` doing the default resolution | It only customizes `length()` in practice: replacing a step means copying `frame`'s private code. Public building blocks serve inheritance and composition alike. |
+| The richer payload contract above (`make` + `exact_length` on every payload, `payload<T>`, `payload_resolved`) | Solves the asymmetry and opens `frame` to user payloads, but puts a contract on *every* payload for cases a custom frame covers. Kept as an option. |
+| An extra span stored in `frame` for `buffer()` | `header_.buffer()` already is that span, with no state. |
+| `rbe::any_frame<H, Msgs...>` | The id is just one header field; a custom frame that needs another one reads it off `header()` in step 2 or 3. |
+| Have `payload_extent_of` recognise custom frames structurally | It cannot: a custom frame's delimitation is not in its types. Hence the opt-in. |
+
+---
+
 ## Divergences from framing.md
 
 [framing.md](framing.md) predates the implementation. Known points where it no longer matches:
@@ -589,6 +824,7 @@ Candidates:
 | Header length field "required only when the extent can't be determined any other way" | Formalized as `payload_extent` and `self_delimiting_frame` ([§3](#3-length-resolution), [§4](#4-self-delimiting-and-buffer-delimited-frames)) |
 | `[[= rbe::id_field]]` locator | `[[=rbe::id]]` on the header field, `[[=rbe::id(value)]]` on the message type |
 | `proxy<T, S = lazy_t>` reached through `as_proxy(S)` for strategy-generic code | Rejected: it mixes owning and view contracts; a free `rbe::field<...>(source)` accessor instead ([§9](#9-uniform-field-access-across-strategies)) |
+| `frame::match(...)` as a forwarder, and `proxy<Header>` as a second constructor parameter for a payload "whose meaning depends on the header" | Customization moves to the frame, not the payload: a custom frame is a vocabulary serder whose `dsrl_type` derives from `dsrl::base_frame` ([§11](#11-custom-frames-public-building-blocks-and-a-minimal-base_frame)) |
 
 ---
 
@@ -607,4 +843,12 @@ Candidates:
 - [ ] `srl::frame` / `srl::many` on top of the same classification.
 - [ ] Length units (words, element counts).
 - [ ] Header-only messages ([§10](#10-header-only-messages)), then add `aquis::Heartbeat` and `opra::Control` back to their `messages`.
+- [ ] Lift `narrow_to_payload` / `construct_payload_hardened` out of `frame` as public `dsrl::payload_extent(hdr, rest)` and `dsrl::make_payload<P>(hdr, bytes)`; `dsrl::base_frame<H, P>` with storage and derived operations only, `dsrl::frame` composing the blocks on top of it ([§11](#11-custom-frames-public-building-blocks-and-a-minimal-base_frame)).
+- [ ] `using base::buffer;` in `header`, and `buffer()` / `header_span()` / `payload_span()` on `base_frame` through deducing `this`.
+- [ ] `self_delimiting` opt-in consulted by `is_self_delimiting<T>` before the structural classification.
+- [ ] `rbe::value_type<H, P>` and a generic eager conversion written against `header()` / `payload()`.
+- [ ] `srl::base_frame` / `srl::frame` with the same primitives-versus-derived cut; then re-enable `srl_type` in `serder_traits`.
+- [ ] Rewrite `cboe::top::line` as a vocabulary serder plus `line_view`, replacing the sketch in `example/markets/cboe.hpp`.
+- [ ] `dsrl/flatten.hpp` calls `header(strategy)` / `payload(strategy)`, which `frame` no longer has.
+- [ ] `frame<H, blob>::make` calls `std::span::make` on the hardened path, which is ill-formed; only the constructor works for a span payload.
 - [ ] Fold these notes and framing.md into user-facing documentation.
