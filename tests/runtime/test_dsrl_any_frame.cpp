@@ -41,7 +41,7 @@ constexpr auto identity_accessors() {
   RBE_CHECK(any.as<msg_1>() == msg_1 {.value1 = static_cast<int>(0xCCCCCCCC)});
   RBE_CHECK(any.as<msg_2>() == std::nullopt);
   RBE_CHECK(any.as<msg_3>() == std::nullopt);
-  RBE_CHECK(any.length() == sizeof(msg_1));
+  RBE_CHECK(any.size() == sizeof(msg_1));
   RBE_CHECK_EQ(any.data(), buffer.data());
 
   // known ids truncate the span to the wire size of the candidate type,
@@ -64,7 +64,7 @@ constexpr auto unknown_id() {
 
   // whenever the id is unknown, the length of the frame is the size of the buffer,
   // since we cannot know how many bytes are used by the unknown type
-  RBE_CHECK(any.length() == buffer.size());
+  RBE_CHECK(any.size() == buffer.size());
   RBE_CHECK_EQ(any.data(), buffer.data());
   RBE_CHECK(std::ranges::equal(any.as_span(), buffer));
 }
@@ -83,7 +83,7 @@ constexpr auto any_with_empty_type() {
   RBE_CHECK(any.as<msg_3>() == std::nullopt);
   RBE_CHECK(any.as<heartbeat>() == heartbeat {});
 
-  RBE_CHECK(any.length() == 0);
+  RBE_CHECK(any.size() == 0);
   RBE_CHECK_EQ(any.data(), buffer.data());
   RBE_CHECK(any.as_span().empty());
 }

@@ -77,6 +77,14 @@ struct[[ = rbe::id(42), = rbe::empty ]] heartbeat {
   constexpr auto operator==(heartbeat const&) const -> bool = default;
 };
 
+// The SBE shape: one header carrying both the id that selects the message and the extent of the
+// message block, so a sender on a newer schema can declare a block longer than this build knows how
+// to decode.
+struct [[=rbe::little, =rbe::pack]] IdAndBlockLengthHeader {
+  [[=rbe::payload_length]] std::uint16_t block_length;
+  [[=rbe::id]] std::int32_t template_id;
+};
+
 template<typename T>
 concept msgs_1_and_2 = std::same_as<T, msg_1> or std::same_as<T, msg_2>;
 

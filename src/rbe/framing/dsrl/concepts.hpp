@@ -37,19 +37,10 @@ concept is_frame = rbe::is_frame<T> and requires(T const ct) {
   typename T::buffer_type;
   typename T::size_type;
 
-  { ct.header() } -> std::same_as<typename T::header_proxy_type>;
-  // { ct.header(lazy) } -> std::same_as<return_type<lazy_t, typename T::header_type>>;
-  // { ct.header(eager) } -> std::same_as<return_type<eager_t, typename T::header_type>>;
-  // { ct.header(in_place) } -> std::same_as<return_type<in_place_t, typename T::header_type>>;
-  // TOOO: payload getter
-
-  // { ct.header_span() } -> std::same_as<typename T::buffer_type>;
-  // { ct.payload_span() } -> std::same_as<typename T::buffer_type>;
-  { ct.length() } -> std::same_as<typename T::size_type>;
-  // { T::parse_length(ct.as_span()) } -> std::same_as<std::optional<typename T::size_type>>;
   { T::make(ct.as_span()) } -> std::same_as<std::optional<T>>;
-  // { ct.header_length() } -> std::same_as<typename T::size_type>;
-  // { ct.payload_length() } -> std::same_as<typename T::size_type>;
+  { ct.header() } -> std::same_as<typename T::header_return_type>;
+  { ct.payload() } -> std::same_as<typename T::payload_return_type>;
+  { ct.length() } -> std::same_as<typename T::size_type>;
   { ct.as_span() } -> std::same_as<typename T::buffer_type>;
   { ct.data() } -> std::same_as<std::byte const*>;
 

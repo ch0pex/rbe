@@ -47,7 +47,7 @@ public:
    * @brief wide-contract counterpart of the constructor, construct an any over `data` after checking it's preconditions
    *
    * Preconditions:
-   *   - if the id is known, the candidate fits in the buffer: data.size() >= *parse_length(id, data)
+   *   - if the id is known, the candidate fits in the buffer: data.size() >= *length_of(index_of(id), data)
    *
    * @return The any, nullopt if the candidate does not fit in the buffer. If the id is unknown, any is always returned.
    */
@@ -73,7 +73,7 @@ public:
    *
    * Preconditions are narrow contract, violating either of them is undefined behavior:
    *   - the bytes are the wire representation of the candidate the id selects, not of another one
-   *   - the candidate fits in the buffer: data.size() >= *parse_length(id, data)
+   *   - the candidate fits in the buffer: data.size() >= *length_of(index_of(id), data)
    *
    * Over a buffer that may not hold a whole candidate yet use make()
    * instead, which reports the violation rather than running into it.
@@ -158,7 +158,8 @@ public:
 
   [[nodiscard]] constexpr auto known_id() const -> bool { return candidates::contains(index_); }
 
-  [[nodiscard]] constexpr auto length() const -> size_type { return data_.size(); }
+  /// How many bytes this any holds: the candidate's size for a known id, the rest of the buffer for an unknown one
+  [[nodiscard]] constexpr auto size() const -> size_type { return data_.size(); }
 
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
 
@@ -183,7 +184,7 @@ private:
    *
    * Preconditions:
    *   - index == candidates::index_of(id)
-   *   - data is already narrowed: data.size() == *parse_length(id, data)
+   *   - data is already narrowed: data.size() == *length_of(index, data)
    */
   constexpr any(id_type const id, index_type const index, buffer_type const data) :
     id_(id), //

@@ -3,54 +3,31 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file frame_header.hpp
- * @date 28/09/2026
- * @brief Short description
- *
- * Longer description
+ * @file header.hpp
+ * @date 05/10/2026
+ * @brief A frame header view: a proxy over H plus the lengths the wire declares
  */
 
 #pragma once
 
 // --- Includes ---
-#include <rbe/annotations/annotation_concepts.hpp>
-#include <rbe/annotations/id.hpp>
-#include <rbe/annotations/length.hpp>
-#include <rbe/core/memory_layout.hpp>
 #include <rbe/dsrl/proxy.hpp>
-#include <rbe/framing/frame_concepts.hpp>
 
 // --- STD ---
-#include <concepts>
-#include <cstddef>
-#include <optional>
-#include <span>
 
 namespace rbe::dsrl {
 
-/**
- * @brief A frame header view: a proxy over T plus the framing lengths the wire carries
- *
- * The inheritance from proxy is private on purpose. header_proxy is implemented in terms of a proxy
- * but is not substitutable for one: proxy::as_span() is the *physical* extent of T -- size() bytes,
- * all that layer can know, since it has no notion of what the content means -- whereas
- * header_proxy::as_span() is the *logical* extent the wire declares, matching what frame, any and
- * many already return. Deriving publicly would let a header_proxy bind to a proxy const& and
- * silently answer with the wrong extent; and proxy is a non-polymorphic value type passed by value
- * throughout the library, so that slice is the ordinary way to use it, not a corner case.
- */
 template<frame_header T>
-class header_proxy : private proxy<T> {
+class header : private rbe::dsrl::proxy<T> {
   using base = proxy<T>;
-  constexpr explicit header_proxy(base const b) : base(b) { }
+  constexpr explicit header(base const b) : base(b) { }
 
 public:
   // --- Type traits ---
 
-  using value_type  = T;
-  using buffer_type = std::span<std::byte const>;
-  using size_type   = std::size_t;
-
+  using value_type  = base::value_type;
+  using buffer_type = base::buffer_type;
+  using size_type   = base::size_type;
 
   // --- Constants ---
 
@@ -59,21 +36,25 @@ public:
   static constexpr bool has_frame_length   = contains_annotation<T, rbe::frame_length>;
   static constexpr bool has_id             = contains_annotation<T, rbe::id>;
 
+  /// Whether this header settles where its payload ends, through payload_length or frame_length. When it
+  /// does, the field is the one authoritative source for the payload's extent, whatever the payload is.
+  static constexpr bool delimits_payload = has_payload_length or has_frame_length;
+
   // --- Factory static member function ---
 
-  [[nodiscard]] static constexpr auto make(buffer_type const data) -> std::optional<header_proxy> {
+  [[nodiscard]] static constexpr auto make(buffer_type const data) -> std::optional<header> {
     auto const hdr = base::make(data);
     if (not hdr) {
       return std::nullopt;
     }
 
     if constexpr (has_header_length) {
-      auto logic_length = static_cast<size_type>(hdr->template field<rbe::header_length>());
-      if (data.size() < logic_length) {
+      auto declared_length = static_cast<size_type>(hdr->template field<rbe::header_length>());
+      if (data.size() < declared_length) {
         return std::nullopt;
       }
     }
-    return header_proxy {*hdr};
+    return header {*hdr};
   }
 
   // --- Constructors ---
@@ -85,9 +66,10 @@ public:
   // Everything that is purely about T's layout carries over unchanged so we
   // can directly expose proxy's interface for those members.
 
+  using base::buffer; // the buffer this view was handed, untrimmed -- not an extent of anything
   using base::data;
   using base::field;
-  using base::size; // physical size of T, not the logical length the wire declares
+  using base::size; // size of T, known to the code, not the length the wire declares
   using base::value;
   using base::operator*;
 
@@ -102,9 +84,9 @@ public:
   // to improve backwards compatibiility whenn adding new fields to a header
   // so the user could have a reduced version of the header meaning
   // that header_length (value comming through the wire) could be bigger than the
-  // wire size of the header type (size()). is_extended() can be used to check
+  // size of the header type (size(), known to the code). is_extended() can be used to check
   // this condition, and extension_span() hands back the bytes T does not account for.
-  // The behaivour is undefined if logical length is smaller than the physical size of T (size()).
+  // The behaivour is undefined if the length the wire declares is smaller than the size of T (size()).
   [[nodiscard]] constexpr auto length() const -> size_type {
     if constexpr (has_header_length) {
       assert(this->template field<rbe::header_length>() >= this->size());
@@ -114,6 +96,8 @@ public:
       return this->size();
     }
   }
+
+  [[nodiscard]] constexpr auto is_extended() const -> bool { return length() > this->size(); }
 
   // Payload length can be derived sorted by priority as follows:
   // - payload_length field if present
@@ -126,10 +110,10 @@ public:
   }
 
   // NOTE: same with payload_length as with header_length
-  // payload logical length might defer from the payload size
+  // the payload length the wire declares might differ from the payload size
   // if the payload is a wirable_class.
   // The behaivour is undefined if the payload is a wirable_class
-  // and the payload_length is smaller than the wire size of the payload type.
+  // and the payload_length is smaller than the size of the payload type.
   [[nodiscard]] constexpr auto payload_length() const -> size_type
     requires(has_frame_length and not has_payload_length)
   {
@@ -154,8 +138,6 @@ public:
     return this->length() + payload_length();
   }
 
-  [[nodiscard]] constexpr auto is_extended() const -> bool { return length() > this->size(); }
-
   // --- Spans ---
 
   // Three extents over the same data(): the one the wire delimits, the part of it T knows how to
@@ -163,9 +145,9 @@ public:
 
   /// The header as the wire delimits it: what has to be skipped to reach the payload, and what has to
   /// be re-emitted to reproduce the header verbatim.
-  /// precondition: the underlying buffer holds at least length() bytes -- guaranteed when the
-  /// header_proxy came from make(), the caller's responsibility when it was built from a raw buffer.
-  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return buffer_type {data(), length()}; }
+  /// precondition: the underlying buffer holds at least length() bytes -- guaranteed when the header
+  /// came from make(), the caller's responsibility when it was built from a raw buffer.
+  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return buffer_type {this->data(), length()}; }
 
   /// The bytes T declares fields for, and therefore the only ones field() may read. Never longer than
   /// as_span().
