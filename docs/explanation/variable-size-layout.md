@@ -1,6 +1,6 @@
 # Variable-Size Layout Notes
 
-> **Status: working notes, not implemented.** Design of wirable types whose wire size is only known at runtime
+> **Status: working notes, not implemented.** Design of wirable types whose wire length is only known at runtime
 > (e.g. a `std::vector<T>` sized by another member), and of the runtime offset table that lets `dsrl::proxy`
 > access them. Meant as source material for the future documentation. Not linked from site navigation — same
 > convention as [Framing Design Notes](framing-design-notes.md) and
@@ -9,6 +9,13 @@
 > Related: the `count` annotation is an open problem in
 > [Annotation System Redesign](annotation-system-v2.md#open-problem-variable-length-fields-count); the impact on
 > framing is summarized in [Framing Design Notes §8](framing-design-notes.md#8-variable-size-wirable-types).
+
+**Size and length.** Everything the code knows is a *size*; everything the wire sends is a *length*. A size is a
+property of a type, fixed at compile time (`wire_size_of<T>()`, a member's static size, the fixed prefix). A
+length is a property of one instance, resolved at runtime from the bytes (a count read off the wire, a
+`header_length` field, the end of a variable-size member). For fixed-size types the two always agree, so a
+fixed-size `T` has a size and its length is that size; a variable-size `T` has no size, only a minimum (its
+fixed prefix) and a length.
 
 Each decision is tagged:
 
@@ -23,8 +30,8 @@ Each decision is tagged:
 | Term | Meaning |
 | --- | --- |
 | **Fixed-size type** | Every member has a compile-time wire size. Everything that is wirable today. |
-| **Variable-size type** | At least one member, directly or nested, has a runtime wire size. |
-| **Variable-size member** | A `std::vector<T>`, or a nested variable-size struct. |
+| **Variable-size type** | At least one member, directly or nested, has a runtime wire length. |
+| **Variable-size member** | A `std::vector<T>`, or a nested variable-size struct. Its wire length is read at runtime. |
 | **Fixed prefix** | The members before the first variable-size member. Their offsets are still compile-time. |
 | **Anchor** | The point a member's offset is measured from: the start of the struct, or the end of a previous variable-size member. |
 | **Delta** | The static distance from the anchor to the member. |
@@ -84,7 +91,7 @@ buffer-delimited. Probably not allowed at struct level, since `frame<H, blob>` a
 - Variable-size `T`: the offset table built by the constructor yields the length.
 
 The span passed in may be larger than the object; the extra bytes are not kept. `as_span()` is just `data_`, and
-`size()`/`size_bytes()` are removed, since `length()` is the object's size.
+`size()`/`size_bytes()` are removed for variable-size `T`: it has no size known to the code, only a `length()`. A fixed-size `T` keeps its static `size()`, equal to its `length()`.
 
 **Decided — lazy means values, not layout.** Field values are still decoded on demand, one at a time, with no
 copy of the object (REQ-011..013). For variable-size `T` the *layout* is resolved eagerly: construction reads only
@@ -176,7 +183,7 @@ so a fixed-size `proxy` takes exactly the space it takes today.
 
 ```
 offset(i) = (anchor(i) ? table[*anchor(i)] : 0) + delta(i)
-size(i)   = end_entry(i) ? table[*end_entry(i)] - offset(i) : static_size(i)
+length(i) = end_entry(i) ? table[*end_entry(i)] - offset(i) : static_size(i)
 ```
 
 `field<Index>()` goes through an `offset_of(index)` helper instead of reading `member_layout.offset` directly.
@@ -229,7 +236,7 @@ adios.field<"sayonara">();
 ## 8. Resolution: shallow per level
 
 The runtime resolution follows the same model as the compile-time code: `get_wire_layout` is shallow, and
-recursion only appears to compute nested lengths, as in `wire_size_of`.
+recursion only appears to compute nested sizes in `wire_size_of`, and nested lengths in the runtime `resolve`.
 
 Compile time:
 
@@ -262,8 +269,9 @@ constexpr auto resolve(std::span<std::byte const> data, std::span<size_type> tab
 - Each call only goes over its direct members.
 - The `count` is read at the same level (§2), so it is shallow too.
 - **`wire_size_of<T>()` stops being total** for variable-size types: they have a static minimum (the fixed
-  prefix) plus a runtime length, the struct-level counterpart of `resolve`'s return value. Headers keep
-  requiring a fixed size.
+  prefix) plus a runtime length, the struct-level counterpart of `resolve`'s return value. The runtime query is
+  a different name, `wire_length_of(value)` / `wire_length_of<T>(buffer)`, so `wire_size_of` keeps meaning "known to the
+  code". Headers keep requiring a fixed size.
 
 ---
 
@@ -283,7 +291,7 @@ its own table, so element tables are not kept. The root's table still stores whe
 
 `get_wire_layout_padded` takes member offsets from the C++ layout (`offset_of(m)`). Past a `std::vector` member
 that is meaningless: the C++ offset of the next member depends on `sizeof(std::vector)` (24 bytes on x86-64), not
-on the vector's wire size.
+on the vector's wire length.
 
 **Open**, two options:
 
@@ -366,9 +374,9 @@ table = [ 12 | 16 | 24 | 40 ]
           └ e0: end of numbers (relative to Hola)
 ```
 
-Applying `offset = table[anchor] + delta` recovers what `get_wire_layout` would return:
+Applying `offset = table[anchor] + delta` recovers what `get_wire_layout` would return, with lengths in place of the static sizes:
 
-| `Hola` | Offset | Size | | `Adios` (relative) | Offset | Size |
+| `Hola` | Offset | Length | | `Adios` (relative) | Offset | Length |
 | --- | --- | --- | --- | --- | --- | --- |
 | `count` | 0 | 4 | | `count` | 0 | 4 |
 | `numbers` | 4 | 8 | | `numbers2` | 4 | 12 |
@@ -413,7 +421,7 @@ For variable-size `T`:
 
 ## 13. Impact elsewhere
 
-- **Framing**: `payload_extent` has to split `static_size` into fixed-size payloads and payloads that compute their
+- **Framing**: `payload_extent` has to split `static_size` into fixed-size payloads (their size) and payloads that compute their
   own length from their bytes, the struct-level counterpart of `nested_frame`
   ([Framing Design Notes §8](framing-design-notes.md#8-variable-size-wirable-types)).
 - **Eager versus lazy**: eager does not benefit from lazy's offset table, since it reads sequentially and picks up
