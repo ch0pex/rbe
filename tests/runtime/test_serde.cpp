@@ -77,10 +77,8 @@ constexpr void test_case(Test const& test_case) {
     test_inplace(test_case.wire, test_case.structure);
   }
 
-  if constexpr (
-      not rbe::custom_wirable<typename Test::structure_type> and
-      not rbe::wirable_primitive<typename Test::structure_type>
-  ) {
+  if constexpr (not rbe::custom_wirable<typename Test::structure_type> and
+                not rbe::wirable_primitive<typename Test::structure_type>) {
     test_lazy(test_case.wire, test_case.structure);
   }
 }
@@ -290,6 +288,21 @@ TEST_CASE("serde - hardened deserialize checks buffer size and alignment") {
   auto const misaligned_wire = std::span {wire.data() + 1, wire.size() - 1};
   auto const misaligned_view = rbe::try_deserialize<CommonHeader>(misaligned_wire, rbe::dsrl::in_place);
   RBE_CHECK(not misaligned_view.has_value());
+}
+
+TEST_CASE("serde - hardened serialize checks buffer size and alignment") {
+  auto const value = message_with_array_be_test.structure;
+  auto buffer      = testing_buffer<MessageWithArrayBe>();
+
+  // conformant
+  auto const bytes_written = rbe::try_serialize(buffer, value);
+  RBE_CHECK(bytes_written.has_value());
+  RBE_CHECK(bytes_written.value() == buffer.size());
+
+  // non-conformant: buffer too short
+  auto const short_buffer = std::span {buffer.data(), buffer.size() - 1};
+  auto const short_write  = rbe::try_serialize(short_buffer, value);
+  RBE_CHECK(not short_write.has_value());
 }
 
 TEST_SUITE_END();

@@ -29,6 +29,9 @@ namespace rbe {
  * (empty) ambient context and dispatches internally, via `detail::serialize`, to whichever of the
  * fast-path/custom/primitive/aggregate implementations applies to `T`.
  *
+ * Preconditions:
+ *   - The output buffer must be large enough to hold the serialized data
+ *
  * @tparam T The type to serialize. Must satisfy `wirable`.
  * @param out Output buffer large enough to hold the serialized data.
  * @param value The object to serialize.
@@ -37,6 +40,22 @@ namespace rbe {
 template<wirable T>
 constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {
   return detail::serialize<T>(out, value);
+}
+
+/**
+ * @brief Serializes a wirable value into a buffer if the buffer is large enough.
+ *
+ * Serializes a wirable value into a buffer if the buffer is large enough to hold
+ * the serialized data.
+ *
+ * @tparam T The type to serialize. Must satisfy `wirable`.
+ * @param out Output buffer.
+ * @param value The object to serialize.
+ * @return Number of bytes written to the buffer if successful, or std::nullopt if the buffer is too small.
+ */
+template<wirable T>
+constexpr auto try_serialize(std::span<std::byte> const out, T const& value) -> std::optional<std::size_t> {
+  return out.size() >= wire_size_of<T>() ? std::optional<std::size_t>(serialize(out, value)) : std::nullopt;
 }
 
 } // namespace rbe
