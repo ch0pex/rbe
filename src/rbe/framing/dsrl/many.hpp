@@ -14,8 +14,11 @@
 
 // --- Includes ---
 #include <iterator>
+#include <memory>
+#include <ranges>
 #include <rbe/framing/detail/base_tags.hpp>
 #include <rbe/framing/dsrl/concepts.hpp>
+#include <utility>
 
 // --- STD ---
 
@@ -31,21 +34,37 @@ public:
 
   class iterator {
   public:
+    /// Holds the frame operator-> hands back: current() returns by value, so there is nothing to point
+    /// into, and the pointer operator-> yields must target a frame that outlives the expression.
+    class arrow_proxy {
+    public:
+      [[nodiscard]] constexpr auto operator->() const -> frame_type const* { return std::addressof(frame_); }
+
+    private:
+      friend class iterator;
+      explicit constexpr arrow_proxy(frame_type frame) : frame_(std::move(frame)) { }
+
+      frame_type frame_;
+    };
+
     using parent_type       = many;
     using iterator_category = std::input_iterator_tag;
     using iterator_concept  = std::input_iterator_tag;
     using value_type        = frame_type;
+    using difference_type   = std::ptrdiff_t;
+    using reference         = frame_type;
+    using pointer           = arrow_proxy;
 
     explicit constexpr iterator(parent_type* parent) : parent_(parent) { }
 
-    [[nodiscard]] constexpr auto operator*() const -> frame_type {
+    [[nodiscard]] constexpr auto operator*() const -> reference {
       assert(parent_->current_.has_value());
       return parent_->current();
     }
 
-    [[nodiscard]] constexpr auto operator->() const -> frame_type const* {
+    [[nodiscard]] constexpr auto operator->() const -> pointer {
       assert(parent_->current_.has_value());
-      return std::addressof(parent_->current());
+      return arrow_proxy {parent_->current()};
     }
 
     constexpr auto operator++() -> iterator& {

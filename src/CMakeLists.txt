@@ -65,12 +65,18 @@ target_sources(
         rbe/framing/detail/to_srl_type.hpp
         rbe/framing/detail/to_value_type.hpp
         rbe/framing/dsrl/detail/any_dispatcher.hpp
+        rbe/framing/dsrl/detail/payload_size.hpp
         rbe/framing/dsrl/any.hpp
+        rbe/framing/dsrl/any_fallback.hpp
         rbe/framing/dsrl/any_unmatched.hpp
+        rbe/framing/dsrl/base_frame.hpp
         rbe/framing/dsrl/flatten.hpp
         rbe/framing/dsrl/frame.hpp
+        rbe/framing/dsrl/header.hpp
         rbe/framing/dsrl/concepts.hpp
         rbe/framing/dsrl/many.hpp
+        rbe/framing/dsrl/payload.hpp
+        rbe/framing/dsrl/views.hpp
         rbe/framing/srl/any.hpp
         rbe/framing/srl/frame.hpp
         rbe/framing/srl/concepts.hpp
