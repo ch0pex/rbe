@@ -67,7 +67,6 @@ target_sources(
         rbe/framing/dsrl/detail/any_dispatcher.hpp
         rbe/framing/dsrl/detail/payload_size.hpp
         rbe/framing/dsrl/any.hpp
-        rbe/framing/dsrl/any_fallback.hpp
         rbe/framing/dsrl/any_unmatched.hpp
         rbe/framing/dsrl/base_frame.hpp
         rbe/framing/dsrl/flatten.hpp

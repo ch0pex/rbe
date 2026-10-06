@@ -25,7 +25,6 @@ namespace rbe {
 
 namespace detail {
 
-
 template<id_like T>
 struct unmatched {
   using id_type     = T;
@@ -35,7 +34,6 @@ struct unmatched {
   bool known_id;
   buffer_type data;
 };
-
 
 } // namespace detail
 

@@ -25,21 +25,6 @@
 
 namespace rbe::views {
 
-template<dsrl::is_frame T>
-  requires self_delimiting_frame<T>
-struct many_fn : std::ranges::range_adaptor_closure<many_fn<T>> {
-
-  [[nodiscard]] constexpr auto operator()(std::span<std::byte const> const data) const -> dsrl::many<T> {
-    return dsrl::many<T> {data};
-  }
-};
-
-template<dsrl::is_frame T>
-  requires self_delimiting_frame<T>
-[[nodiscard]] constexpr auto many() -> many_fn<T> {
-  return {};
-}
-
 namespace detail {
 
 /// Sign-safe for integers (an id read as int against an unsigned literal), plain == for anything else, enums included
@@ -55,6 +40,21 @@ template<typename A, typename B>
 
 } // namespace detail
 
+template<dsrl::is_frame T>
+  requires self_delimiting_frame<T>
+struct many_fn : std::ranges::range_adaptor_closure<many_fn<T>> {
+
+  [[nodiscard]] constexpr auto operator()(std::span<std::byte const> const data) const -> dsrl::many<T> {
+    return dsrl::many<T> {data};
+  }
+};
+
+template<dsrl::is_frame T>
+  requires self_delimiting_frame<T>
+[[nodiscard]] constexpr auto many() -> many_fn<T> {
+  return {};
+}
+
 /**
  * @brief Keeps the frames whose header id is any of `ids`
  *
@@ -64,7 +64,9 @@ template<typename A, typename B>
 template<typename... Ids>
   requires(sizeof...(Ids) > 0)
 [[nodiscard]] constexpr auto with_ids(Ids... ids) {
-  return std::views::filter([... ids = std::move(ids)](auto const& frame) { return (detail::same_id(frame.header().id(), ids) or ...); });
+  return std::views::filter([... ids = std::move(ids)](auto const& frame) {
+    return (detail::same_id(frame.header().id(), ids) or ...);
+  });
 }
 
 /// Keeps the frames whose id the code knows, those whose payload is one of the candidates of its any
