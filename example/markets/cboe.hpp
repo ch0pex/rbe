@@ -31,6 +31,10 @@
 
 #include <rbe/rbe.hpp>
 
+#include <algorithm>
+#include <cstddef>
+#include <optional>
+#include <span>
 #include <cstdint>
 #include <tuple>
 
@@ -613,8 +617,11 @@ using packet = rbe::frame<SequencedUnitHeader, rbe::many<message>>;
 // starts with a single-byte ASCII message type at offset 0 and ends
 // with an LF (0x0A). There is no on-wire length field — the wire size
 // is fixed per message type — so the shared `Header` here declares
-// only `rbe::id` and each message carries an explicit terminating
-// `newline` byte defaulted to '\n'.
+// only `rbe::id`. The terminating LF is framing, not a message field:
+// the message types below stop at their last field, and `line` (see
+// the framing section) is the frame that accounts for the LF and for
+// any LF padding after it. Messages with no fields of their own, such
+// as the heartbeats, are `rbe::empty` candidates.
 
 namespace top {
 
@@ -728,18 +735,15 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::logon)]] Logon {
   std::array<char,6>  username;
   std::array<char,10> password;
   boolean_t       spin_flag; ///< 'Y' → send a spin of current top of book.
-  std::uint8_t    newline = '\n';
 };
 
 /// Server → client acceptance (spec §4.2).
-struct [[=rbe::pack_le, =rbe::id(message_type_t::logon_accepted)]] LogonAccepted {
-  std::uint8_t newline = '\n';
+struct [[=rbe::pack_le, =rbe::id(message_type_t::logon_accepted), =rbe::empty]] LogonAccepted {
 };
 
 /// Server → client rejection (spec §4.3).
 struct [[=rbe::pack_le, =rbe::id(message_type_t::logon_rejected)]] LogonRejected {
   reject_reason_t reject_reason;
-  std::uint8_t    newline = '\n';
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -763,7 +767,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_spin)]] ExpandedSpin {
   reg_sho_action_t   reg_sho_action;
   std::uint8_t       reserved_1;
   std::uint8_t       reserved_2;
-  std::uint8_t       newline = '\n';
 };
 
 /// Per-symbol snapshot with extended (14-char) prices (spec §5.1.2).
@@ -782,24 +785,20 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_spin)]] ExtendedSpin {
   reg_sho_action_t   reg_sho_action;
   std::uint8_t       reserved_1;
   std::uint8_t       reserved_2;
-  std::uint8_t       newline = '\n';
 };
 
 /// End-of-spin marker (spec §5.2).
-struct [[=rbe::pack_le, =rbe::id(message_type_t::spin_done)]] SpinDone {
-  std::uint8_t newline = '\n';
+struct [[=rbe::pack_le, =rbe::id(message_type_t::spin_done), =rbe::empty]] SpinDone {
 };
 
 // ─────────────────────────────────────────────────────────────────────
 // Heartbeat messages (spec §6)
 // ─────────────────────────────────────────────────────────────────────
 
-struct [[=rbe::pack_le, =rbe::id(message_type_t::server_heartbeat)]] ServerHeartbeat {
-  std::uint8_t newline = '\n';
+struct [[=rbe::pack_le, =rbe::id(message_type_t::server_heartbeat), =rbe::empty]] ServerHeartbeat {
 };
 
-struct [[=rbe::pack_le, =rbe::id(message_type_t::client_heartbeat)]] ClientHeartbeat {
-  std::uint8_t newline = '\n';
+struct [[=rbe::pack_le, =rbe::id(message_type_t::client_heartbeat), =rbe::empty]] ClientHeartbeat {
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -809,13 +808,11 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::client_heartbeat)]] ClientHeart
 /// Seconds past midnight, Eastern (spec §7.1).
 struct [[=rbe::pack_le, =rbe::id(message_type_t::seconds)]] Seconds {
   seconds_t    seconds;
-  std::uint8_t newline = '\n';
 };
 
 /// Milliseconds since the last Seconds message (spec §7.2).
 struct [[=rbe::pack_le, =rbe::id(message_type_t::milliseconds)]] Milliseconds {
   milliseconds_t milliseconds;
-  std::uint8_t   newline = '\n';
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -826,56 +823,48 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_bid_update)]] Extended
   symbol_wide_t    symbol;
   price_extended_t bid_price;
   qty_long_t       bid_quantity;
-  std::uint8_t     newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_bid_update)]] ExpandedBidUpdate {
   symbol_wide_t symbol;
   price_long_t  bid_price;
   qty_long_t    bid_quantity;
-  std::uint8_t  newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::long_bid_update)]] LongBidUpdate {
   symbol_long_t symbol;
   price_long_t  bid_price;
   qty_long_t    bid_quantity;
-  std::uint8_t  newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::short_bid_update)]] ShortBidUpdate {
   symbol_short_t symbol;
   price_short_t  bid_price;
   qty_short_t    bid_quantity;
-  std::uint8_t   newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_ask_update)]] ExtendedAskUpdate {
   symbol_wide_t    symbol;
   price_extended_t ask_price;
   qty_long_t       ask_quantity;
-  std::uint8_t     newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_ask_update)]] ExpandedAskUpdate {
   symbol_wide_t symbol;
   price_long_t  ask_price;
   qty_long_t    ask_quantity;
-  std::uint8_t  newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::long_ask_update)]] LongAskUpdate {
   symbol_long_t symbol;
   price_long_t  ask_price;
   qty_long_t    ask_quantity;
-  std::uint8_t  newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::short_ask_update)]] ShortAskUpdate {
   symbol_short_t symbol;
   price_short_t  ask_price;
   qty_short_t    ask_quantity;
-  std::uint8_t   newline = '\n';
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -888,7 +877,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_two_sided_update)]] Ex
   qty_long_t    bid_quantity;
   price_long_t  ask_price;
   qty_long_t    ask_quantity;
-  std::uint8_t  newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::long_two_sided_update)]] LongTwoSidedUpdate {
@@ -897,7 +885,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::long_two_sided_update)]] LongTw
   qty_long_t    bid_quantity;
   price_long_t  ask_price;
   qty_long_t    ask_quantity;
-  std::uint8_t  newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::short_two_sided_update)]] ShortTwoSidedUpdate {
@@ -906,7 +893,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::short_two_sided_update)]] Short
   qty_short_t    bid_quantity;
   price_short_t  ask_price;
   qty_short_t    ask_quantity;
-  std::uint8_t   newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_two_sided_update)]] ExtendedTwoSidedUpdate {
@@ -915,7 +901,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_two_sided_update)]] Ex
   qty_long_t       bid_quantity;
   price_extended_t ask_price;
   qty_long_t       ask_quantity;
-  std::uint8_t     newline = '\n';
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -927,7 +912,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::extended_trade)]] ExtendedTrade
   price_extended_t last_price;
   qty_long_t       last_quantity;
   volume_t         cumulative_volume;
-  std::uint8_t     newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_trade)]] ExpandedTrade {
@@ -935,7 +919,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::expanded_trade)]] ExpandedTrade
   price_long_t  last_price;
   qty_long_t    last_quantity;
   volume_t      cumulative_volume;
-  std::uint8_t  newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::long_trade)]] LongTrade {
@@ -943,7 +926,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::long_trade)]] LongTrade {
   price_long_t  last_price;
   qty_long_t    last_quantity;
   volume_t      cumulative_volume;
-  std::uint8_t  newline = '\n';
 };
 
 struct [[=rbe::pack_le, =rbe::id(message_type_t::short_trade)]] ShortTrade {
@@ -951,7 +933,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::short_trade)]] ShortTrade {
   price_short_t  last_price;
   qty_short_t    last_quantity;
   volume_short_t cumulative_volume; ///< Short trade uses a 7-digit cumulative volume.
-  std::uint8_t   newline = '\n';
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -965,7 +946,6 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::trading_status)]] TradingStatus
   reg_sho_action_t reg_sho_action;
   std::uint8_t     reserved_1;
   std::uint8_t     reserved_2;
-  std::uint8_t     newline = '\n';
 };
 
 // clang-format on
@@ -980,10 +960,74 @@ using messages = rbe::any<
     ExpandedAskUpdate, LongAskUpdate, ShortAskUpdate, ExpandedTwoSidedUpdate, LongTwoSidedUpdate, ShortTwoSidedUpdate,
     ExtendedTwoSidedUpdate, ExtendedTrade, ExpandedTrade, LongTrade, ShortTrade, TradingStatus>;
 
-/// One TOP message: `Header` followed by the message selected by `msg_type`.
-/// TODO: the length is implied by `msg_type`; until `rbe::any` resolves it
-///       (payload_extent::any_id) the payload runs to the end of the buffer.
+/// One TOP message without its line terminator: `Header` followed by the message selected by
+/// `msg_type`, delimited by the id (`rbe::dispatch_delimited_frame`). It is the message as a value, not
+/// as it sits on the wire: on the wire every message is followed by an LF that no candidate accounts
+/// for, so a `many<message>` would land on that LF -- `line` is the frame for a TOP stream.
 using message = rbe::frame<Header, messages>;
+
+/// One TOP message as it sits on the wire: `message` plus its terminating LF and any LF padding after it.
+///
+/// TOP is line-oriented, so the end of a message is readable without knowing its type: the first LF
+/// after the header. `line_view` is a custom frame that keeps the default header (step 1) and the default
+/// payload construction (step 3, an `any` over the line, LF included) and swaps only the extent (step 2)
+/// for that scan. Two things follow: `length()` covers the terminator and the padding, so `many<line>`
+/// advances line by line, and the extent does not depend on the id, so an unknown `msg_type` is yielded
+/// as an `any` over its own line and iteration goes on past it.
+class line_view : public rbe::dsrl::base_frame<Header, messages::dsrl_type> {
+  using base = rbe::dsrl::base_frame<Header, messages::dsrl_type>;
+
+public:
+  static constexpr auto make(buffer_type const buf) -> std::optional<line_view> {
+    auto const hdr = header_return_type::make(buf); // step 1
+    if (not hdr.has_value()) {
+      return std::nullopt;
+    }
+    auto const rest   = buf.subspan(hdr->length());
+    auto const extent = line_extent(rest); // step 2: the only custom part
+    if (not extent.has_value()) {
+      return std::nullopt; // incomplete line: wait for more bytes
+    }
+    auto const line = rest.first(*extent);
+    return rbe::dsrl::make_payload<payload_type>(*hdr, line) // step 3
+        .transform([&](payload_return_type const p) { return line_view {*hdr, p, hdr->length() + line.size()}; });
+  }
+
+  /// precondition: buf holds a whole line
+  constexpr explicit line_view(buffer_type const buf) : line_view(*make(buf)) { }
+
+  [[nodiscard]] constexpr auto length() const -> size_type { return line_length_; }
+
+private:
+  /// up to and including the terminating LF, then every LF that follows it; nullopt if the line is not complete yet
+  static constexpr auto line_extent(buffer_type const rest) -> std::optional<size_type> {
+    auto const lf = std::ranges::find(rest, std::byte {'\n'});
+    if (lf == rest.end()) {
+      return std::nullopt;
+    }
+    auto n = static_cast<size_type>(lf - rest.begin());
+    while (n < rest.size() and rest[n] == std::byte {'\n'}) {
+      ++n;
+    }
+    return n;
+  }
+
+  constexpr line_view(header_return_type const hdr, payload_return_type const p, size_type const n) :
+    base(hdr, p), line_length_(n) { }
+
+  size_type line_length_;
+};
+
+/// The vocabulary serder for `line_view`: what makes `rbe::many<line>` compose, exactly as `rbe::blob`
+/// or `rbe::frame` do. It keeps the header-plus-payload shape, so the delimiting concepts classify it.
+struct line {
+  using header_type  = Header;
+  using payload_type = messages;
+  using dsrl_type    = line_view;
+};
+
+/// A run of TOP lines, LF padding included.
+using lines = rbe::many<line>;
 
 } // namespace top
 

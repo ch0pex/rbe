@@ -28,6 +28,11 @@ static_assert(rbe::self_delimiting_frame<cboe::pitch::packet>);
 static_assert(rbe::self_delimiting_frame<lse::message>);
 static_assert(rbe::self_delimiting_frame<cboe::top::message>); // the any alternatives imply their length
 static_assert(rbe::dispatch_delimited_frame<cboe::top::message>);
+// A custom frame built on base_frame is a frame like any other: it composes with many and classifies.
+static_assert(rbe::dsrl::is_frame<cboe::top::line_view>);
+static_assert(rbe::frame_serder<cboe::top::line>);
+static_assert(rbe::self_delimiting_frame<cboe::top::line>);
+static_assert(rbe::frame_serder_payload<cboe::top::lines>);
 static_assert(rbe::self_delimiting_frame<lse::packet>);
 static_assert(rbe::self_delimiting_frame<nasdaq::message>); // the any alternatives imply their length
 static_assert(rbe::dispatch_delimited_frame<nasdaq::message>);
