@@ -989,7 +989,7 @@ public:
       return std::nullopt; // incomplete line: wait for more bytes
     }
     auto const line = rest.first(*extent);
-    return rbe::dsrl::make_payload<payload_type>(*hdr, line) // step 3
+    return rbe::dsrl::try_construct_payload<payload_type>(*hdr, line) // step 3
         .transform([&](payload_return_type const p) { return line_view {*hdr, p, hdr->length() + line.size()}; });
   }
 

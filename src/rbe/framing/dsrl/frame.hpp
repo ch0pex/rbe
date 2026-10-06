@@ -29,7 +29,7 @@ namespace rbe::dsrl {
  *
  * frame adds to base_frame the two primitives in their default form. make() is the canonical composition
  * of the three building blocks -- locate the payload (header<H>::make), settle its extent
- * (try_payload_extent) and build the view (make_payload) -- and length() follows the same precedence as
+ * (try_payload_extent) and build the view (try_construct_payload) -- and length() follows the same precedence as
  * the extent: a header that declares a length is the authority, otherwise header plus payload.
  */
 template<frame_header HeaderType, frame_payload PayloadType>
@@ -62,7 +62,7 @@ public:
     }
 
     // builds the payload
-    return make_payload<payload_type>(*hdr, *payload_extent).transform([&](payload_return_type const payload) {
+    return try_construct_payload<payload_type>(*hdr, *payload_extent).transform([&](payload_return_type const payload) {
       return frame {*hdr, payload};
     });
   }

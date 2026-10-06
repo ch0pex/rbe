@@ -31,7 +31,7 @@ namespace rbe::dsrl {
  * primitive: leaving one out is a compile error in many<D> or dsrl::is_frame<D>, not an iteration that
  * silently advances by the base's length. There are no protected resolution helpers either -- a derived
  * class that wants the default resolution calls the same public building blocks dsrl::frame calls
- * (header<H>::make, payload_extent, make_payload), which serve a frame that holds a frame as a member
+ * (header<H>::make, payload_extent, try_construct_payload), which serve a frame that holds a frame as a member
  * just as well as one that derives.
  *
  * The derived operations dispatch to the most derived type (deducing this), so as_span(), payload_span()

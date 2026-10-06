@@ -8,7 +8,7 @@
  * @brief The steps a frame takes to reach its payload, as public building blocks
  *
  * Reading a frame is three steps: locate the payload (the header's job, header<H>::make and length()),
- * settle where it ends (payload_extent) and build a view over those bytes (make_payload). dsrl::frame is
+ * settle where it ends (payload_extent) and build a view over those bytes (try_construct_payload). dsrl::frame is
  * the canonical composition of the three, and nothing else; they are public so that a frame of the
  * user's own -- one that delimits by a terminator, by a composite discriminant, by a length carried in
  * the body -- composes the same blocks and swaps only the step it needs, instead of copying frame's
@@ -16,7 +16,7 @@
  *
  * Each step comes in the two forms the rest of the library uses: a narrow one that assumes its
  * precondition (payload_extent, construct_payload) and a wide one that reports failure as std::optional
- * (try_payload_extent, make_payload).
+ * (try_payload_extent, try_construct_payload).
  */
 
 #pragma once
@@ -100,7 +100,7 @@ try_payload_extent([[maybe_unused]] header<H> const hdr, std::span<std::byte con
  * The view narrows itself to what it knows: a proxy to T's wire size, an any to its candidate's wire size
  * (the whole of `bytes` for an unknown id), a nested frame to its own length. The bytes a header declared
  * beyond that stay reachable through the frame's payload_span(), not through the view. Narrow contract:
- * the payload fits in `bytes`. make_payload is the wide form.
+ * the payload fits in `bytes`. try_construct_payload is the wide form.
  */
 template<frame_payload P, frame_header H>
 [[nodiscard]] constexpr auto
@@ -120,7 +120,8 @@ construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte cons
 
 /// Wide form of construct_payload: nullopt when the payload does not fit in `bytes`
 template<frame_payload P, frame_header H>
-[[nodiscard]] constexpr auto make_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte const> const bytes)
+[[nodiscard]] constexpr auto
+try_construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte const> const bytes)
     -> std::optional<payload_view_t<P>> //
 {
   using view = payload_view_t<P>;

@@ -621,13 +621,13 @@ without copying them.
 | --- | --- | --- | --- |
 | 1. Where the payload starts | `header<H>::make(buf)` + `header<H>::length()` | unchanged, already public | nobody so far; header-length units (IPv4 IHL in words) would be the header's business |
 | 2. Where the payload ends | `frame::narrow_to_payload` (private) | `dsrl::payload_extent(hdr, rest) -> buffer_type` | TOP (`'\n'`), OPRA (`msg_category` + `msg_indicator`), OPRA `Administrative` (length inside the body) |
-| 3. What is built over those bytes | `frame::construct_payload[_hardened]` (private) | `dsrl::make_payload<P>(hdr, bytes) -> std::optional<P>` | anyone wanting a view of their own instead of `any` / `proxy<T>` |
+| 3. What is built over those bytes | `frame::construct_payload[_hardened]` (private) | `dsrl::try_construct_payload<P>(hdr, bytes) -> std::optional<P>` | anyone wanting a view of their own instead of `any` / `proxy<T>` |
 
 - `payload_extent(hdr, rest)` is today's `narrow_to_payload`: the header's `payload_length()` when it
   declares one; otherwise the rest, and the view built in step 3 narrows itself if it can. Keeping it
   separate from step 3 is what lets a custom frame swap the *extent* while keeping the *payload* — the
   common case.
-- `make_payload<P>(hdr, bytes)` is today's `construct_payload_hardened`: wirable `T` → `proxy<T>::make`,
+- `try_construct_payload<P>(hdr, bytes)` is today's `construct_payload_hardened`: wirable `T` → `proxy<T>::make`,
   `any` → `any::make(hdr.id(), bytes)`, which checks the candidate fits and narrows to its wire size — an
   `any` is a variant of `proxy`, a view over the candidate it knows, and the bytes a header declared beyond
   it stay reachable through the frame's `payload_span()` — nested frame → `frame::make`, span → the span. It is
@@ -640,12 +640,12 @@ static constexpr auto make(buffer_type data) -> std::optional<frame> {
   auto const hdr = header_type::make(data);
   if (not hdr) return std::nullopt;
   auto const bytes = payload_extent(*hdr, data.subspan(hdr->length()));
-  return make_payload<payload_return_type>(*hdr, bytes).transform([&](auto p) { return frame {*hdr, p}; });
+  return try_construct_payload<payload_return_type>(*hdr, bytes).transform([&](auto p) { return frame {*hdr, p}; });
 }
 ```
 
 The "fast path" `make` takes today for explicitly delimited frames (skip the fit check) folds into
-`make_payload`, which can see `header<H>::has_payload_length` / `has_frame_length` itself.
+`try_construct_payload`, which can see `header<H>::has_payload_length` / `has_frame_length` itself.
 
 ### `dsrl::base_frame<H, P>`: only what is common
 
@@ -709,7 +709,7 @@ public:
     auto const n = line_extent(rest);                                            // step 2: the only custom part
     if (not n) return std::nullopt;                                              // incomplete line: wait for more
     auto const line = rest.first(*n);
-    return rbe::dsrl::make_payload<payload_type>(*hdr, line)                     // step 3
+    return rbe::dsrl::try_construct_payload<payload_type>(*hdr, line)                     // step 3
         .transform([&](auto p) { return line_view {*hdr, p, hdr->length() + line.size()}; });
   }
   [[nodiscard]] constexpr auto length() const -> size_type { return line_length_; }
@@ -737,10 +737,10 @@ types drop their trailing `newline` member, and the four that are left with no f
 candidates.
 
 OPRA is the same shape with a different step 2 — the extent follows from `(msg_category, msg_indicator)`
-— and keeps `any` as its payload, because `make_payload<any>` accepts a given extent. `Administrative`
+— and keeps `any` as its payload, because `try_construct_payload<any>` accepts a given extent. `Administrative`
 reads its own first two bytes in step 2. None of them touches `any`.
 
-`make_payload<any>` narrows a known candidate's `any` to its wire size, like any other payload view, while
+`try_construct_payload<any>` narrows a known candidate's `any` to its wire size, like any other payload view, while
 the line's extent lives in the frame's `length()` and `payload_span()`. An unknown id's `any` has nothing
 to narrow to and spans exactly the line it was handed, instead of running to the end of the buffer:
 `many<line>` steps over it and goes on.
@@ -843,7 +843,7 @@ non-total `candidate_list::wire_size`), the same one variable-size candidates ne
 - [ ] `srl::frame` / `srl::many` on top of the same classification.
 - [ ] Length units (words, element counts).
 - [ ] Header-only messages ([§10](#10-header-only-messages)), then add `aquis::Heartbeat` and `opra::Control` back to their `messages`.
-- [ ] Lift `narrow_to_payload` / `construct_payload_hardened` out of `frame` as public `dsrl::payload_extent(hdr, rest)` and `dsrl::make_payload<P>(hdr, bytes)`; `dsrl::base_frame<H, P>` with storage and derived operations only, `dsrl::frame` composing the blocks on top of it ([§11](#11-custom-frames-public-building-blocks-and-a-minimal-base_frame)).
+- [ ] Lift `narrow_to_payload` / `construct_payload_hardened` out of `frame` as public `dsrl::payload_extent(hdr, rest)` and `dsrl::try_construct_payload<P>(hdr, bytes)`; `dsrl::base_frame<H, P>` with storage and derived operations only, `dsrl::frame` composing the blocks on top of it ([§11](#11-custom-frames-public-building-blocks-and-a-minimal-base_frame)).
 - [ ] `using base::buffer;` in `header`, and `buffer()` / `header_span()` / `payload_span()` on `base_frame` through deducing `this`.
 - [ ] `self_delimiting` opt-in consulted by `is_self_delimiting<T>` before the structural classification.
 - [ ] `rbe::value_type<H, P>` and a generic eager conversion written against `header()` / `payload()`.

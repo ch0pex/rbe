@@ -252,7 +252,7 @@ constexpr auto frame_buffer_is_untrimmed() {
 }
 
 // ============================================================
-// the building blocks on their own: a frame is header<H>::make + payload_extent + make_payload
+// the building blocks on their own: a frame is header<H>::make + payload_extent + try_construct_payload
 // ============================================================
 
 constexpr auto building_blocks_compose_into_a_frame() {
@@ -267,7 +267,7 @@ constexpr auto building_blocks_compose_into_a_frame() {
   RBE_CHECK(bytes.size() == rest.size());
   RBE_CHECK(rbe::dsrl::payload_extent<any_t>(hdr, rest).size() == rest.size());
 
-  auto const payload = rbe::dsrl::make_payload<any_t>(hdr, bytes).value(); // step 3: the any narrows to msg_1
+  auto const payload = rbe::dsrl::try_construct_payload<any_t>(hdr, bytes).value(); // step 3: the any narrows to msg_1
   RBE_CHECK(payload.is<msg_1>());
   RBE_CHECK(payload.size() == 4);
 
@@ -279,8 +279,8 @@ constexpr auto building_blocks_compose_into_a_frame() {
   // a wirable payload comes back as a proxy, an opaque one as the span it was handed
   static_assert(std::same_as<rbe::dsrl::payload_view_t<Message>, rbe::dsrl::proxy<Message>>);
   static_assert(std::same_as<rbe::dsrl::payload_view_t<blob>, blob>);
-  RBE_CHECK(rbe::dsrl::make_payload<blob>(hdr, rest).value().size() == rest.size());
-  RBE_CHECK(not rbe::dsrl::make_payload<Message>(hdr, rest.first(3)).has_value()); // 8 bytes do not fit in 3
+  RBE_CHECK(rbe::dsrl::try_construct_payload<blob>(hdr, rest).value().size() == rest.size());
+  RBE_CHECK(not rbe::dsrl::try_construct_payload<Message>(hdr, rest.first(3)).has_value()); // 8 bytes do not fit in 3
 }
 
 // ============================================================
@@ -305,7 +305,7 @@ public:
       return std::nullopt; // incomplete line: wait for more bytes
     }
     auto const line = rest.first(*extent);
-    return rbe::dsrl::make_payload<payload_type>(*hdr, line) // step 3
+    return rbe::dsrl::try_construct_payload<payload_type>(*hdr, line) // step 3
         .transform([&](payload_return_type const p) { return line_view {*hdr, p, hdr->length() + line.size()}; });
   }
 
@@ -402,7 +402,7 @@ TEST_SUITE("dsrl_frame - length and buffer accessors") {
   RBE_TEST_CASE("dsrl_frame - length and buffer: frame with empty payload", frame_with_empty_payload);
   RBE_TEST_CASE("dsrl_frame - length and buffer: payload bigger than wirable size", frame_payload_bigger_than_wireable);
   RBE_TEST_CASE("dsrl_frame - length and buffer: buffer() is the untrimmed buffer, the spans derive from length()", frame_buffer_is_untrimmed);
-  RBE_TEST_CASE("dsrl_frame - building blocks: header::make + payload_extent + make_payload compose into a frame", building_blocks_compose_into_a_frame);
+  RBE_TEST_CASE("dsrl_frame - building blocks: header::make + payload_extent + try_construct_payload compose into a frame", building_blocks_compose_into_a_frame);
   RBE_TEST_CASE("dsrl_frame - custom frame: a base_frame with its own length() drives as_span, payload_span and the payload", custom_frame_follows_its_own_length);
   RBE_TEST_CASE("dsrl_frame - custom frame: many iterates by the custom length and steps over an unknown id", many_iterates_a_custom_frame_by_line);
 }
