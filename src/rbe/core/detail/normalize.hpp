@@ -35,7 +35,9 @@ template<trivially_wirable_primitive T>
 using normalize_primitive_type = typename normalize_primitive_impl_t<T>::type;
 
 /// Identity forwarder for non-enum trivially wirable types.
-auto normalize_primitive(trivially_wirable auto const value) { return value; }
+template<trivially_wirable T>
+  requires(not std::is_enum_v<T>)
+auto normalize_primitive(T const value) { return value; }
 
 /// Convert an enum to its underlying integral type for byte-swapping.
 template<trivially_wirable_primitive T>
