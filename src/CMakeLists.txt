@@ -36,6 +36,7 @@ target_sources(
         rbe/core/detail/introspection.hpp
         rbe/core/detail/invoke_concept.hpp
         rbe/core/detail/memcpy_constexpr.hpp
+        rbe/core/detail/memory_layout.hpp
         rbe/core/detail/throw_check.hpp
         rbe/core/detail/normalize.hpp
         rbe/core/detail/static_array.hpp

@@ -18,7 +18,7 @@
 #include <rbe/annotations/empty.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/static_string.hpp>
-#include <rbe/core/memory_layout.hpp>
+#include <rbe/core/detail/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
@@ -48,7 +48,7 @@ public:
 
   [[nodiscard]] static constexpr auto make(buffer_type const data) -> std::optional<proxy> {
     // NOTE: specialize in the future when variable size types are supported
-    if (data.size() >= wire_size_of<value_type, local>()) {
+    if (data.size() >= rbe::detail::wire_size_of<value_type, local>()) {
       return proxy {data};
     }
     return std::nullopt;
@@ -91,7 +91,7 @@ public:
     requires(wirable_class<value_type>)
   [[nodiscard]] constexpr auto field() const {
     using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
-    static constexpr auto wire          = get_wire_layout<T, local>();
+    static constexpr auto wire          = rbe::detail::get_wire_layout<T, local>();
     static constexpr auto member_layout = wire.members[Index];
     static constexpr auto member_ctx    = rbe::detail::merge_context(local, rbe::detail::nsdm(^^value_type, Index));
 
@@ -110,7 +110,7 @@ public:
 
   [[nodiscard]] constexpr auto operator*() const -> value_type { return value(); }
 
-  [[nodiscard]] static constexpr auto fixed_size() -> size_type { return wire_size_of<value_type, local>(); }
+  [[nodiscard]] static constexpr auto fixed_size() -> size_type { return rbe::detail::wire_size_of<value_type, local>(); }
 
   // NOTE: for now size and fixed_size are the same since variable size types are not supported yet
   [[nodiscard]] constexpr auto size() const -> size_type { return fixed_size(); }

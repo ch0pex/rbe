@@ -19,7 +19,7 @@
 #include <rbe/core/custom.hpp>
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/normalize.hpp>
-#include <rbe/core/memory_layout.hpp>
+#include <rbe/core/detail/memory_layout.hpp>
 #include <rbe/core/trivially_wirable_concepts.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/tags.hpp>
