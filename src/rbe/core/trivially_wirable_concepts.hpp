@@ -11,7 +11,7 @@
 #pragma once
 
 // --- Includes ---
-#include <rbe/core/memory_layout.hpp>
+#include <rbe/core/detail/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/core/wirable_primitives.hpp>
 
@@ -40,7 +40,7 @@ consteval auto is_trivially_wirable(std::meta::info const info) -> bool {
          ( //
              is_class_type(info) //
              and not is_empty_type(info) //
-             and get_struct_layout(info) == get_wire_layout(info) //
+             and detail::get_struct_layout(info) == detail::get_wire_layout(info) //
              and is_trivially_copyable_type(info) //
              and is_standard_layout_type(info) //
              and std::ranges::all_of(detail::nsdm(info), is_trivially_wirable, std::meta::type_of) //
