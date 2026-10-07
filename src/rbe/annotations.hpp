@@ -11,6 +11,7 @@
 #pragma once
 
 #include <rbe/annotations/alignment.hpp>
+#include <rbe/annotations/annotation_concepts.hpp>
 #include <rbe/annotations/bits.hpp>
 #include <rbe/annotations/count.hpp>
 #include <rbe/annotations/derive.hpp>

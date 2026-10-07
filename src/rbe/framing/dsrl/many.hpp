@@ -18,6 +18,7 @@
 #include <ranges>
 #include <rbe/framing/detail/base_tags.hpp>
 #include <rbe/framing/dsrl/concepts.hpp>
+#include <rbe/framing/frame_delimiting_concepts.hpp>
 #include <utility>
 
 // --- STD ---
