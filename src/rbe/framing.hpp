@@ -14,6 +14,7 @@
 
 #include <rbe/framing/any.hpp>
 #include <rbe/framing/blob.hpp>
+#include <rbe/framing/deserialize.hpp>
 #include <rbe/framing/dsrl/any_unmatched.hpp>
 #include <rbe/framing/dsrl/concepts.hpp>
 #include <rbe/framing/dsrl/views.hpp>

@@ -16,14 +16,15 @@
 #include "markets/nasdaq.hpp"
 #include "markets/opra.hpp"
 
+#include <rbe/framing/deserialize.hpp>
 #include <rbe/framing/dsrl/views.hpp>
 
-#include <cstddef>
 #include <array>
+#include <cstddef>
 #include <print>
+#include <span>
 #include <string_view>
 #include <utility>
-#include <span>
 #include <vector>
 
 // --- STD ---
@@ -79,20 +80,27 @@ void aquis_packet() {
   auto const datagram = wire(
       PacketHeader {.count = 3}, //
       Header {.msg_type = message_type_t::heartbeat, .length = header_size, .seq_no = 1},
-      Header {.msg_type = message_type_t::order_cancel, .length = header_size + rbe::wire_size_of<OrderCancel>(), .seq_no = 2},
+      Header {
+        .msg_type = message_type_t::order_cancel, .length = header_size + rbe::wire_size_of<OrderCancel>(), .seq_no = 2
+      },
       OrderCancel {.security_id = 7, .order_ref = 42, .timestamp = 1},
-      Header {.msg_type = message_type_t::order_add, .length = header_size + rbe::wire_size_of<OrderAdd>(), .seq_no = 3},
+      Header {
+        .msg_type = message_type_t::order_add, .length = header_size + rbe::wire_size_of<OrderAdd>(), .seq_no = 3
+      },
       OrderAdd {.security_id = 7, .side = side_t::buy, .quantity = 100, .price = 2500, .order_ref = 43, .timestamp = 2}
   );
 
-  auto [packet_header, messages] = aquis::packet::dsrl_type::make(datagram).value(); // a many iterates as an lvalue
+  auto [packet_header, messages] =
+      rbe::try_deserialize<aquis::packet>(datagram).value(); // a many iterates as an lvalue
   std::println("aquis: packet of {} messages", packet_header.field<"count">());
 
   for (auto const [header, payload]: messages) {
     std::print("  seq {}: ", header.field<"seq_no">());
     payload.match(
         [](Heartbeat const&) { std::println("heartbeat"); },
-        [](proxy<OrderAdd> const& add) { std::println("order add, {} @ {}", add.field<"quantity">(), add.field<"price">()); },
+        [](proxy<OrderAdd> const& add) {
+          std::println("order add, {} @ {}", add.field<"quantity">(), add.field<"price">());
+        },
         [](rbe::unmatched auto const& other) { std::println("not handled, id known: {}", other.known_id); }
     );
   }
@@ -108,15 +116,15 @@ void nasdaq_packet() {
       SoupHeader {.length = rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<AddOrder>()},
       ItchHeader {.msg_type = message_type_t::add_order, .stock_locate = 1, .tracking_number = 2},
       AddOrder {
-          .order_reference_number = 1001,
-          .buy_sell_indicator     = buy_sell_t::buy,
-          .shares                 = 300,
-          .stock                  = {'A', 'C', 'M', 'E', ' ', ' ', ' ', ' '},
-          .price                  = 1'250'000
+        .order_reference_number = 1001,
+        .buy_sell_indicator     = buy_sell_t::buy,
+        .shares                 = 300,
+        .stock                  = {'A', 'C', 'M', 'E', ' ', ' ', ' ', ' '},
+        .price                  = 1'250'000
       }
   );
 
-  auto const packet = nasdaq::packet::dsrl_type::make(stream).value();
+  auto const packet = rbe::try_deserialize<nasdaq::packet>(stream).value();
   std::println("nasdaq: soup packet of {} bytes", packet.length());
 
   // flatten walks the nested frames: both headers and the innermost payload in one go
@@ -125,7 +133,10 @@ void nasdaq_packet() {
 
   payload.match(
       [](proxy<AddOrder> const& add) {
-        std::println("  add order {}: {} shares @ {}", add.field<"order_reference_number">(), add.field<"shares">(), add.field<"price">());
+        std::println(
+            "  add order {}: {} shares @ {}", add.field<"order_reference_number">(), add.field<"shares">(),
+            add.field<"price">()
+        );
       },
       [](rbe::unmatched auto const& other) { std::println("  not handled, id known: {}", other.known_id); }
   );
@@ -153,7 +164,7 @@ void london_packet() {
       Header {.length = delete_size, .msg_type = message_type_t::order_delete}, delete_of(2)
   );
 
-  auto const packet            = lse::packet::dsrl_type::make(datagram).value();
+  auto const packet            = rbe::try_deserialize<lse::packet>(datagram).value();
   auto [unit_header, messages] = packet;
   std::println("london: packet of {} messages, {} bytes", unit_header.field<"message_count">(), packet.length());
 
@@ -173,20 +184,17 @@ void cboe_top_lines() {
   auto const stream = wire(
       Header {.msg_type = message_type_t::seconds}, Seconds {.seconds = {'3', '6', '0', '0', '0'}}, std::array {'\n'},
       Header {.msg_type = static_cast<message_type_t>('?')}, std::array {'x', 'y', '\n'},
-      Header {.msg_type = message_type_t::milliseconds}, Milliseconds {.milliseconds = {'0', '4', '2'}}, std::array {'\n'}
+      Header {.msg_type = message_type_t::milliseconds}, Milliseconds {.milliseconds = {'0', '4', '2'}},
+      std::array {'\n'}
   );
 
   std::println("cboe top:");
   for (auto const [header, payload]: stream | rbe::views::many<line_view>()) {
-    payload.match(
-        [](proxy<Seconds> const& s) {
-          std::println("  seconds {}", as_text(s.field<"seconds">().as_span()));
-        },
-        [](proxy<Milliseconds> const& ms) {
-          std::println("  milliseconds {}", as_text(ms.field<"milliseconds">().as_span()));
-        },
+    payload.match( // clang-format off
+        [](proxy<Seconds> const& s) { std::println("  seconds {}", as_text(s.field<"seconds">().as_span())); },
+        [](proxy<Milliseconds> const& ms) { std::println("  milliseconds {}", as_text(ms.field<"milliseconds">().as_span())); },
         [](rbe::unmatched auto const& other) { std::println("  skipped a line, id known: {}", other.known_id); }
-    );
+    ); // clang-format on
   }
 }
 
@@ -195,9 +203,11 @@ void cboe_top_lines() {
 void opra_message() {
   using namespace opra;
 
-  auto const datagram = wire(Header {.msg_category = msg_category_t::control, .msg_type = std::to_underlying(control_type_t::start_of_day)});
+  auto const datagram = wire(
+      Header {.msg_category = msg_category_t::control, .msg_type = std::to_underlying(control_type_t::start_of_day)}
+  );
 
-  auto const [header, payload] = opra::message::dsrl_type::make(datagram).value();
+  auto const [header, payload] = rbe::try_deserialize<opra::message>(datagram).value();
   auto const msg_type          = header.field<"msg_type">();
   payload.match(
       [msg_type](Control const&) { std::println("opra: control, type {}", msg_type); },

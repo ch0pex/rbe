@@ -60,6 +60,7 @@ target_sources(
         rbe/dsrl/tags.hpp
 
         # framing
+        rbe/framing/deserialize.hpp
         rbe/framing/detail/base_tags.hpp
         rbe/framing/detail/candidate_list.hpp
         rbe/framing/detail/payload_extent.hpp
