@@ -16,27 +16,20 @@
 #include <rbe/framing/dsrl/concepts.hpp>
 
 // --- STD ---
+#include <tuple>
 
 
 namespace rbe::dsrl {
 
-template<is_frame T, strategy S>
-constexpr auto flatten(T const frame, S strategy) {
-  auto get_payload = [&]() { // clang-format off
-    if constexpr (wirable<typename T::payload_type>) { return frame.payload(strategy); }
-    else { return frame.payload(); }
-  }; // clang-format on
-
-  return std::make_tuple(frame.header(strategy), get_payload());
-}
-
-template<is_frame T, strategy S>
-  requires is_frame<typename T::payload_type>
-constexpr auto flatten(T const frame, S strategy) {
-  return std::tuple_cat( //
-        std::make_tuple(frame.header(strategy)), //
-        flatten(frame.payload(), strategy) //
-    );
+/// The header of every nested frame followed by the innermost payload: `auto [soup, itch, payload] = flatten(frame)`
+template<is_frame T>
+constexpr auto flatten(T const& frame) {
+  if constexpr (is_frame<typename T::payload_return_type>) {
+    return std::tuple_cat(std::make_tuple(frame.header()), flatten(frame.payload()));
+  }
+  else {
+    return std::make_tuple(frame.header(), frame.payload());
+  }
 }
 
 } // namespace rbe::dsrl

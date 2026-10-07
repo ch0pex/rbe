@@ -3,6 +3,7 @@ include(testing)
 create_test_suite(test_rbe_runtime
     test_dsrl_frame.cpp
     test_dsrl_frame_any.cpp
+    test_dsrl_frame_flatten.cpp
     test_dsrl_frame_many.cpp
     test_endian.cpp
     test_format.cpp

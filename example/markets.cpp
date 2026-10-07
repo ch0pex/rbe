@@ -54,6 +54,13 @@ static_assert(rbe::dispatch_delimited_frame<opra::message>);
 
 namespace {
 
+using rbe::dsrl::proxy; // the lazy form of a match callback: fields are read from the buffer on demand
+
+/// An ASCII array field read lazily comes back as the bytes it occupies in the buffer
+auto as_text(std::span<std::byte const> const bytes) -> std::string_view {
+  return {reinterpret_cast<char const*>(bytes.data()), bytes.size()};
+}
+
 /// Serializes the parts back to back: what a feed handler would find in a datagram.
 template<typename... Ts>
 auto wire(Ts const&... parts) -> std::vector<std::byte> {
@@ -78,14 +85,14 @@ void aquis_packet() {
       OrderAdd {.security_id = 7, .side = side_t::buy, .quantity = 100, .price = 2500, .order_ref = 43, .timestamp = 2}
   );
 
-  auto const packet = aquis::packet::dsrl_type::make(datagram).value();
-  std::println("aquis: packet of {} messages", packet.header().field<"count">());
+  auto [packet_header, messages] = aquis::packet::dsrl_type::make(datagram).value(); // a many iterates as an lvalue
+  std::println("aquis: packet of {} messages", packet_header.field<"count">());
 
-  for (auto const [header, payload]: packet.payload()) {
+  for (auto const [header, payload]: messages) {
     std::print("  seq {}: ", header.field<"seq_no">());
     payload.match(
         [](Heartbeat const&) { std::println("heartbeat"); },
-        [](OrderAdd const& add) { std::println("order add, {} @ {}", add.quantity, add.price); },
+        [](proxy<OrderAdd> const& add) { std::println("order add, {} @ {}", add.field<"quantity">(), add.field<"price">()); },
         [](rbe::unmatched auto const& other) { std::println("not handled, id known: {}", other.known_id); }
     );
   }
@@ -112,8 +119,14 @@ void nasdaq_packet() {
   auto const packet = nasdaq::packet::dsrl_type::make(stream).value();
   std::println("nasdaq: soup packet of {} bytes", packet.length());
 
-  packet.payload().payload().match(
-      [](AddOrder const& add) { std::println("  add order {}: {} shares @ {}", add.order_reference_number, add.shares, add.price); },
+  // flatten walks the nested frames: both headers and the innermost payload in one go
+  auto const [soup, itch, payload] = packet.flatten();
+  std::println("  soup length {}, itch tracking number {}", soup.field<"length">(), itch.field<"tracking_number">());
+
+  payload.match(
+      [](proxy<AddOrder> const& add) {
+        std::println("  add order {}: {} shares @ {}", add.field<"order_reference_number">(), add.field<"shares">(), add.field<"price">());
+      },
       [](rbe::unmatched auto const& other) { std::println("  not handled, id known: {}", other.known_id); }
   );
 }
@@ -140,12 +153,13 @@ void london_packet() {
       Header {.length = delete_size, .msg_type = message_type_t::order_delete}, delete_of(2)
   );
 
-  auto const packet = lse::packet::dsrl_type::make(datagram).value();
-  std::println("london: packet of {} messages, {} bytes", packet.header().field<"message_count">(), packet.length());
+  auto const packet            = lse::packet::dsrl_type::make(datagram).value();
+  auto [unit_header, messages] = packet;
+  std::println("london: packet of {} messages, {} bytes", unit_header.field<"message_count">(), packet.length());
 
-  for (auto const frame: packet.payload() | rbe::views::with_ids(message_type_t::order_delete)) {
-    frame.payload().match(
-        [](OrderDelete const& del) { std::println("  order {} deleted", del.order_id); },
+  for (auto const [header, payload]: messages | rbe::views::with_ids(message_type_t::order_delete)) {
+    payload.match(
+        [](proxy<OrderDelete> const& del) { std::println("  order {} deleted", del.field<"order_id">()); },
         [](rbe::unmatched auto const&) { }
     );
   }
@@ -163,10 +177,14 @@ void cboe_top_lines() {
   );
 
   std::println("cboe top:");
-  for (auto const line: stream | rbe::views::many<line_view>()) {
-    line.payload().match(
-        [](Seconds const& s) { std::println("  seconds {}", std::string_view {s.seconds.data(), s.seconds.size()}); },
-        [](Milliseconds const& ms) { std::println("  milliseconds {}", std::string_view {ms.milliseconds.data(), ms.milliseconds.size()}); },
+  for (auto const [header, payload]: stream | rbe::views::many<line_view>()) {
+    payload.match(
+        [](proxy<Seconds> const& s) {
+          std::println("  seconds {}", as_text(s.field<"seconds">().as_span()));
+        },
+        [](proxy<Milliseconds> const& ms) {
+          std::println("  milliseconds {}", as_text(ms.field<"milliseconds">().as_span()));
+        },
         [](rbe::unmatched auto const& other) { std::println("  skipped a line, id known: {}", other.known_id); }
     );
   }
@@ -179,9 +197,10 @@ void opra_message() {
 
   auto const datagram = wire(Header {.msg_category = msg_category_t::control, .msg_type = std::to_underlying(control_type_t::start_of_day)});
 
-  auto const message = opra::message::dsrl_type::make(datagram).value();
-  message.payload().match(
-      [&](Control const&) { std::println("opra: control, type {}", message.header().field<"msg_type">()); },
+  auto const [header, payload] = opra::message::dsrl_type::make(datagram).value();
+  auto const msg_type          = header.field<"msg_type">();
+  payload.match(
+      [msg_type](Control const&) { std::println("opra: control, type {}", msg_type); },
       [](rbe::unmatched auto const& other) { std::println("opra: not handled, id known: {}", other.known_id); }
   );
 }

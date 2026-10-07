@@ -83,8 +83,8 @@ public:
     return self.as_span().subspan(self.header().length());
   }
 
-  [[nodiscard]] constexpr auto flatten(this auto const& self, strategy auto strategy = lazy) {
-    return rbe::dsrl::flatten(self, strategy);
+  [[nodiscard]] constexpr auto flatten(this auto const& self) {
+    return rbe::dsrl::flatten(self);
   }
 
 protected:
