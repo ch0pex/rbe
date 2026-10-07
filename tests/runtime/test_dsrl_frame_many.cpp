@@ -296,6 +296,19 @@ constexpr auto mixed_ids = bytes(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
                                  0x00, 0x00, 0x00, 0x00, 0x22, 0x22, 0x22, 0x22, //
                                  0x09, 0x00, 0x00, 0x00, 'A', 'B');
 
+constexpr auto frames_decompose_into_header_and_payload() {
+  constexpr auto payload_sizes = std::array<std::size_t, 3> {2, 0, 4};
+
+  auto frames = rbe::dsrl::many<length_frame> {three_frames};
+  auto index  = std::size_t {0};
+  for (auto const [header, payload]: frames) {
+    RBE_CHECK(header.length() == 3);
+    RBE_CHECK(payload.size() == payload_sizes[index]);
+    ++index;
+  }
+  RBE_CHECK(index == 3);
+}
+
 constexpr auto with_ids_keeps_matching_frames() {
   return std::ranges::distance(mixed_ids | rbe::views::many<id_frame>() | rbe::views::with_ids(0u)) == 2
      and std::ranges::distance(mixed_ids | rbe::views::many<id_frame>() | rbe::views::with_ids(2u)) == 1
@@ -309,6 +322,7 @@ constexpr auto known_and_unknown_ids_split_the_frames() {
 }
 
 TEST_SUITE("dsrl_many") {
+  RBE_TEST_CASE("dsrl_many - a frame decomposes into header and payload with a structured binding", frames_decompose_into_header_and_payload);
   RBE_TEST_CASE("dsrl_many - views::with_ids keeps the frames with any of the ids", with_ids_keeps_matching_frames);
   RBE_TEST_CASE("dsrl_many - views::known_ids and unknown_ids split by whether the code knows the id", known_and_unknown_ids_split_the_frames);
   RBE_TEST_CASE("dsrl_many - views::many pipes a buffer into a many", pipe_builds_the_many);

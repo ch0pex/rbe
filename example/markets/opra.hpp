@@ -506,8 +506,8 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::administrative)]] Administrati
 // specific control action within the shared layout.
 // ─────────────────────────────────────────────────────────────────────
 
-// TODO: header-only message: empty payloads are not wirable yet, so it is left out of `messages`.
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::control)]] Control {};
+// Header-only: annotated rbe::empty so it is wirable with a size of 0 and can be an alternative of `messages`.
+struct[[= rbe::pack_be, = rbe::id(msg_category_t::control), = rbe::empty]] Control {};
 
 // ─────────────────────────────────────────────────────────────────────
 // Category 'R' – Series Mapping Message (spec §6.07), 155 bytes.
@@ -552,16 +552,14 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::underlying_value)]] Underlying
 // Framing
 // ─────────────────────────────────────────────────────────────────────
 
-// TODO: Control is header-only, and empty payloads are not wirable yet, so it
-//       cannot be one of the alternatives. UnderlyingValueLastSale and
-//       UnderlyingValueBidOffer share msg_category 'Y' and are told apart by
+// TODO: UnderlyingValueLastSale and UnderlyingValueBidOffer share msg_category 'Y' and are told apart by
 //       msg_type, which rbe::id cannot express yet.
 // TODO: `UnderlyingValueBidOffer` is left out because it answers to the same category as
 //       `UnderlyingValueLastSale`: telling them apart needs the composite discriminant the two
 //       structs above already flag, and a candidate list may not declare one id twice.
 using messages = rbe::any<
-    EquityIndexLastSale, OpenInterest, EquityIndexEodSummary, LongQuote, ShortQuote, Administrative, SeriesMapping,
-    UnderlyingValueLastSale>;
+    EquityIndexLastSale, OpenInterest, EquityIndexEodSummary, LongQuote, ShortQuote, Administrative, Control,
+    SeriesMapping, UnderlyingValueLastSale>;
 
 /// One OPRA message: `Header` followed by the message selected by `msg_category`.
 /// TODO: the length is implied by the message category and the BBO indicator;

@@ -55,6 +55,18 @@ public:
 
   [[nodiscard]] constexpr auto payload() const -> payload_return_type { return payload_; }
 
+  /// Tuple-like access so a frame decomposes into its two parts: `auto [header, payload] = frame`
+  template<std::size_t I>
+    requires(I < 2)
+  [[nodiscard]] constexpr auto get() const {
+    if constexpr (I == 0) {
+      return header();
+    }
+    else {
+      return payload();
+    }
+  }
+
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return header_.data(); }
 
   [[nodiscard]] constexpr auto buffer() const -> buffer_type { return header_.buffer(); }
@@ -85,3 +97,15 @@ private:
 };
 
 } // namespace rbe::dsrl
+
+// A frame is a pair of header and payload, which is what makes `for (auto [header, payload] : many)` work. Any
+// frame qualifies, the library's or a user's, as long as it provides get<0> (header) and get<1> (payload): base_frame
+// does, a frame of the user that does not derive from it supplies its own.
+template<rbe::dsrl::decomposable_frame T>
+struct std::tuple_size<T> : std::integral_constant<std::size_t, 2> { };
+
+template<std::size_t I, rbe::dsrl::decomposable_frame T>
+  requires(I < 2)
+struct std::tuple_element<I, T> {
+  using type = std::conditional_t<I == 0, typename T::header_return_type, typename T::payload_return_type>;
+};

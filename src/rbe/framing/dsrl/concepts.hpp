@@ -23,8 +23,20 @@
 // --- STD ---
 #include <concepts>
 #include <cstddef>
+#include <tuple>
+#include <type_traits>
 
 namespace rbe::dsrl {
+
+namespace detail {
+
+using std::get; // so `get<I>(frame)` parses as a template-id and is found by ADL
+
+/// `get<I>` the way structured bindings look for it: a member, or a free function found by ADL
+template<typename T, std::size_t I>
+concept has_get = requires(T const& frame) { frame.template get<I>(); } or requires(T const& frame) { get<I>(frame); };
+
+} // namespace detail
 
 /**
  * @brief A frame deserializer: a non-owning view over a frame's bytes that decodes it lazily
@@ -48,6 +60,11 @@ concept is_frame = rbe::is_frame<T> and requires(T const ct) {
   requires frame_header<typename T::header_type>;
   requires frame_payload<typename T::payload_type>;
 };
+
+
+/// A frame that can be taken apart: `auto [header, payload] = frame`
+template<typename T>
+concept decomposable_frame = is_frame<T> and detail::has_get<T, 0> and detail::has_get<T, 1>;
 
 
 /**
