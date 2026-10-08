@@ -59,9 +59,7 @@ concept introspectable = std::meta::is_enumerable_type(^^T);
  *       - All member variables are wirable
  *
  * Not supported yet:
- *   - Nested wirable types in non-static member variables
  *   - Base classes
- *   - Array types
  *
  */
 template<typename T>
