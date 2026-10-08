@@ -24,7 +24,12 @@ class MonoGameRecipe(ConanFile):
     topics = ("reflection", "serialization", "deserialization",
               "cpp", "library", "binary", "encoding", "decoding")
 
-    exports_sources = "CMakeLists.txt", "docs/*", "src/*", "tests/*", "cmake/*", "example/*"
+    # single_header: package the whole library as one generated include/rbe/rbe.hpp instead of the header tree.
+    # Code written against <rbe/rbe.hpp> builds with either, the granular <rbe/...> headers only exist without it.
+    options = {"single_header": [True, False]}
+    default_options = {"single_header": False}
+
+    exports_sources = "CMakeLists.txt", "docs/*", "src/*", "tests/*", "cmake/*", "example/*", "single_include/*"
 
     @property
     def _build_all(self):
@@ -67,8 +72,13 @@ class MonoGameRecipe(ConanFile):
                 cmake.ctest(cli_args=["--output-on-failure"])
 
     def package(self):
-        cmake = CMake(self)
-        cmake.install()
+        if self.options.single_header:
+            copy(self, "rbe.hpp",
+                 src=os.path.join(self.source_folder, "single_include", "rbe"),
+                 dst=os.path.join(self.package_folder, "include", "rbe"))
+        else:
+            cmake = CMake(self)
+            cmake.install()
 
     def package_info(self):
         self.cpp_info.bindirs = []
@@ -97,7 +107,9 @@ class MonoGameRecipe(ConanFile):
             )
 
     def package_id(self):
-        self.info.clear()
+        # a header library does not depend on the settings, but the single header option changes what is packaged
+        self.info.settings.clear()
+        self.info.requires.clear()
 
     def requirements(self):
         pass

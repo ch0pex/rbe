@@ -1,3 +1,4 @@
 conan
 mkdocs-material
 zensical
+pre-commit

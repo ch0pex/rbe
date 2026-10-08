@@ -1,0 +1,11 @@
+# Optional but recommended: `pip install pre-commit && pre-commit install`
+repos:
+  - repo: local
+    hooks:
+      # single_include/rbe/rbe.hpp is generated from src/rbe: regenerate it and stage it, so the commit includes it
+      - id: single-header
+        name: regenerate the single header
+        entry: bash -c 'python3 scripts/amalgamate.py && git add single_include/rbe/rbe.hpp'
+        language: system
+        files: ^(src/rbe/.*\.hpp|src/CMakeLists\.txt|scripts/amalgamate\.py)$
+        pass_filenames: false

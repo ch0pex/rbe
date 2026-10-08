@@ -1,0 +1,48 @@
+name: Amalgamate check
+
+# single_include/rbe/rbe.hpp is generated from src/rbe and committed, so it can be copied as is. This fails when it
+# is out of date: run `python3 scripts/amalgamate.py` and commit the result.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/rbe/**"
+      - "src/CMakeLists.txt"
+      - "scripts/amalgamate.py"
+      - "single_include/**"
+      - ".github/workflows/amalgamate_check.yml"
+  pull_request:
+    paths:
+      - "src/rbe/**"
+      - "src/CMakeLists.txt"
+      - "scripts/amalgamate.py"
+      - "single_include/**"
+      - ".github/workflows/amalgamate_check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  up-to-date:
+    name: single_include is up to date
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Regenerate the single header
+        run: python3 scripts/amalgamate.py
+
+      - name: Fail if it differs from the committed one
+        shell: bash
+        run: |
+          if [[ -n "$(git status --porcelain -- single_include)" ]]; then
+            git diff --stat -- single_include
+            echo "::error::single_include/rbe/rbe.hpp is out of date. Run 'python3 scripts/amalgamate.py' and commit it."
+            exit 1
+          fi

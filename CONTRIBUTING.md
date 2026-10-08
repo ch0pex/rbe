@@ -59,6 +59,17 @@ The suite has two halves, and a change usually touches both:
 New source files must be listed explicitly: headers in `src/CMakeLists.txt`, test translation units
 in the `CMakeLists.txt` of their test directory.
 
+## Single header
+
+`single_include/rbe/rbe.hpp` is the whole library in one file, generated from `src/rbe` and committed so it can be
+copied as is. Never edit it by hand: after touching anything under `src/rbe`, regenerate it with
+`python3 scripts/amalgamate.py` (or the `amalgamate` CMake target) and commit the result. The
+"Amalgamate check" workflow fails the PR when it is out of date.
+
+To not have to remember it, install the optional pre-commit hook once with `pip install pre-commit && pre-commit install`.
+It regenerates the file and stages it whenever a commit touches `src/rbe`, so the regenerated file goes into that
+same commit.
+
 ## Code style
 
 `.clang-format` and `.clang-tidy` at the repo root are the source of truth; run clang-format over the
