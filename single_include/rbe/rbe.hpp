@@ -2034,7 +2034,6 @@ concept introspectable = std::meta::is_enumerable_type(^^T);
  *
  * Not supported yet:
  *   - Base classes
- *
  */
 template<typename T>
 concept wirable = wirable_primitive<T> or detail::is_wirable_class_type(^^T);
@@ -2736,8 +2735,8 @@ constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
     using member_type = [:type_of(member):];
     value.[:member:]  = deserialize<member_type, merge_context(local, member)>(
-                         input.subspan<layout.offset.bytes, layout.size>()
-                     );
+                          input.subspan<layout.offset.bytes, layout.size>()
+                      );
   }
   return value;
 }
@@ -2776,7 +2775,7 @@ constexpr auto satisfy_preconditions(std::span<std::byte const> const input, S /
   }
   if constexpr (std::same_as<S, dsrl::in_place_t> or std::same_as<S, dsrl::in_place_mut_t>) {
     std::uintptr_t const ptr = reinterpret_cast<std::uintptr_t>(input.data());
-    return (ptr & (alignof(T) - 1)) == 0;
+    return (ptr & (alignment_of(T) - 1)) == 0;
   }
 
   return true;

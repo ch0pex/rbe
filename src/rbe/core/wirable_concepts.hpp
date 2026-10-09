@@ -60,7 +60,6 @@ concept introspectable = std::meta::is_enumerable_type(^^T);
  *
  * Not supported yet:
  *   - Base classes
- *
  */
 template<typename T>
 concept wirable = wirable_primitive<T> or detail::is_wirable_class_type(^^T);
