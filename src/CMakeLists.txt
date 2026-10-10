@@ -39,6 +39,7 @@ target_sources(
         rbe/core/detail/memory_layout.hpp
         rbe/core/detail/throw_check.hpp
         rbe/core/detail/normalize.hpp
+        rbe/core/detail/split_span.hpp
         rbe/core/detail/static_array.hpp
         rbe/core/detail/static_string.hpp
         rbe/core/custom.hpp

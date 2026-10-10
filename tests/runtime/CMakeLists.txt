@@ -12,6 +12,7 @@ create_test_suite(test_rbe_runtime
     test_memcpy_constexpr.cpp
     test_memory_layout.cpp
     test_no_throw.cpp
+    test_split_span.cpp
     test_serde.cpp
     test_static_array.cpp
     test_static_string.cpp
