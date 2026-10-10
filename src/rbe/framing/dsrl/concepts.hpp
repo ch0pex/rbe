@@ -43,6 +43,13 @@ concept has_get = requires(T const& frame) { frame.template get<I>(); } or requi
  *
  * On top of the shape, this is the API rbe::dsrl::frame offers and the one generic code (flatten, many)
  * relies on.
+ *
+ * @note one common mistake that the user might make
+ * is that they might mix rbe::dsrl::frame with rbe::frame we could check
+ * if payload is a serder to provide them a btter error message. However
+ * it's not possible to include here the serder concepts because it would
+ * create a circular dependency, so we will have to live with the current error message
+ * until we find a better way to do it.
  */
 template<typename T>
 concept is_frame = rbe::is_frame<T> and requires(T const ct) {

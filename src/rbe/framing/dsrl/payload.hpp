@@ -55,6 +55,16 @@ concept has_make = requires(std::span<std::byte const> const bytes) {
   { P::make(bytes) } -> std::same_as<std::optional<P>>;
 };
 
+template<frame_header H>
+constexpr auto payload_count(H const hdr) -> std::size_t {
+  if constexpr (H::has_count) {
+    return hdr.count();
+  }
+  else {
+    return std::numeric_limits<std::size_t>::max();
+  }
+}
+
 } // namespace detail
 
 /// The view a frame hands back for a payload declared as P: proxy<T> for a wirable T, P itself otherwise
@@ -113,6 +123,9 @@ construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte cons
     );
     return view {hdr.id(), bytes};
   }
+  else if constexpr (is_many<view>) {
+    return view {bytes, detail::payload_count(hdr)}; // many
+  }
   else {
     return view {bytes};
   }
@@ -132,8 +145,11 @@ try_construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte 
     );
     return view::make(hdr.id(), bytes); // any
   }
+  else if constexpr (is_many<view>) {
+    return view::make(bytes, detail::payload_count(hdr)); // many
+  }
   else if constexpr (detail::has_make<view>) {
-    return view::make(bytes); // proxy, a nested frame, a many
+    return view::make(bytes); // proxy, a nested frame
   }
   else {
     return std::optional {view {bytes}}; // an opaque span-constructible payload, e.g. blob

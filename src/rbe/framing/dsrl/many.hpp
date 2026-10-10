@@ -14,6 +14,7 @@
 
 // --- Includes ---
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <ranges>
 #include <rbe/framing/detail/base_tags.hpp>
@@ -82,14 +83,19 @@ public:
     parent_type* parent_;
   };
 
-  [[nodiscard]] static constexpr auto make(buffer_type const data) -> std::optional<many> { return many {data}; }
+  [[nodiscard]] static constexpr auto
+  make(buffer_type const data, size_type count = std::numeric_limits<size_type>::max()) -> std::optional<many> {
+    return many {data, count};
+  }
 
-  constexpr many(buffer_type const data) : current_(frame_type::make(data)), data_(data) { }
+  explicit constexpr many(buffer_type const data, size_type count = std::numeric_limits<size_type>::max()) :
+    current_(frame_type::make(data)), data_(data), left_(count) { }
 
   constexpr auto next() {
     assert(not done());
     data_    = data_.subspan(current_->length());
     current_ = frame_type::make(data_);
+    --left_;
   }
 
   [[nodiscard]] constexpr auto current() const -> frame_type {
@@ -97,7 +103,7 @@ public:
     return current_.value();
   }
 
-  [[nodiscard]] constexpr auto done() const -> bool { return not current_; }
+  [[nodiscard]] constexpr auto done() const -> bool { return not current_ or left_ == 0; }
 
   [[nodiscard]] constexpr auto remainder() const -> buffer_type { return data_; }
 
@@ -114,6 +120,7 @@ public:
 private:
   std::optional<frame_type> current_;
   buffer_type data_;
+  size_type left_;
 };
 
 } // namespace rbe::dsrl

@@ -9,6 +9,10 @@
  *
  * These concepts only look at the shape of a frame (rbe::is_frame), so they apply to an rbe:: vocabulary
  * frame and to its dsrl:: / srl:: lowerings alike: lowering never changes how a frame is delimited.
+ *
+ * @note 'delimited' word is used here rather than 'sized' to avoid confusion between length and size semantics
+ * in the library: length is the value readen from the wire and size is the hardcoded size of a type in RBE.
+ *
  */
 
 #pragma once

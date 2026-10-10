@@ -75,7 +75,10 @@ public:
   // --- Member functions ---
 
   [[nodiscard]] constexpr auto length() const -> size_type {
-    if constexpr (header_return_type::delimits_payload) {
+    if constexpr (buffer_delimited_frame<frame>) {
+      return this->buffer().size();
+    }
+    else if constexpr (header_return_type::delimits_payload) {
       return this->header().frame_length();
     }
     else {

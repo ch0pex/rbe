@@ -27,6 +27,7 @@ enum class length_kind : std::uint8_t {
   frame, ///< total frame length: header + payload
   payload, ///< payload length: frame minus header
   self, ///< self annotated type length
+  count ///< the number of elements in a dynamic range, not a length in bytes
 };
 
 /**
@@ -68,11 +69,13 @@ using length_kind = detail::length_kind;
  * - frame_length: the total frame length, header + payload
  * - payload_length: the payload length, frame minus header
  * - header_length: the header length (self_length alias)
+ * - payload_count: indicates the length by telling the count of payload elements in a frame
  */
 inline constexpr detail::annotation_kind<detail::length_tag> length {};
 inline constexpr auto self_length    = length(length_kind::self);
 inline constexpr auto frame_length   = length(length_kind::frame);
 inline constexpr auto payload_length = length(length_kind::payload);
 inline constexpr auto header_length = self_length; ///< alias for self_length, convenient for use in a frame header type
+inline constexpr auto payload_count = length(length_kind::count);
 
 } // namespace rbe

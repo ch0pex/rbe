@@ -19,8 +19,8 @@
 
 // --- STD ---
 #include <array>
-#include <cstddef>
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <ranges>
@@ -50,9 +50,11 @@ static_assert(std::ranges::input_range<length_many>);
 //   1     5                 AA AA          5
 //   2     3                 -              3 (empty payload)
 //   3     7                 B1 B2 B3 B4    7
-constexpr auto three_frames = bytes(0x01, 0x05, 0x00, 0xAA, 0xAA, //
-                                    0x02, 0x03, 0x00, //
-                                    0x03, 0x07, 0x00, 0xB1, 0xB2, 0xB3, 0xB4);
+constexpr auto three_frames = bytes(
+    0x01, 0x05, 0x00, 0xAA, 0xAA, //
+    0x02, 0x03, 0x00, //
+    0x03, 0x07, 0x00, 0xB1, 0xB2, 0xB3, 0xB4
+);
 
 // ============================================================
 // iteration: one frame after the other, each as long as the wire says
@@ -222,9 +224,11 @@ constexpr auto make_always_yields_a_many() {
 
 constexpr auto id_frames_split_by_their_candidate() {
   // id 0 + msg_1 (4 bytes) | id 2 + msg_3 (1 byte) | id 0 + 2 of the 4 bytes of msg_1
-  auto const wire = bytes(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, //
-                          0x02, 0x00, 0x00, 0x00, 'x', //
-                          0x00, 0x00, 0x00, 0x00, 0x22, 0x22);
+  auto const wire = bytes(
+      0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, //
+      0x02, 0x00, 0x00, 0x00, 'x', //
+      0x00, 0x00, 0x00, 0x00, 0x22, 0x22
+  );
 
   auto frames      = rbe::dsrl::many<id_frame> {wire};
   std::size_t seen = 0;
@@ -246,8 +250,10 @@ constexpr auto id_frames_split_by_their_candidate() {
 
 constexpr auto unknown_id_takes_the_rest_of_the_buffer() {
   // the code does not know id 9, so nothing says where its frame ends: it runs to the end of the buffer
-  auto const wire = bytes(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, //
-                          0x09, 0x00, 0x00, 0x00, 'A', 'B', 'C', 'D', 'E', 'F');
+  auto const wire = bytes(
+      0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11, //
+      0x09, 0x00, 0x00, 0x00, 'A', 'B', 'C', 'D', 'E', 'F'
+  );
 
   auto frames      = rbe::dsrl::many<id_frame> {wire};
   std::size_t seen = 0;
@@ -317,9 +323,21 @@ constexpr auto with_ids_keeps_matching_frames() {
 }
 
 constexpr auto known_and_unknown_ids_split_the_frames() {
-  return std::ranges::distance(mixed_ids | rbe::views::many<id_frame>() | rbe::views::known_ids()) == 3
-     and std::ranges::distance(mixed_ids | rbe::views::many<id_frame>() | rbe::views::unknown_ids()) == 1;
+  RBE_CHECK(std::ranges::distance(mixed_ids | rbe::views::many<id_frame>() | rbe::views::known_ids()) == 3);
+  RBE_CHECK(std::ranges::distance(mixed_ids | rbe::views::many<id_frame>() | rbe::views::unknown_ids()) == 1);
 }
+
+constexpr auto count_specified_many() {
+  auto frames = rbe::dsrl::many<length_frame> {three_frames, 2};
+  RBE_CHECK(std::ranges::distance(frames) == 2);
+  RBE_CHECK(frames.has_seen_partial());
+  RBE_CHECK(frames.remainder().size() == 7);
+
+  auto third_frame = length_frame::make(frames.remainder());
+  RBE_CHECK(third_frame.has_value());
+  RBE_CHECK(third_frame->length() == 7);
+}
+
 
 TEST_SUITE("dsrl_many") {
   RBE_TEST_CASE("dsrl_many - a frame decomposes into header and payload with a structured binding", frames_decompose_into_header_and_payload);
@@ -340,6 +358,7 @@ TEST_SUITE("dsrl_many") {
   RBE_TEST_CASE("dsrl_many - make never fails, an incomplete buffer gives a done many", make_always_yields_a_many);
   RBE_TEST_CASE("dsrl_many - frames whose length is implied by the id", id_frames_split_by_their_candidate);
   RBE_TEST_CASE("dsrl_many - an unknown id takes the rest of the buffer", unknown_id_takes_the_rest_of_the_buffer);
+  RBE_TEST_CASE("dsrl_many - a count limits the number of frames returned", count_specified_many);
 }
 // clang-format on
 

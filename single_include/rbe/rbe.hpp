@@ -1729,6 +1729,7 @@ enum class length_kind : std::uint8_t {
   frame, ///< total frame length: header + payload
   payload, ///< payload length: frame minus header
   self, ///< self annotated type length
+  count ///< the number of elements in a dynamic range, not a length in bytes
 };
 
 /**
@@ -1770,12 +1771,14 @@ using length_kind = detail::length_kind;
  * - frame_length: the total frame length, header + payload
  * - payload_length: the payload length, frame minus header
  * - header_length: the header length (self_length alias)
+ * - payload_count: indicates the length by telling the count of payload elements in a frame
  */
 inline constexpr detail::annotation_kind<detail::length_tag> length {};
 inline constexpr auto self_length    = length(length_kind::self);
 inline constexpr auto frame_length   = length(length_kind::frame);
 inline constexpr auto payload_length = length(length_kind::payload);
 inline constexpr auto header_length = self_length; ///< alias for self_length, convenient for use in a frame header type
+inline constexpr auto payload_count = length(length_kind::count);
 
 } // namespace rbe
 
@@ -3776,6 +3779,13 @@ concept has_get = requires(T const& frame) { frame.template get<I>(); } or requi
  *
  * On top of the shape, this is the API rbe::dsrl::frame offers and the one generic code (flatten, many)
  * relies on.
+ *
+ * @note one common mistake that the user might make
+ * is that they might mix rbe::dsrl::frame with rbe::frame we could check
+ * if payload is a serder to provide them a btter error message. However
+ * it's not possible to include here the serder concepts because it would
+ * create a circular dependency, so we will have to live with the current error message
+ * until we find a better way to do it.
  */
 template<typename T>
 concept is_frame = rbe::is_frame<T> and requires(T const ct) {
@@ -4257,6 +4267,10 @@ template<frame_serder T>
  *
  * These concepts only look at the shape of a frame (rbe::is_frame), so they apply to an rbe:: vocabulary
  * frame and to its dsrl:: / srl:: lowerings alike: lowering never changes how a frame is delimited.
+ *
+ * @note 'delimited' word is used here rather than 'sized' to avoid confusion between length and size semantics
+ * in the library: length is the value readen from the wire and size is the hardcoded size of a type in RBE.
+ *
  */
 
 
@@ -4469,14 +4483,19 @@ public:
     parent_type* parent_;
   };
 
-  [[nodiscard]] static constexpr auto make(buffer_type const data) -> std::optional<many> { return many {data}; }
+  [[nodiscard]] static constexpr auto
+  make(buffer_type const data, size_type count = std::numeric_limits<size_type>::max()) -> std::optional<many> {
+    return many {data, count};
+  }
 
-  constexpr many(buffer_type const data) : current_(frame_type::make(data)), data_(data) { }
+  explicit constexpr many(buffer_type const data, size_type count = std::numeric_limits<size_type>::max()) :
+    current_(frame_type::make(data)), data_(data), left_(count) { }
 
   constexpr auto next() {
     assert(not done());
     data_    = data_.subspan(current_->length());
     current_ = frame_type::make(data_);
+    --left_;
   }
 
   [[nodiscard]] constexpr auto current() const -> frame_type {
@@ -4484,7 +4503,7 @@ public:
     return current_.value();
   }
 
-  [[nodiscard]] constexpr auto done() const -> bool { return not current_; }
+  [[nodiscard]] constexpr auto done() const -> bool { return not current_ or left_ == 0; }
 
   [[nodiscard]] constexpr auto remainder() const -> buffer_type { return data_; }
 
@@ -4501,6 +4520,7 @@ public:
 private:
   std::optional<frame_type> current_;
   buffer_type data_;
+  size_type left_;
 };
 
 } // namespace rbe::dsrl
@@ -4726,6 +4746,7 @@ public:
   static constexpr bool has_payload_length = contains_annotation<T, rbe::payload_length>;
   static constexpr bool has_frame_length   = contains_annotation<T, rbe::frame_length>;
   static constexpr bool has_id             = contains_annotation<T, rbe::id>;
+  static constexpr bool has_count          = contains_annotation<T, rbe::payload_count>;
 
   /// Whether this header settles where its payload ends, through payload_length or frame_length. When it
   /// does, the field is the one authoritative source for the payload's extent, whatever the payload is.
@@ -4829,6 +4850,12 @@ public:
     return this->length() + payload_length();
   }
 
+  [[nodiscard]] constexpr auto payload_count() const -> size_type
+    requires(has_count)
+  {
+    return this->template field<rbe::payload_count>();
+  }
+
   // --- Spans ---
 
   // Three extents over the same data(): the one the wire delimits, the part of it T knows how to
@@ -4900,6 +4927,16 @@ concept has_make = requires(std::span<std::byte const> const bytes) {
   { P::make(bytes) } -> std::same_as<std::optional<P>>;
 };
 
+template<frame_header H>
+constexpr auto payload_count(H const hdr) -> std::size_t {
+  if constexpr (H::has_count) {
+    return hdr.count();
+  }
+  else {
+    return std::numeric_limits<std::size_t>::max();
+  }
+}
+
 } // namespace detail
 
 /// The view a frame hands back for a payload declared as P: proxy<T> for a wirable T, P itself otherwise
@@ -4958,6 +4995,9 @@ construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte cons
     );
     return view {hdr.id(), bytes};
   }
+  else if constexpr (is_many<view>) {
+    return view {bytes, detail::payload_count(hdr)}; // many
+  }
   else {
     return view {bytes};
   }
@@ -4977,8 +5017,11 @@ try_construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte 
     );
     return view::make(hdr.id(), bytes); // any
   }
+  else if constexpr (is_many<view>) {
+    return view::make(bytes, detail::payload_count(hdr)); // many
+  }
   else if constexpr (detail::has_make<view>) {
-    return view::make(bytes); // proxy, a nested frame, a many
+    return view::make(bytes); // proxy, a nested frame
   }
   else {
     return std::optional {view {bytes}}; // an opaque span-constructible payload, e.g. blob
@@ -5184,7 +5227,10 @@ public:
   // --- Member functions ---
 
   [[nodiscard]] constexpr auto length() const -> size_type {
-    if constexpr (header_return_type::delimits_payload) {
+    if constexpr (buffer_delimited_frame<frame>) {
+      return this->buffer().size();
+    }
+    else if constexpr (header_return_type::delimits_payload) {
       return this->header().frame_length();
     }
     else {

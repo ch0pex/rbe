@@ -10,6 +10,7 @@
 
 // --- Includes ---
 #include "common_frame.hpp"
+#include "rbe/dsrl/deserialize.hpp"
 #include "test_macros.hpp"
 
 #include <rbe/annotations/alignment.hpp>
@@ -314,7 +315,9 @@ public:
 
   [[nodiscard]] constexpr auto length() const -> size_type { return line_length_; }
 
-  [[nodiscard]] constexpr auto is_extended() const -> bool { return this->header().length() + this->payload().size() != line_length_; }
+  [[nodiscard]] constexpr auto is_extended() const -> bool {
+    return this->header().length() + this->payload().size() != line_length_;
+  }
 
 
 private:
@@ -388,6 +391,19 @@ constexpr auto many_iterates_a_custom_frame_by_line() {
   RBE_CHECK(lines.remainder().empty());
 }
 
+// --- Frame with many without length field ---
+
+constexpr auto buffer_delimited_frame_length() {
+  constexpr auto wire = std::array<std::byte, 92> {};
+  using many_frame    = rbe::frame<PlainHeader, rbe::many<msg_frame>>;
+  auto const f        = rbe::deserialize<many_frame>(wire);
+
+  RBE_CHECK(f.length() == 92);
+  RBE_CHECK(f.as_span().size() == 92);
+  RBE_CHECK(f.payload().as_span().size() == 88);
+}
+
+
 // clang-format off
 TEST_SUITE("dsrl_frame - length and buffer accessors") {
   RBE_TEST_CASE("dsrl_frame - length and buffer: construction narrows the span to the frame", frame_narrows_at_construction);
@@ -405,6 +421,7 @@ TEST_SUITE("dsrl_frame - length and buffer accessors") {
   RBE_TEST_CASE("dsrl_frame - building blocks: header::make + payload_extent + try_construct_payload compose into a frame", building_blocks_compose_into_a_frame);
   RBE_TEST_CASE("dsrl_frame - custom frame: a base_frame with its own length() drives as_span, payload_span and the payload", custom_frame_follows_its_own_length);
   RBE_TEST_CASE("dsrl_frame - custom frame: many iterates by the custom length and steps over an unknown id", many_iterates_a_custom_frame_by_line);
+  RBE_TEST_CASE("dsrl_frame - many without length field: the frame length is the buffer size", buffer_delimited_frame_length);
 }
 // clang-format on
 

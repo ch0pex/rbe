@@ -35,6 +35,7 @@ public:
   static constexpr bool has_payload_length = contains_annotation<T, rbe::payload_length>;
   static constexpr bool has_frame_length   = contains_annotation<T, rbe::frame_length>;
   static constexpr bool has_id             = contains_annotation<T, rbe::id>;
+  static constexpr bool has_count          = contains_annotation<T, rbe::payload_count>;
 
   /// Whether this header settles where its payload ends, through payload_length or frame_length. When it
   /// does, the field is the one authoritative source for the payload's extent, whatever the payload is.
@@ -136,6 +137,12 @@ public:
     requires(has_payload_length and not has_frame_length)
   {
     return this->length() + payload_length();
+  }
+
+  [[nodiscard]] constexpr auto payload_count() const -> size_type
+    requires(has_count)
+  {
+    return this->template field<rbe::payload_count>();
   }
 
   // --- Spans ---
