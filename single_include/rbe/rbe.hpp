@@ -2009,7 +2009,7 @@ consteval auto is_wirable_class_type(std::meta::info type) -> bool {
     return true;
   }
 
-  if (is_class_type(type) and not is_empty_type(type)) {
+  if (is_class_type(type) and not is_empty_type(type) and bases_of(type).empty()) {
     return std::ranges::all_of(nsdm(type), is_wirable_class_type, std::meta::type_of);
   }
   return false;
@@ -2034,6 +2034,7 @@ concept introspectable = std::meta::is_enumerable_type(^^T);
  *         hierarchy (inheritance is allowed, but fields cannot be split
  *         across multiple levels)
  *       - All member variables are wirable
+ *       - It hasn't any base classes (base classes are not supported yet)
  *
  * Not supported yet:
  *   - Base classes
