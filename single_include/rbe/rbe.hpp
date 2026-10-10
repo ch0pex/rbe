@@ -2779,7 +2779,7 @@ constexpr auto satisfy_preconditions(std::span<std::byte const> const input, S /
   }
   if constexpr (std::same_as<S, dsrl::in_place_t> or std::same_as<S, dsrl::in_place_mut_t>) {
     std::uintptr_t const ptr = reinterpret_cast<std::uintptr_t>(input.data());
-    return (ptr & (alignof(T) - 1)) == 0;
+    return (ptr & (alignment_of(^^T) - 1)) == 0;
   }
 
   return true;
