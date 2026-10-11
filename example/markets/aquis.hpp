@@ -25,6 +25,7 @@
 
 #include <cstdint>
 #include "rbe/annotations/empty.hpp"
+#include "rbe/annotations/length.hpp"
 #include "rbe/core/memory_layout.hpp"
 
 namespace aquis {
@@ -122,9 +123,11 @@ using password_t  = std::array<char, 10>;
 // Multicast packet header (spec §3.2)
 // ─────────────────────────────────────────────────────────────────────
 
+// clang-format off
+
 /// Prefix of every UDP payload. Followed by `count` back-to-back messages.
-struct[[= rbe::pack_le]] PacketHeader {
-  std::uint8_t count;
+struct[[=rbe::pack_le]] PacketHeader {
+  [[=rbe::payload_count]] std::uint8_t count;
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -136,7 +139,7 @@ struct[[= rbe::pack_le]] PacketHeader {
 /// Declared once for the whole protocol and composed with the message set
 /// in `message`: `msg_type` selects the message whose `rbe::id(value)`
 /// matches, and `length` covers the header plus the message.
-struct[[= rbe::pack_le]] Header {
+struct[[=rbe::pack_le]] Header {
   [[= rbe::id]] message_type_t msg_type {};
   [[= rbe::frame_length]] std::uint8_t length {};
   std::uint32_t seq_no {};
@@ -145,8 +148,6 @@ struct[[= rbe::pack_le]] Header {
 // ─────────────────────────────────────────────────────────────────────
 // Continuous data feed messages (spec §3.3–§3.4)
 // ─────────────────────────────────────────────────────────────────────
-
-// clang-format off
 
 // Empty messages are supported by explicitly annotating them as empty
 struct [[=rbe::pack_le, =rbe::id(message_type_t::heartbeat), =rbe::empty]] Heartbeat {};

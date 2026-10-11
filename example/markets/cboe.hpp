@@ -33,9 +33,9 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <span>
-#include <cstdint>
 #include <tuple>
 
 namespace cboe {
@@ -1002,14 +1002,7 @@ private:
   /// up to and including the terminating LF, then every LF that follows it; nullopt if the line is not complete yet
   static constexpr auto line_extent(buffer_type const rest) -> std::optional<size_type> {
     auto const lf = std::ranges::find(rest, std::byte {'\n'});
-    if (lf == rest.end()) {
-      return std::nullopt;
-    }
-    auto n = static_cast<size_type>(lf - rest.begin());
-    while (n < rest.size() and rest[n] == std::byte {'\n'}) {
-      ++n;
-    }
-    return n;
+    return lf == rest.end() ? std::nullopt : std::make_optional(std::distance(rest.begin(), lf) + 1);
   }
 
   constexpr line_view(header_return_type const hdr, payload_return_type const p, size_type const n) :
