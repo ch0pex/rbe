@@ -17,7 +17,7 @@
 
 // --- STD ---
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 template<typename T>
 struct to_dsrl {
@@ -32,4 +32,4 @@ struct to_dsrl<T> {
 template<typename T>
 using to_dsrl_t = typename to_dsrl<T>::type;
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail

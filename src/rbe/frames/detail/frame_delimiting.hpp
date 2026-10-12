@@ -35,7 +35,7 @@
 #include <cstddef>
 #include <meta>
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 template<frames::header H, typename P>
 [[nodiscard]] consteval auto frame_delimiting() -> std::meta::info;
@@ -205,4 +205,4 @@ template<frames::is_frame T>
   }
 }
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail

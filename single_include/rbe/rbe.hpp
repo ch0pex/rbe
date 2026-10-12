@@ -3233,13 +3233,13 @@ constexpr auto try_deserialize(std::span<std::byte const> const input, S str)
 
 // --- STD ---
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 struct any_tag { };
 
 struct many_tag { };
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail
 
 // ===== rbe/frames/dsrl/any.hpp =====
 
@@ -3307,7 +3307,7 @@ constexpr auto throws(Diagnose&& diagnose, Args&&... args) noexcept -> bool {
 
 // --- System ---
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 /// NOTE: if unique_set constepxr is available it's used, otherwise a vector is
 /// used and the search is linear.
@@ -3351,14 +3351,14 @@ consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> t
   }
 
   for (auto const candidate: types) {
-    if (id_type_of(candidate) == std::meta::info {}) {
+    if (rbe::detail::id_type_of(candidate) == std::meta::info {}) {
       throw std::invalid_argument(
           "all candidates must be identifiable types, but '" + std::string(display_string_of(candidate)) +
           "' declares no id"
       );
     }
 
-    if (id_type_of(candidate) != id_type_of(types[0])) {
+    if (rbe::detail::id_type_of(candidate) != rbe::detail::id_type_of(types[0])) {
       throw std::invalid_argument(
           "all candidates must have the same id type, but '" + std::string(display_string_of(candidate)) +
           "' has a different id type than the first candidate '" + std::string(display_string_of(types[0])) + "'"
@@ -3368,7 +3368,7 @@ consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> t
 
   seen_ids<IdType> ids;
   for (auto const candidate: types) {
-    if (not insert_unique(ids, id_of<IdType>(candidate))) {
+    if (not insert_unique(ids, rbe::detail::id_of<IdType>(candidate))) {
       throw std::invalid_argument(
           "all candidates must have unique ids, but '" + std::string(display_string_of(candidate)) +
           "' has the same id as another candidate"
@@ -3378,7 +3378,7 @@ consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> t
 }
 
 template<typename... T>
-concept compatible_candidates = no_throw(diagnose_compatible_candidates<rbe::id_type_of<T...[0]>>, std::array {^^T...});
+concept compatible_candidates = rbe::detail::no_throw(diagnose_compatible_candidates<rbe::id_type_of<T...[0]>>, std::array {^^T...});
 
 template<typename T, typename List>
 concept belongs_to = [] {
@@ -3445,7 +3445,7 @@ struct candidate_list<T...> {
   static constexpr auto contains(candidate_index const index) -> bool { return std::to_underlying(index) < count; }
 };
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail
 
 // ===== rbe/frames/dsrl/concepts.hpp =====
 
@@ -3489,9 +3489,7 @@ struct candidate_list<T...> {
 // it would be too verbose to write rbe::frames::dsrl::unmatched in the match callbacks
 // Moreover probably in the future it will be used in other contexts,
 // so it is better to keep it in the rbe namespace
-namespace rbe {
-
-namespace detail {
+namespace rbe::frames::detail {
 
 template<id_like T>
 struct unmatched {
@@ -3503,7 +3501,9 @@ struct unmatched {
   buffer_type data;
 };
 
-} // namespace detail
+} // namespace rbe::frames::detail
+
+namespace rbe {
 
 /**
  * @brief A type that represents an unhandled/unknown candidate in an any match overload set.
@@ -3512,7 +3512,7 @@ struct unmatched {
  * to handle the case where the id of the any does not match any of the known candidates.
  */
 template<typename T>
-concept unmatched = detail::specialization_of(^^T, ^^detail::unmatched);
+concept unmatched = detail::specialization_of(^^T, ^^frames::detail::unmatched);
 
 } // namespace rbe
 
@@ -3596,7 +3596,7 @@ consteval auto diagnose_any_dispatcher() -> void {
   using id_type = CandidateList::id_type;
 
   // every overload set must be able to handle ids outside of `CandidateList`
-  if (not std::invocable<Overload&, rbe::detail::unmatched<id_type>>) {
+  if (not std::invocable<Overload&, frames::detail::unmatched<id_type>>) {
     throw std::invalid_argument(
         "overload set must contain a fallback callback (invocable with the observed id, or with no "
         "arguments at all) to handle unrecognized messages"
@@ -3704,26 +3704,6 @@ constexpr auto dispatch_matched(Overload overload_set, std::span<std::byte const
  * @file frame_delimiting_tags.hpp
  * @date 12/10/2026
  * @brief The delimiting categories of a frame, as tag types
- *
- * The vocabulary of the classification, and nothing else: the tags, what counts as one, and what it
- * means for a frame to declare its own. How a frame that declares nothing gets one is the deduction in
- * detail/frame_delimiting.hpp, and the questions asked of the answer are the concepts in
- * frame_delimiting_concepts.hpp.
- *
- * The tags mirror that hierarchy of concepts by deriving from one another, so a category refines its
- * parent the way std::forward_iterator_tag refines std::input_iterator_tag: every concept over them is
- * one std::derived_from, and an interior node is a usable answer on its own -- a frame with an extended
- * header is implicitly delimited and not static_delimited, its only leaf.
- *
- * Which tag a frame carries follows the same rule the standard library follows for iterators: it is
- * deduced from what is structurally detectable, and declared where it is not. Every frame carries it as a
- * `delimiting_concept` member -- rbe::frames::is_frame requires one -- and the default frames, rbe::frames::frame and
- * rbe::frames::dsrl::frame, have frame_delimiting_tag deduce theirs from their shape.
- *
- * A frame that resolves its own length in code (a terminator scan, a length buried in the payload, a
- * composite discriminant) is the case the shape cannot see, and usually the case the shape gets wrong:
- * rbe::frames::dsrl::base_frame deliberately declares no tag, so such a frame has nothing to inherit and has to
- * state its category, exactly as it has to supply its own make() and length().
  */
 
 
@@ -3731,14 +3711,14 @@ constexpr auto dispatch_matched(Overload overload_set, std::span<std::byte const
 
 // --- STD ---
 
-namespace rbe::detail {
+namespace rbe::frames {
+
+namespace detail {
 
 /// The common base of every tag, so that rbe::frames::delimiting_tag is one std::derived_from as well
 struct delimiting_tag { };
 
-} // namespace rbe::detail
-
-namespace rbe::frames {
+} // namespace detail
 
 /*
  * @verbatim
@@ -3755,8 +3735,8 @@ namespace rbe::frames {
  *           `-- (an id, an extended header)   O(1), no leaf of its own
  * @endverbatim
  */
-struct buffer_delimited_tag : rbe::detail::delimiting_tag { };
-struct self_delimited_tag : rbe::detail::delimiting_tag { };
+struct buffer_delimited_tag : detail::delimiting_tag { };
+struct self_delimited_tag : detail::delimiting_tag { };
 struct explicitly_delimited_tag : self_delimited_tag { };
 struct length_delimited_tag : explicitly_delimited_tag { };
 struct count_delimited_tag : explicitly_delimited_tag { };
@@ -3775,10 +3755,10 @@ struct static_delimited_tag : implicitly_delimited_tag { };
  * A tag answers the mechanism and only the mechanism. What the resolution costs is the other axis
  * (rbe::frames::constant_length), which the library deduces from the chain of tags, and a frame that
  * resolves itself in code is presumed to honour the O(1) length() contract every frame signs rather than
- * being asked to declare a cost -- see rbe::detail::is_constant_length.
+ * being asked to declare a cost -- see detail::is_constant_length.
  */
 template<typename T>
-concept delimiting_tag = std::derived_from<T, rbe::detail::delimiting_tag>;
+concept delimiting_tag = std::derived_from<T, detail::delimiting_tag>;
 
 /**
  * @brief A type that states which delimiting category it belongs to
@@ -3956,9 +3936,9 @@ concept any_dispatcher = rbe::detail::no_throw(detail::diagnose_any_dispatcher<O
 namespace rbe::frames::dsrl {
 
 template<frames::wirable_class_payload... Args>
-class any : public rbe::detail::any_tag {
+class any : public frames::detail::any_tag {
 public:
-  using candidates  = rbe::detail::candidate_list<Args...>;
+  using candidates  = frames::detail::candidate_list<Args...>;
   using buffer_type = std::span<std::byte const>;
   using size_type   = std::size_t;
   using id_type     = candidates::id_type;
@@ -4042,7 +4022,7 @@ public:
 
     return detail::dispatch_unmatched(
         std::forward<T>(overload_set), //
-        rbe::detail::unmatched {.id = id_, .known_id = known_id(), .data = data_}
+        frames::detail::unmatched {.id = id_, .known_id = known_id(), .data = data_}
     );
   }
 
@@ -4057,18 +4037,18 @@ public:
     detail::diagnose_any_dispatcher<T, candidates>();
   }
 
-  template<rbe::detail::belongs_to<candidates> T>
+  template<frames::detail::belongs_to<candidates> T>
   [[nodiscard]] constexpr auto is() const -> bool {
     return index_ == candidates::template index_of<T>();
   }
 
-  template<rbe::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
+  template<frames::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
     requires(wirable_class<T>)
   [[nodiscard]] constexpr auto as(S strategy = rbe::dsrl::lazy) const -> std::optional<rbe::dsrl::return_type<S, T>> {
     return is<T>() ? std::optional<rbe::dsrl::return_type<S, T>>(rbe::deserialize<T>(data_, strategy)) : std::nullopt;
   }
 
-  template<rbe::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
+  template<frames::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
     requires(explicitly_empty<T>)
   [[nodiscard]] constexpr auto as() const -> std::optional<T> {
     return is<T>() ? std::optional<T>(T {}) : std::nullopt;
@@ -4086,7 +4066,7 @@ public:
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
 
 private:
-  using index_type = rbe::detail::candidate_index;
+  using index_type = frames::detail::candidate_index;
 
   /// NOTE: maybe I should expose this constructor. For now it's only used by the factory function
   /// however if the id is dense and the user know it he could use it to avoid finding the index.
@@ -4268,7 +4248,7 @@ namespace rbe::frames {
  * @brief A vocabulary type that knows how to lower itself to a (de)serializer
  *
  * rbe::frames::frame, rbe::frames::blob, rbe::frames::many and rbe::frames::any are the vocabulary types the user
- * writes; each one names its dsrl / srl counterpart, which is what rbe::detail::to_dsrl_t and rbe::detail::to_srl_t map
+ * writes; each one names its dsrl / srl counterpart, which is what detail::to_dsrl_t and detail::to_srl_t map
  * through.
  */
 template<typename T>
@@ -4474,10 +4454,6 @@ split_span(std::span<T, Extent>, std::size_t) -> split_span<T>;
  * than believes. It is std::ranges::sized_range exactly, which only works because the member is optional
  * -- rbe::frames::dsrl::is_frame required it until this header existed, and the detection was a tautology.
  *
- * The detection concepts live in rbe::detail and not in a rbe::frames::detail: such a namespace would
- * shadow rbe::detail for every unqualified rbe::detail:: inside rbe::frames, which is where the rest of the
- * classification reads its machinery from.
- *
  * `distance` is the algorithm, not a second customization point, which is the shape std chose too: if you
  * can compute the extent cheaply you expose length(), and if you cannot, walking is the only
  * implementation left. It is still extensible, unlike ranges::distance, because a frame does not always
@@ -4515,7 +4491,7 @@ split_span(std::span<T, Extent>, std::size_t) -> split_span<T>;
 
 // --- STD ---
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 template<frames::header H, typename P>
 [[nodiscard]] consteval auto frame_delimiting() -> std::meta::info;
@@ -4685,14 +4661,13 @@ template<frames::is_frame T>
   }
 }
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail
 
 // --- STD ---
 
-// The detection concepts live in rbe::detail and NOT in a rbe::frames::detail: such a namespace shadows
-// rbe::detail for every unqualified rbe::detail:: inside rbe::frames, which is where the delimiting
-// classification reads its machinery from (see A10 in docs/explanation/frame-delimiting-decisions.md).
-namespace rbe::detail {
+namespace rbe::frames {
+
+namespace detail {
 
 /// A frame that resolves its extent in O(1) and says so by carrying the member
 template<typename T>
@@ -4727,9 +4702,7 @@ concept walkable_run = requires(T const& frame) {
   requires std::ranges::input_range<decltype(frame.payload())>;
 };
 
-} // namespace rbe::detail
-
-namespace rbe::frames {
+} // namespace detail
 
 /**
  * @brief The byte extent of a frame, in O(1)
@@ -4739,7 +4712,7 @@ namespace rbe::frames {
  */
 struct length_fn {
   template<is_frame F>
-    requires rbe::detail::member_length<F>
+    requires detail::member_length<F>
   [[nodiscard]] constexpr auto operator()(F const& frame) const -> std::size_t {
     return frame.length();
   }
@@ -4767,10 +4740,10 @@ inline constexpr length_fn length {};
 template<typename F>
 concept constant_length = //
     is_frame<F> //
-    and (rbe::detail::member_length<F> //
-         or (not rbe::detail::resolves_extent<F> //
-             and rbe::detail::lowers_to_view<F> //
-             and rbe::detail::member_length<typename F::dsrl_type>));
+    and (detail::member_length<F> //
+         or (not detail::resolves_extent<F> //
+             and detail::lowers_to_view<F> //
+             and detail::member_length<typename F::dsrl_type>));
 
 /**
  * @brief The byte extent of any frame, walking when that is the only way to it
@@ -4784,16 +4757,16 @@ concept constant_length = //
  */
 struct distance_fn {
   template<is_frame F>
-    requires rbe::detail::member_length<F> or rbe::detail::member_distance<F> or rbe::detail::adl_distance<F> or
-             rbe::detail::walkable_run<F>
+    requires detail::member_length<F> or detail::member_distance<F> or detail::adl_distance<F> or
+             detail::walkable_run<F>
   [[nodiscard]] constexpr auto operator()(F const& frame) const -> std::size_t {
-    if constexpr (rbe::detail::member_length<F>) {
+    if constexpr (detail::member_length<F>) {
       return frame.length();
     }
-    else if constexpr (rbe::detail::member_distance<F>) {
+    else if constexpr (detail::member_distance<F>) {
       return frame.distance();
     }
-    else if constexpr (rbe::detail::adl_distance<F>) {
+    else if constexpr (detail::adl_distance<F>) {
       return frame_distance(frame);
     }
     else {
@@ -5027,7 +5000,7 @@ namespace rbe::frames::dsrl {
 
 template<is_frame T>
   requires frames::self_delimited<T> and frames::constant_length<T>
-class many : public rbe::detail::many_tag {
+class many : public frames::detail::many_tag {
 public:
   using frame_type  = T;
   using buffer_type = std::span<std::byte const>;
@@ -5217,7 +5190,7 @@ namespace views = frames::views;
 
 // --- STD ---
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 template<typename T>
 struct to_dsrl {
@@ -5232,7 +5205,7 @@ struct to_dsrl<T> {
 template<typename T>
 using to_dsrl_t = typename to_dsrl<T>::type;
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail
 
 // ===== rbe/frames/detail/to_srl_type.hpp =====
 
@@ -5249,7 +5222,7 @@ using to_dsrl_t = typename to_dsrl<T>::type;
 
 // --- STD ---
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 template<typename T>
 struct to_srl {
@@ -5264,7 +5237,7 @@ struct to_srl<T> {
 template<typename T>
 using to_srl_t = typename to_srl<T>::type;
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail
 
 // ===== rbe/frames/dsrl/frame.hpp =====
 
@@ -5547,7 +5520,7 @@ constexpr auto payload_count(header<H> const hdr) -> std::size_t {
  * @brief A run whose extent the header settles: a count field over elements of a compile-time-constant size
  *
  * The one shape where a count delimits without walking anything, and the same condition
- * rbe::detail::frame_delimiting reads to hand such a frame frames::static_stride_delimited_tag -- the two
+ * frames::detail::frame_delimiting reads to hand such a frame frames::static_stride_delimited_tag -- the two
  * must agree, since one settles the bytes and the other the category of the frame over them.
  */
 template<typename P, typename H>
@@ -5909,8 +5882,8 @@ public:
   /// is what keeps the two halves of the axis recursing by the same rule, so this exists only when the
   /// body below actually compiles.
   [[nodiscard]] constexpr auto length() const -> size_type
-    requires(rbe::detail::is_constant_length<frame>() and
-             (not frames::is_frame<PayloadType> or rbe::detail::member_length<PayloadType>))
+    requires(frames::detail::is_constant_length<frame>() and
+             (not frames::is_frame<PayloadType> or frames::detail::member_length<PayloadType>))
   {
     if constexpr (frames::buffer_delimited<frame>) {
       return this->buffer().size();

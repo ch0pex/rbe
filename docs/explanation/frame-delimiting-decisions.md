@@ -637,8 +637,10 @@ src/rbe/frames/                       (was src/rbe/framing/)
   rbe::frames::dsrl::      frame, base_frame, many, any, header, payload_extent, …
   rbe::frames::srl::       frame, many, any
   rbe::frames::views::     many, with_ids, known_ids, unknown_ids   (+ alias rbe::views)
+  rbe::frames::length / distance / constant_length          (length.hpp)
   rbe::                    deserialize, try_deserialize
-  rbe::detail::            everything private, as in core/ and annotations/
+  rbe::frames::detail::    the module's private machinery      (see A14)
+  rbe::frames::dsrl::detail::  the lowering's own private machinery
 ```
 
 The whole module is under `rbe::frames` except the two verbs. Two things could not follow and both are
@@ -796,6 +798,38 @@ Three consequences, all of them things this document previously decided the othe
 What it costs: `aquis::packet` loses `length()`, `as_span()` and `payload_span()`. Nothing used them — the
 example reads the header's count and iterates — and `frames::distance(packet)` is there for a caller who
 does want the extent and accepts the walk. That is the whole point of the pair of names.
+
+### A14 — The module's private names are `rbe::frames::detail`
+
+Everything under `src/rbe/frames/detail/`, plus the tag base and the extent-detection concepts, moved from
+`rbe::detail` to **`rbe::frames::detail`** (2026-10-13). The convention it buys is one line long:
+
+> unqualified `detail::` is the module's own; `rbe::detail::` is a sibling module's.
+
+~~An earlier amendment recorded the opposite~~ — that all `detail` stays in `rbe::detail`, because an
+attempt to introduce `rbe::frames::detail` had broken `candidate_list.hpp`. That attempt moved *part* of
+the machinery, so the rest became siblings reached by a name that no longer resolved; moving all of it at
+once leaves only genuine siblings to qualify, and there are ten of them
+(`invoke_concept`, `normalize_type`, `id_of`, `id_type_of`, `no_throw`, `split_span`, `unmatched`,
+`specialization_of`, `member_alias_of`, `default_context`).
+
+What it fixes is not tidiness. `rbe::frames` code refers to its machinery as unqualified `detail::`, and
+lookup of that name stops at the innermost namespace called `detail` — it does not continue to
+`rbe::detail`. `to_value_type.hpp` happened to declare an **empty `namespace detail { }`** inside
+`rbe::frames`, so whether `detail::is_tag` in a neighbouring header meant `rbe::detail::is_tag` or a
+compile error depended on the order the two headers were included in. That placeholder is gone and the
+ambiguity with it: there is exactly one `detail` reachable unqualified from inside the module, and it is
+the module's own.
+
+Names that moved, for anything outside the module that referred to them: `any_tag`, `many_tag`,
+`candidate_list`, `candidate_index`, `compatible_candidates`, `belongs_to`, `hashable`, `insert_unique`,
+`seen_ids`, `diagnose_compatible_candidates`, `frame_delimiting`, `is_tag`, `has_static_stride`,
+`static_frame_size`, `is_constant_length`, `to_dsrl` / `to_dsrl_t`, `to_srl` / `to_srl_t`,
+`delimiting_tag`, and the detection concepts of `length.hpp`. Only the tests referred to any of them.
+
+`rbe::frames::dsrl::detail` already existed (`any_dispatcher`, `payload_size`) and is unaffected: it is one
+level deeper, so inside `rbe::frames::dsrl` an unqualified `detail::` is that one, and the module's own is
+spelled `frames::detail::`.
 
 ### Also noted, not acted on
 

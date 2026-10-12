@@ -21,10 +21,6 @@
  * than believes. It is std::ranges::sized_range exactly, which only works because the member is optional
  * -- rbe::frames::dsrl::is_frame required it until this header existed, and the detection was a tautology.
  *
- * The detection concepts live in rbe::detail and not in a rbe::frames::detail: such a namespace would
- * shadow rbe::detail for every unqualified rbe::detail:: inside rbe::frames, which is where the rest of the
- * classification reads its machinery from.
- *
  * `distance` is the algorithm, not a second customization point, which is the shape std chose too: if you
  * can compute the extent cheaply you expose length(), and if you cannot, walking is the only
  * implementation left. It is still extensible, unlike ranges::distance, because a frame does not always
@@ -44,10 +40,9 @@
 #include <cstddef>
 #include <ranges>
 
-// The detection concepts live in rbe::detail and NOT in a rbe::frames::detail: such a namespace shadows
-// rbe::detail for every unqualified rbe::detail:: inside rbe::frames, which is where the delimiting
-// classification reads its machinery from (see A10 in docs/explanation/frame-delimiting-decisions.md).
-namespace rbe::detail {
+namespace rbe::frames {
+
+namespace detail {
 
 /// A frame that resolves its extent in O(1) and says so by carrying the member
 template<typename T>
@@ -82,9 +77,7 @@ concept walkable_run = requires(T const& frame) {
   requires std::ranges::input_range<decltype(frame.payload())>;
 };
 
-} // namespace rbe::detail
-
-namespace rbe::frames {
+} // namespace detail
 
 /**
  * @brief The byte extent of a frame, in O(1)
@@ -94,7 +87,7 @@ namespace rbe::frames {
  */
 struct length_fn {
   template<is_frame F>
-    requires rbe::detail::member_length<F>
+    requires detail::member_length<F>
   [[nodiscard]] constexpr auto operator()(F const& frame) const -> std::size_t {
     return frame.length();
   }
@@ -122,10 +115,10 @@ inline constexpr length_fn length {};
 template<typename F>
 concept constant_length = //
     is_frame<F> //
-    and (rbe::detail::member_length<F> //
-         or (not rbe::detail::resolves_extent<F> //
-             and rbe::detail::lowers_to_view<F> //
-             and rbe::detail::member_length<typename F::dsrl_type>));
+    and (detail::member_length<F> //
+         or (not detail::resolves_extent<F> //
+             and detail::lowers_to_view<F> //
+             and detail::member_length<typename F::dsrl_type>));
 
 /**
  * @brief The byte extent of any frame, walking when that is the only way to it
@@ -139,16 +132,16 @@ concept constant_length = //
  */
 struct distance_fn {
   template<is_frame F>
-    requires rbe::detail::member_length<F> or rbe::detail::member_distance<F> or rbe::detail::adl_distance<F> or
-             rbe::detail::walkable_run<F>
+    requires detail::member_length<F> or detail::member_distance<F> or detail::adl_distance<F> or
+             detail::walkable_run<F>
   [[nodiscard]] constexpr auto operator()(F const& frame) const -> std::size_t {
-    if constexpr (rbe::detail::member_length<F>) {
+    if constexpr (detail::member_length<F>) {
       return frame.length();
     }
-    else if constexpr (rbe::detail::member_distance<F>) {
+    else if constexpr (detail::member_distance<F>) {
       return frame.distance();
     }
-    else if constexpr (rbe::detail::adl_distance<F>) {
+    else if constexpr (detail::adl_distance<F>) {
       return frame_distance(frame);
     }
     else {

@@ -520,7 +520,7 @@ constexpr auto counted_dynamic_run_answers_through_distance() {
   static_assert(rbe::frames::count_delimited<counted_lines>);
   static_assert(not rbe::frames::static_stride_delimited<counted_lines>);
   static_assert(not rbe::frames::constant_length<counted_lines>);
-  static_assert(not rbe::detail::member_length<counted_lines>); // nothing to reach for by accident
+  static_assert(not rbe::frames::detail::member_length<counted_lines>); // nothing to reach for by accident
   // and the spans that derive from length() are gone with it, the view_interface way -- not asserted here
   // because GCC hard-errors on a `requires { f.as_span(); }` probe of a constrained deducing-this member
 

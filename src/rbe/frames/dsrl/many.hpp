@@ -30,7 +30,7 @@ namespace rbe::frames::dsrl {
 
 template<is_frame T>
   requires frames::self_delimited<T> and frames::constant_length<T>
-class many : public rbe::detail::many_tag {
+class many : public frames::detail::many_tag {
 public:
   using frame_type  = T;
   using buffer_type = std::span<std::byte const>;

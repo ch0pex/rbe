@@ -30,7 +30,7 @@ namespace rbe::frames {
  * @brief A vocabulary type that knows how to lower itself to a (de)serializer
  *
  * rbe::frames::frame, rbe::frames::blob, rbe::frames::many and rbe::frames::any are the vocabulary types the user
- * writes; each one names its dsrl / srl counterpart, which is what rbe::detail::to_dsrl_t and rbe::detail::to_srl_t map
+ * writes; each one names its dsrl / srl counterpart, which is what detail::to_dsrl_t and detail::to_srl_t map
  * through.
  */
 template<typename T>

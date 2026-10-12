@@ -70,7 +70,7 @@ constexpr auto payload_count(header<H> const hdr) -> std::size_t {
  * @brief A run whose extent the header settles: a count field over elements of a compile-time-constant size
  *
  * The one shape where a count delimits without walking anything, and the same condition
- * rbe::detail::frame_delimiting reads to hand such a frame frames::static_stride_delimited_tag -- the two
+ * frames::detail::frame_delimiting reads to hand such a frame frames::static_stride_delimited_tag -- the two
  * must agree, since one settles the bytes and the other the category of the frame over them.
  */
 template<typename P, typename H>

@@ -44,19 +44,19 @@ struct [[=rbe::id(rbe::static_string {"heartbeat"})]] msg_str_again { int hb; };
 
 struct non_identifiable { int x; };
 
-static_assert(rbe::detail::compatible_candidates<msg_a, msg_b, msg_c>);
-static_assert(rbe::detail::compatible_candidates<msg_hb, msg_st, msg_cmd>);
-static_assert(rbe::detail::compatible_candidates<msg_str, msg_str2, msg_str3>);
-static_assert(not rbe::detail::compatible_candidates<msg_a, msg_b, msg_hb>); // different id types
-static_assert(not rbe::detail::compatible_candidates<msg_a, non_identifiable>); // non-identifiable type
-static_assert(not rbe::detail::compatible_candidates<msg_a>); // only one candidate
-static_assert(not rbe::detail::compatible_candidates<msg_a, msg_b, msg_a_again>); // repeated id
-static_assert(not rbe::detail::compatible_candidates<msg_str, msg_str2, msg_str_again>); // repeated id
+static_assert(rbe::frames::detail::compatible_candidates<msg_a, msg_b, msg_c>);
+static_assert(rbe::frames::detail::compatible_candidates<msg_hb, msg_st, msg_cmd>);
+static_assert(rbe::frames::detail::compatible_candidates<msg_str, msg_str2, msg_str3>);
+static_assert(not rbe::frames::detail::compatible_candidates<msg_a, msg_b, msg_hb>); // different id types
+static_assert(not rbe::frames::detail::compatible_candidates<msg_a, non_identifiable>); // non-identifiable type
+static_assert(not rbe::frames::detail::compatible_candidates<msg_a>); // only one candidate
+static_assert(not rbe::frames::detail::compatible_candidates<msg_a, msg_b, msg_a_again>); // repeated id
+static_assert(not rbe::frames::detail::compatible_candidates<msg_str, msg_str2, msg_str_again>); // repeated id
 
-using candidate_list_t = rbe::detail::candidate_list<msg_a, msg_b, msg_c>;
-using candidate_list_hb = rbe::detail::candidate_list<msg_hb, msg_st, msg_cmd>;
-using candidate_list_str = rbe::detail::candidate_list<msg_str, msg_str2, msg_str3>;
-using index = rbe::detail::candidate_index;
+using candidate_list_t = rbe::frames::detail::candidate_list<msg_a, msg_b, msg_c>;
+using candidate_list_hb = rbe::frames::detail::candidate_list<msg_hb, msg_st, msg_cmd>;
+using candidate_list_str = rbe::frames::detail::candidate_list<msg_str, msg_str2, msg_str3>;
+using index = rbe::frames::detail::candidate_index;
 
 static_assert(candidate_list_t::ids == std::array {1, 2, 3});
 static_assert(candidate_list_hb::ids == std::array {custom_id{.x = 0, .y = 1}, custom_id{.x = 1, .y = 1}, custom_id{.x = 0, .y = 0}});

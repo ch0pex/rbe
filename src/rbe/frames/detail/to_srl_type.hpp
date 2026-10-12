@@ -17,7 +17,7 @@
 
 // --- STD ---
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 template<typename T>
 struct to_srl {
@@ -32,4 +32,4 @@ struct to_srl<T> {
 template<typename T>
 using to_srl_t = typename to_srl<T>::type;
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail

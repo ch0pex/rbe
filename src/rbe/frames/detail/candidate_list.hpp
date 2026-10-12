@@ -37,7 +37,7 @@
 
 // --- System ---
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 /// NOTE: if unique_set constepxr is available it's used, otherwise a vector is
 /// used and the search is linear.
@@ -81,14 +81,14 @@ consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> t
   }
 
   for (auto const candidate: types) {
-    if (id_type_of(candidate) == std::meta::info {}) {
+    if (rbe::detail::id_type_of(candidate) == std::meta::info {}) {
       throw std::invalid_argument(
           "all candidates must be identifiable types, but '" + std::string(display_string_of(candidate)) +
           "' declares no id"
       );
     }
 
-    if (id_type_of(candidate) != id_type_of(types[0])) {
+    if (rbe::detail::id_type_of(candidate) != rbe::detail::id_type_of(types[0])) {
       throw std::invalid_argument(
           "all candidates must have the same id type, but '" + std::string(display_string_of(candidate)) +
           "' has a different id type than the first candidate '" + std::string(display_string_of(types[0])) + "'"
@@ -98,7 +98,7 @@ consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> t
 
   seen_ids<IdType> ids;
   for (auto const candidate: types) {
-    if (not insert_unique(ids, id_of<IdType>(candidate))) {
+    if (not insert_unique(ids, rbe::detail::id_of<IdType>(candidate))) {
       throw std::invalid_argument(
           "all candidates must have unique ids, but '" + std::string(display_string_of(candidate)) +
           "' has the same id as another candidate"
@@ -108,7 +108,7 @@ consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> t
 }
 
 template<typename... T>
-concept compatible_candidates = no_throw(diagnose_compatible_candidates<rbe::id_type_of<T...[0]>>, std::array {^^T...});
+concept compatible_candidates = rbe::detail::no_throw(diagnose_compatible_candidates<rbe::id_type_of<T...[0]>>, std::array {^^T...});
 
 template<typename T, typename List>
 concept belongs_to = [] {
@@ -175,4 +175,4 @@ struct candidate_list<T...> {
   static constexpr auto contains(candidate_index const index) -> bool { return std::to_underlying(index) < count; }
 };
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail

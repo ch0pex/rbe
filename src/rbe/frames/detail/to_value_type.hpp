@@ -16,12 +16,10 @@
 // --- STD ---
 
 
-namespace rbe::frames {
-
-namespace detail { }
+namespace rbe::frames::detail {
 
 // TODO:
 template<frames::header HeaderType, frames::serder_payload PayloadType>
 using value_type = void;
 
-} // namespace rbe::frames
+} // namespace rbe::frames::detail

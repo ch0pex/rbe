@@ -16,10 +16,10 @@
 
 // --- STD ---
 
-namespace rbe::detail {
+namespace rbe::frames::detail {
 
 struct any_tag { };
 
 struct many_tag { };
 
-} // namespace rbe::detail
+} // namespace rbe::frames::detail

@@ -85,8 +85,8 @@ public:
   /// is what keeps the two halves of the axis recursing by the same rule, so this exists only when the
   /// body below actually compiles.
   [[nodiscard]] constexpr auto length() const -> size_type
-    requires(rbe::detail::is_constant_length<frame>() and
-             (not frames::is_frame<PayloadType> or rbe::detail::member_length<PayloadType>))
+    requires(frames::detail::is_constant_length<frame>() and
+             (not frames::is_frame<PayloadType> or frames::detail::member_length<PayloadType>))
   {
     if constexpr (frames::buffer_delimited<frame>) {
       return this->buffer().size();

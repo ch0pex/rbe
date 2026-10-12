@@ -21,9 +21,7 @@
 // it would be too verbose to write rbe::frames::dsrl::unmatched in the match callbacks
 // Moreover probably in the future it will be used in other contexts,
 // so it is better to keep it in the rbe namespace
-namespace rbe {
-
-namespace detail {
+namespace rbe::frames::detail {
 
 template<id_like T>
 struct unmatched {
@@ -35,7 +33,9 @@ struct unmatched {
   buffer_type data;
 };
 
-} // namespace detail
+} // namespace rbe::frames::detail
+
+namespace rbe {
 
 /**
  * @brief A type that represents an unhandled/unknown candidate in an any match overload set.
@@ -44,6 +44,6 @@ struct unmatched {
  * to handle the case where the id of the any does not match any of the known candidates.
  */
 template<typename T>
-concept unmatched = detail::specialization_of(^^T, ^^detail::unmatched);
+concept unmatched = detail::specialization_of(^^T, ^^frames::detail::unmatched);
 
 } // namespace rbe

@@ -34,9 +34,9 @@
 namespace rbe::frames::dsrl {
 
 template<frames::wirable_class_payload... Args>
-class any : public rbe::detail::any_tag {
+class any : public frames::detail::any_tag {
 public:
-  using candidates  = rbe::detail::candidate_list<Args...>;
+  using candidates  = frames::detail::candidate_list<Args...>;
   using buffer_type = std::span<std::byte const>;
   using size_type   = std::size_t;
   using id_type     = candidates::id_type;
@@ -120,7 +120,7 @@ public:
 
     return detail::dispatch_unmatched(
         std::forward<T>(overload_set), //
-        rbe::detail::unmatched {.id = id_, .known_id = known_id(), .data = data_}
+        frames::detail::unmatched {.id = id_, .known_id = known_id(), .data = data_}
     );
   }
 
@@ -135,18 +135,18 @@ public:
     detail::diagnose_any_dispatcher<T, candidates>();
   }
 
-  template<rbe::detail::belongs_to<candidates> T>
+  template<frames::detail::belongs_to<candidates> T>
   [[nodiscard]] constexpr auto is() const -> bool {
     return index_ == candidates::template index_of<T>();
   }
 
-  template<rbe::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
+  template<frames::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
     requires(wirable_class<T>)
   [[nodiscard]] constexpr auto as(S strategy = rbe::dsrl::lazy) const -> std::optional<rbe::dsrl::return_type<S, T>> {
     return is<T>() ? std::optional<rbe::dsrl::return_type<S, T>>(rbe::deserialize<T>(data_, strategy)) : std::nullopt;
   }
 
-  template<rbe::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
+  template<frames::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
     requires(explicitly_empty<T>)
   [[nodiscard]] constexpr auto as() const -> std::optional<T> {
     return is<T>() ? std::optional<T>(T {}) : std::nullopt;
@@ -164,7 +164,7 @@ public:
   [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
 
 private:
-  using index_type = rbe::detail::candidate_index;
+  using index_type = frames::detail::candidate_index;
 
   /// NOTE: maybe I should expose this constructor. For now it's only used by the factory function
   /// however if the id is dense and the user know it he could use it to avoid finding the index.

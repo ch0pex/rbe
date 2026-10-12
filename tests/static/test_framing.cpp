@@ -159,7 +159,7 @@ static_assert(
 // lowering never changes the category, so dsrl::frame::length() agrees with the rbe:: classification
 template<typename Header, typename Payload>
 inline constexpr bool same_tag_when_lowered =
-    std::same_as<frame_delimiting_tag<Header, Payload>, frame_delimiting_tag<Header, rbe::detail::to_dsrl_t<Payload>>>;
+    std::same_as<frame_delimiting_tag<Header, Payload>, frame_delimiting_tag<Header, rbe::frames::detail::to_dsrl_t<Payload>>>;
 
 static_assert(same_tag_when_lowered<WithFrameLength, rbe::frames::blob>);
 static_assert(same_tag_when_lowered<CommonHeader, msg_frame>);
@@ -338,7 +338,7 @@ static_assert(rbe::frames::count_delimited<dynamic_count_frame>);
 static_assert(not rbe::frames::static_stride_delimited<dynamic_count_frame>);
 static_assert(not rbe::frames::constant_length<dynamic_count_frame>);
 static_assert(not rbe::frames::constant_length<dynamic_count_frame::dsrl_type>);
-static_assert(not rbe::detail::member_length<dynamic_count_frame::dsrl_type>); // no length() to call at all
+static_assert(not rbe::frames::detail::member_length<dynamic_count_frame::dsrl_type>); // no length() to call at all
 static_assert(requires(dynamic_count_frame::dsrl_type const f) { rbe::frames::distance(f); });
 static_assert(rbe::frames::dynamic_stride<rbe::frames::many<any_frame>>);
 
@@ -396,7 +396,7 @@ static_assert(rbe::frames::implicitly_delimited<wrapped_line>);
 // the cost is the chain's and not the outer frame's, which is why the condition recurses: the inner frame
 // cannot answer in O(1), so neither can this one, and it has no length() either
 static_assert(not rbe::frames::constant_length<wrapped_line>);
-static_assert(not rbe::detail::member_length<wrapped_line>);
+static_assert(not rbe::frames::detail::member_length<wrapped_line>);
 
 
 // ============================================================
@@ -416,26 +416,26 @@ static_assert(std::same_as<nested::payload_type, msg_frame>);
 // ============================================================
 
 // a wirable payload is its own dsrl type -- deserialization is driven by the strategy, not the type
-static_assert(std::same_as<rbe::detail::to_dsrl_t<MessageWithHeader>, MessageWithHeader>);
-static_assert(std::same_as<rbe::detail::to_dsrl_t<std::uint32_t>, std::uint32_t>);
+static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<MessageWithHeader>, MessageWithHeader>);
+static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<std::uint32_t>, std::uint32_t>);
 
 // vocabulary types lower to their rbe::frames::dsrl counterpart
 static_assert(
-    std::same_as<rbe::detail::to_dsrl_t<candidates>, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>
+    std::same_as<rbe::frames::detail::to_dsrl_t<candidates>, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>
 );
 static_assert(std::same_as<
-              rbe::detail::to_dsrl_t<rbe::frames::many<msg_frame>>,
+              rbe::frames::detail::to_dsrl_t<rbe::frames::many<msg_frame>>,
               rbe::frames::dsrl::many<rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>>);
-static_assert(std::same_as<rbe::detail::to_dsrl_t<rbe::frames::blob>, std::span<std::byte const>>);
+static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<rbe::frames::blob>, std::span<std::byte const>>);
 static_assert(
-    std::same_as<rbe::detail::to_dsrl_t<msg_frame>, rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>
+    std::same_as<rbe::frames::detail::to_dsrl_t<msg_frame>, rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>
 );
 // lowering is idempotent: an already lowered type has no dsrl_type of its own
 static_assert(
-    std::same_as<rbe::detail::to_dsrl_t<rbe::detail::to_dsrl_t<msg_frame>>, rbe::detail::to_dsrl_t<msg_frame>>
+    std::same_as<rbe::frames::detail::to_dsrl_t<rbe::frames::detail::to_dsrl_t<msg_frame>>, rbe::frames::detail::to_dsrl_t<msg_frame>>
 );
 static_assert(std::same_as<
-              rbe::detail::to_dsrl_t<rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>,
+              rbe::frames::detail::to_dsrl_t<rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>,
               rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>);
 
 // the header is never lowered, only the payload is
@@ -459,7 +459,7 @@ static_assert(
                                   CommonHeader, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>>>>
 ); // the lowered frame keeps the header, and carries the lowered payload
 static_assert(std::same_as<packet::dsrl_type::header_type, NestedPackParent>);
-static_assert(std::same_as<packet::dsrl_type::payload_type, rbe::detail::to_dsrl_t<packet::payload_type>>);
+static_assert(std::same_as<packet::dsrl_type::payload_type, rbe::frames::detail::to_dsrl_t<packet::payload_type>>);
 static_assert(std::same_as<packet::dsrl_type::buffer_type, std::span<std::byte const>>);
 
 

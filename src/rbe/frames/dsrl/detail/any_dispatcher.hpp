@@ -106,7 +106,7 @@ consteval auto diagnose_any_dispatcher() -> void {
   using id_type = CandidateList::id_type;
 
   // every overload set must be able to handle ids outside of `CandidateList`
-  if (not std::invocable<Overload&, rbe::detail::unmatched<id_type>>) {
+  if (not std::invocable<Overload&, frames::detail::unmatched<id_type>>) {
     throw std::invalid_argument(
         "overload set must contain a fallback callback (invocable with the observed id, or with no "
         "arguments at all) to handle unrecognized messages"
