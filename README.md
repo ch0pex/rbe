@@ -100,7 +100,7 @@ RBE provides a flexible and recursive message framing system. By defining a fram
   - `rbe::many<T>`: a run of messages, each one walked using its own length field
 
 ```cpp
-#include <rbe/framing.hpp>
+#include <rbe/frames.hpp>
 
 using packet = rbe::frame<
     PacketHeader,                                 // packet header

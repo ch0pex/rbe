@@ -11,7 +11,7 @@
 // --- Includes ---
 #include <rbe/annotations/id.hpp>
 #include <rbe/core/detail/static_string.hpp>
-#include <rbe/framing/detail/candidate_list.hpp>
+#include <rbe/frames/detail/candidate_list.hpp>
 
 // --- STD ---
 #include <concepts>

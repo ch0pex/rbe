@@ -581,16 +581,16 @@ static_assert(rbe::wire_size_of<ItchHeader>() + rbe::wire_size_of<DLCR>() == 48)
 // Framing
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = rbe::any<
+using messages = rbe::frames::any<
     SystemEvent, StockDirectory, StockTradingAction, RegSHORestriction, MarketParticipantPosition, MWCBDeclineLevel,
     MWCBStatus, IPOQuotingPeriodUpdate, LULDAuctionCollar, OperationalHalt, AddOrder, AddOrderMPID, OrderExecuted,
     OrderExecutedWithPrice, OrderCancel, OrderDelete, OrderReplace, Trade, CrossTrade, BrokenTrade, NOII, RPII, DLCR>;
 
 /// One ITCH message: `ItchHeader` followed by the message selected by `msg_type`.
 /// ITCH carries no length of its own: it is bounded by the enclosing `packet`.
-using message = rbe::frame<ItchHeader, messages>;
+using message = rbe::frames::frame<ItchHeader, messages>;
 
 /// One SoupBinTCP packet: `SoupHeader` followed by exactly one ITCH message.
-using packet = rbe::frame<SoupHeader, message>;
+using packet = rbe::frames::frame<SoupHeader, message>;
 
 } // namespace nasdaq

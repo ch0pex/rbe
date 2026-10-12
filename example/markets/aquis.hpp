@@ -15,7 +15,7 @@
  * Every market data message starts with a 6-byte header carrying the
  * message type, its total wire length, and the stream sequence number.
  * The header is declared once as `Header` and composed with the message
- * set through `rbe::frame`: `rbe::id` on the header field selects the
+ * set through `rbe::frames::frame`: `rbe::id` on the header field selects the
  * message annotated with the matching `rbe::id(value)`, and
  * `rbe::frame_length` bounds it. See `message` and `packet` at the end.
  */
@@ -397,16 +397,16 @@ static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<ReplayResponse>() 
 // ─────────────────────────────────────────────────────────────────────
 
 
-using messages = rbe::any<
+using messages = rbe::frames::any<
     Heartbeat, OrderAdd, OrderCancel, OrderModify, QuoteAddReplace, QuoteCancel, Trade, TradeReport, TradeReportModify,
     TradeReportCancel, TradeBust, SecurityStatistics, TraderDefinition, TickTableData, SecurityDefinition,
     SecurityStatus, AoDUpdate, SnapshotStart, BookStatus, BookEntry, Login, ReplayRequest, ReplayResponse>;
 
 /// One market data message: `Header` followed by the message selected by `msg_type`.
-using message = rbe::frame<Header, messages>;
+using message = rbe::frames::frame<Header, messages>;
 
 /// One multicast UDP payload: `PacketHeader` followed by `count` back-to-back messages.
 /// `PacketHeader` carries no length, so the packet runs to the end of the datagram.
-using packet = rbe::frame<PacketHeader, rbe::many<message>>;
+using packet = rbe::frames::frame<PacketHeader, rbe::frames::many<message>>;
 
 } // namespace aquis

@@ -17,7 +17,7 @@
  * by one or more back-to-back messages. Every message starts with a
  * 3-byte header carrying its 2-byte length and 1-byte type code. The
  * header is declared once as `Header` and composed with the message set
- * through `rbe::frame`: `rbe::id` on the header field selects the message
+ * through `rbe::frames::frame`: `rbe::id` on the header field selects the message
  * annotated with the matching `rbe::id(value)`, and `rbe::frame_length`
  * bounds it. See `message` and `packet` at the end.
  */
@@ -856,7 +856,7 @@ static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<Analytics>() == 10
 // Framing
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = rbe::any<
+using messages = rbe::frames::any<
     LoginRequest, LoginResponse, ReplayRequest, ReplayResponse, RecoveryRequest, RecoveryResponse,
     ReplayAndRecoveryComplete, SystemEvent, InstrumentDirectory, InstrumentDirectoryEquities, InstrumentStatus,
     AddOrderMBO, AddOrderShortMBO, AddOrderMBP, AddOrderShortMBP, AddOrderIncremental, OrderModify, OrderDelete,
@@ -864,10 +864,10 @@ using messages = rbe::any<
     Analytics>;
 
 /// One GTP message: `Header` followed by the message selected by `msg_type`.
-using message = rbe::frame<Header, messages>;
+using message = rbe::frames::frame<Header, messages>;
 
 /// One UDP packet: `UnitHeader` followed by `message_count` back-to-back messages
 /// (a `message_count` of zero is a heartbeat).
-using packet = rbe::frame<UnitHeader, rbe::many<message>>;
+using packet = rbe::frames::frame<UnitHeader, rbe::frames::many<message>>;
 
 } // namespace lse

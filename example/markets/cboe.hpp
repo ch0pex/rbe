@@ -23,7 +23,7 @@
  *    the wire size is fixed per message type.
  *
  * Each protocol declares its `Header` once and composes it with its
- * message set through `rbe::frame`: `rbe::id` on the header field selects
+ * message set through `rbe::frames::frame`: `rbe::id` on the header field selects
  * the message annotated with the matching `rbe::id(value)`. See `message`
  * (and `packet` for PITCH) at the end of each namespace.
  */
@@ -593,7 +593,7 @@ static_assert(rbe::wire_size_of<Header>() + rbe::wire_size_of<IndexQuoteEDSP>() 
 // Framing
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = rbe::any<
+using messages = rbe::frames::any<
     Login, LoginResponse, GapRequest, GapResponse, SpinImageAvailable, SpinRequest, SpinResponse, SpinFinished, Time,
     UnitClear, AddOrderLong, AddOrderShort, AddOrderExpanded, OrderExecuted, OrderExecutedAtPriceSize, ReduceSizeLong,
     ReduceSizeShort, ModifyOrderLong, ModifyOrderShort, DeleteOrder, TradeLong, TradeShort, TradeExtended,
@@ -601,11 +601,11 @@ using messages = rbe::any<
     AuctionUpdate, AuctionSummary, IndexQuote, IndexQuoteEDSP>;
 
 /// One PITCH / GRP / Spin message: `Header` followed by the message selected by `msg_type`.
-using message = rbe::frame<Header, messages>;
+using message = rbe::frames::frame<Header, messages>;
 
 /// One UDP frame: `SequencedUnitHeader` followed by `count` back-to-back messages
 /// (a `count` of zero is a heartbeat).
-using packet = rbe::frame<SequencedUnitHeader, rbe::many<message>>;
+using packet = rbe::frames::frame<SequencedUnitHeader, rbe::frames::many<message>>;
 
 } // namespace pitch
 
@@ -954,17 +954,17 @@ struct [[=rbe::pack_le, =rbe::id(message_type_t::trading_status)]] TradingStatus
 // Framing
 // ─────────────────────────────────────────────────────────────────────
 
-using messages = rbe::any<
+using messages = rbe::frames::any<
     Logon, LogonAccepted, LogonRejected, ExpandedSpin, ExtendedSpin, SpinDone, ServerHeartbeat, ClientHeartbeat,
     Seconds, Milliseconds, ExtendedBidUpdate, ExpandedBidUpdate, LongBidUpdate, ShortBidUpdate, ExtendedAskUpdate,
     ExpandedAskUpdate, LongAskUpdate, ShortAskUpdate, ExpandedTwoSidedUpdate, LongTwoSidedUpdate, ShortTwoSidedUpdate,
     ExtendedTwoSidedUpdate, ExtendedTrade, ExpandedTrade, LongTrade, ShortTrade, TradingStatus>;
 
 /// One TOP message without its line terminator: `Header` followed by the message selected by
-/// `msg_type`, delimited by the id (`rbe::dispatch_delimited_frame`). It is the message as a value, not
+/// `msg_type`, delimited by the id (`rbe::frames::dispatch_delimited`). It is the message as a value, not
 /// as it sits on the wire: on the wire every message is followed by an LF that no candidate accounts
 /// for, so a `many<message>` would land on that LF -- `line` is the frame for a TOP stream.
-using message = rbe::frame<Header, messages>;
+using message = rbe::frames::frame<Header, messages>;
 
 /// One TOP message as it sits on the wire: `message` plus its terminating LF and any LF padding after it.
 ///
@@ -974,10 +974,15 @@ using message = rbe::frame<Header, messages>;
 /// for that scan. Two things follow: `length()` covers the terminator and the padding, so `many<line>`
 /// advances line by line, and the extent does not depend on the id, so an unknown `msg_type` is yielded
 /// as an `any` over its own line and iteration goes on past it.
-class line_view : public rbe::dsrl::base_frame<Header, messages::dsrl_type> {
-  using base = rbe::dsrl::base_frame<Header, messages::dsrl_type>;
+class line_view : public rbe::frames::dsrl::base_frame<Header, messages::dsrl_type> {
+  using base = rbe::frames::dsrl::base_frame<Header, messages::dsrl_type>;
 
 public:
+  /// The scan for the terminator is not detectable from the shape, and the shape would get it wrong: the
+  /// line ends at the first LF, whatever the id says. Self-delimiting, and O(n) -- the bare root states
+  /// exactly that and nothing about a cost it does not have.
+  using delimiting_concept = rbe::frames::self_delimited_tag;
+
   static constexpr auto make(buffer_type const buf) -> std::optional<line_view> {
     auto const hdr = header_return_type::make(buf); // step 1
     if (not hdr.has_value()) {
@@ -989,7 +994,7 @@ public:
       return std::nullopt; // incomplete line: wait for more bytes
     }
     auto const line = rest.first(*extent);
-    return rbe::dsrl::try_construct_payload<payload_type>(*hdr, line) // step 3
+    return rbe::frames::dsrl::try_construct_payload<payload_type>(*hdr, line) // step 3
         .transform([&](payload_return_type const p) { return line_view {*hdr, p, hdr->length() + line.size()}; });
   }
 
@@ -1011,16 +1016,17 @@ private:
   size_type line_length_;
 };
 
-/// The vocabulary serder for `line_view`: what makes `rbe::many<line>` compose, exactly as `rbe::blob`
-/// or `rbe::frame` do. It keeps the header-plus-payload shape, so the delimiting concepts classify it.
+/// The vocabulary serder for `line_view`: what makes `rbe::frames::many<line>` compose, exactly as `rbe::frames::blob`
+/// or `rbe::frames::frame` do. It keeps the header-plus-payload shape, so the delimiting concepts classify it.
 struct line {
-  using header_type  = Header;
-  using payload_type = messages;
-  using dsrl_type    = line_view;
+  using header_type        = Header;
+  using payload_type       = messages;
+  using delimiting_concept = rbe::frames::self_delimited_tag; ///< the terminator scan of line_view, see above
+  using dsrl_type          = line_view;
 };
 
 /// A run of TOP lines, LF padding included.
-using lines = rbe::many<line>;
+using lines = rbe::frames::many<line>;
 
 } // namespace top
 

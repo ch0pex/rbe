@@ -15,7 +15,7 @@
 // --- Includes ---
 #include "common_structs.hpp"
 
-#include <rbe/framing.hpp>
+#include <rbe/frames.hpp>
 
 
 // ============================================================
@@ -46,17 +46,22 @@ struct [[=rbe::little, = rbe::pack]] MessageIdHeader {
   [[=rbe::id]] std::int32_t id;
 };
 
+struct [[=rbe::big, =rbe::pack]] HeaderWithCount {
+  [[=rbe::payload_count]] std::uint16_t count;
+  std::uint16_t flags;
+};
+
 // clang-format on
 
 // ============================================================
 // Shorthands
 // ============================================================
-using candidates = rbe::any<MessageWithHeader, MessageWithHeaderPack>;
-using msg_frame  = rbe::frame<CommonHeader, MessageWithHeader>; // one wirable payload
-using any_frame  = rbe::frame<CommonHeader, candidates>; // candidate set payload
-using blob_frame = rbe::frame<CommonHeader, rbe::blob>; // opaque bytes payload
-using nested     = rbe::frame<NestedPackParent, msg_frame>; // nested frame payload
-using packet     = rbe::frame<NestedPackParent, rbe::many<any_frame>>; // two-level protocol
+using candidates = rbe::frames::any<MessageWithHeader, MessageWithHeaderPack>;
+using msg_frame  = rbe::frames::frame<CommonHeader, MessageWithHeader>; // one wirable payload
+using any_frame  = rbe::frames::frame<CommonHeader, candidates>; // candidate set payload
+using blob_frame = rbe::frames::frame<CommonHeader, rbe::frames::blob>; // opaque bytes payload
+using nested     = rbe::frames::frame<NestedPackParent, msg_frame>; // nested frame payload
+using packet     = rbe::frames::frame<NestedPackParent, rbe::frames::many<any_frame>>; // two-level protocol
 
 struct[[= rbe::id(0)]] msg_1 {
   int value1;
@@ -80,9 +85,9 @@ struct[[ = rbe::id(42), = rbe::empty ]] heartbeat {
 // The SBE shape: one header carrying both the id that selects the message and the extent of the
 // message block, so a sender on a newer schema can declare a block longer than this build knows how
 // to decode.
-struct [[=rbe::little, =rbe::pack]] IdAndBlockLengthHeader {
-  [[=rbe::payload_length]] std::uint16_t block_length;
-  [[=rbe::id]] std::int32_t template_id;
+struct[[ = rbe::little, = rbe::pack ]] IdAndBlockLengthHeader {
+  [[= rbe::payload_length]] std::uint16_t block_length;
+  [[= rbe::id]] std::int32_t template_id;
 };
 
 template<typename T>
@@ -90,7 +95,7 @@ concept msgs_1_and_2 = std::same_as<T, msg_1> or std::same_as<T, msg_2>;
 
 namespace dsrl {
 
-using any_test                = rbe::dsrl::any<msg_1, msg_2, msg_3>;
-using any_test_with_heartbeat = rbe::dsrl::any<msg_1, msg_2, msg_3, heartbeat>;
+using any_test                = rbe::frames::dsrl::any<msg_1, msg_2, msg_3>;
+using any_test_with_heartbeat = rbe::frames::dsrl::any<msg_1, msg_2, msg_3, heartbeat>;
 
 } // namespace dsrl

@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Alvaro Cabrera Barrio
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
-// rbe 0.0.1: single header, auto-generated from the library headers (79 headers).
+// rbe 0.0.1: single header, auto-generated from the library headers (81 headers).
 
 #pragma once
 
@@ -3195,10 +3195,10 @@ constexpr auto try_deserialize(std::span<std::byte const> const input, S str)
 
 } // namespace rbe
 
-// ===== rbe/framing.hpp =====
+// ===== rbe/frames.hpp =====
 
 /**
- * @file framing.hpp
+ * @file frames.hpp
  * @date 11/09/2026
  * @brief Framing module umbrella header
  */
@@ -3207,7 +3207,7 @@ constexpr auto try_deserialize(std::span<std::byte const> const input, S str)
 // --- Includes ---
 
 
-// ===== rbe/framing/any.hpp =====
+// ===== rbe/frames/any.hpp =====
 
 /**
  * @file any.hpp
@@ -3218,7 +3218,7 @@ constexpr auto try_deserialize(std::span<std::byte const> const input, S str)
 
 // --- Includes ---
 
-// ===== rbe/framing/detail/base_tags.hpp =====
+// ===== rbe/frames/detail/base_tags.hpp =====
 
 /**
  * @file is_any_detail.hpp
@@ -3241,7 +3241,7 @@ struct many_tag { };
 
 } // namespace rbe::detail
 
-// ===== rbe/framing/dsrl/any.hpp =====
+// ===== rbe/frames/dsrl/any.hpp =====
 
 /**
  * @file any.hpp
@@ -3254,7 +3254,7 @@ struct many_tag { };
 
 // --- Includes ---
 
-// ===== rbe/framing/detail/candidate_list.hpp =====
+// ===== rbe/frames/detail/candidate_list.hpp =====
 
 /**
  * @file candidate_list.hpp
@@ -3447,7 +3447,7 @@ struct candidate_list<T...> {
 
 } // namespace rbe::detail
 
-// ===== rbe/framing/dsrl/concepts.hpp =====
+// ===== rbe/frames/dsrl/concepts.hpp =====
 
 /**
  * @file concepts.hpp
@@ -3460,7 +3460,7 @@ struct candidate_list<T...> {
 
 // --- Includes ---
 
-// ===== rbe/framing/dsrl/detail/any_dispatcher.hpp =====
+// ===== rbe/frames/dsrl/detail/any_dispatcher.hpp =====
 
 /**
  * @file message_dispatcher_impl.hpp
@@ -3471,7 +3471,7 @@ struct candidate_list<T...> {
 
 // --- Includes ---
 
-// ===== rbe/framing/dsrl/any_unmatched.hpp =====
+// ===== rbe/frames/dsrl/any_unmatched.hpp =====
 
 /**
  * @file unknown.hpp
@@ -3486,7 +3486,7 @@ struct candidate_list<T...> {
 
 // NOTE: this file is deliberately not in the dsrl namespace,
 // not because it's used in both dslr and srl, but because
-// it would be too verbose to write rbe::dsrl::unmatched in the match callbacks
+// it would be too verbose to write rbe::frames::dsrl::unmatched in the match callbacks
 // Moreover probably in the future it will be used in other contexts,
 // so it is better to keep it in the rbe namespace
 namespace rbe {
@@ -3518,14 +3518,14 @@ concept unmatched = detail::specialization_of(^^T, ^^detail::unmatched);
 
 // --- STD ---
 
-namespace rbe::dsrl::detail {
+namespace rbe::frames::dsrl::detail {
 
-// dsrl::proxy<T> requires wirable T, which no empty type ever satisfies can_substitute
+// rbe::dsrl::proxy<T> requires wirable T, which no empty type ever satisfies can_substitute
 // so it needs to be checked first
 // clang-format off
 consteval auto is_proxy_invocable(std::meta::info candidate, std::meta::info overload) -> bool {
-  return can_substitute(^^dsrl::proxy, {candidate})
-     and rbe::detail::invoke_concept(^^std::invocable, {overload, substitute(^^dsrl::proxy, {candidate})});
+  return can_substitute(^^rbe::dsrl::proxy, {candidate})
+     and rbe::detail::invoke_concept(^^std::invocable, {overload, substitute(^^rbe::dsrl::proxy, {candidate})});
 }
 
 consteval auto is_match_invocable(std::meta::info candidate, std::meta::info overload) -> bool {
@@ -3553,7 +3553,7 @@ consteval auto is_bad_empty_match(std::meta::info candidate, std::meta::info ove
 // clang-format on
 
 consteval auto normalize_overload_type(std::meta::info const type) {
-  if (rbe::detail::specialization_of(type, ^^dsrl::proxy)) {
+  if (rbe::detail::specialization_of(type, ^^rbe::dsrl::proxy)) {
     return rbe::detail::normalize_type(rbe::detail::member_alias_of(type, "value_type"));
   }
   return type;
@@ -3625,25 +3625,25 @@ consteval auto diagnose_any_dispatcher() -> void {
   }
 
   // explicitly empty candidates carry no data to defer, so they must be handled eagerly (T), never
-  // through proxy<T>
+  // through rbe::dsrl::proxy<T>
   auto is_bad_empty_candidate = std::bind_back(is_bad_empty_match, ^^Overload);
   for (auto candidate: overload_types | std::views::filter(is_bad_empty_candidate)) {
     throw std::invalid_argument(
         "message type '" + std::string(display_string_of(candidate)) +
-        "' is annotated rbe::empty and is handled through proxy<T> -- an empty type carries no data to "
-        "defer, so it must be handled by its eager form (T) instead: replace the proxy<" +
+        "' is annotated rbe::empty and is handled through rbe::dsrl::proxy<T> -- an empty type carries no data to "
+        "defer, so it must be handled by its eager form (T) instead: replace the rbe::dsrl::proxy<" +
         std::string(display_string_of(candidate)) + "> overload with one taking '" +
         std::string(display_string_of(candidate)) + "' by value"
     );
   }
 
-  // a candidate must be handled by exactly one of its two forms -- invocable with both proxy<T> (lazy)
+  // a candidate must be handled by exactly one of its two forms -- invocable with both rbe::dsrl::proxy<T> (lazy)
   // and T (eager) leaves it unclear which one dispatch_matched should pick
   auto is_ambiguous_candidate = std::bind_back(is_ambiguous_match, ^^Overload);
   for (auto candidate: CandidateList::types | std::views::filter(is_ambiguous_candidate)) {
     throw std::invalid_argument(
         "overload set is ambiguous for message type '" + std::string(display_string_of(candidate)) +
-        "': it is invocable with both its lazy (proxy<T>) and eager (T) form -- keep only one"
+        "': it is invocable with both its rbe::dsrl::lazy (rbe::dsrl::proxy<T>) and rbe::dsrl::eager (T) form -- keep only one"
     );
   }
 }
@@ -3654,44 +3654,76 @@ constexpr auto dispatch_unmatched(Overload&& overload_set, T&& unmatched) -> dec
 }
 
 /// Called once `CandidateType` is known to be the candidate matching the observed id -- what's left is
-/// purely a compile-time overload resolution: `overload_set` may take either `proxy<CandidateType>` (lazy) or
+/// purely a compile-time overload resolution: `overload_set` may take either `rbe::dsrl::proxy<CandidateType>` (lazy) or
 /// `CandidateType` itself (eager), and whichever it's invocable with is used (both can't apply at once --
 /// `message_dispatcher` already rules that out), or it falls back to `dispatch_unmatched` if it's
 /// invocable with neither.
 template<class CandidateType, class Overload>
 constexpr auto dispatch_matched(Overload overload_set, std::span<std::byte const> buffer) -> decltype(auto) {
-  // NOTE: explicitly_empty needs to be first otherwise dsrl::proxy<CandidateType>  would fail the compilation
+  // NOTE: explicitly_empty needs to be first otherwise rbe::dsrl::proxy<CandidateType>  would fail the compilation
   if constexpr (explicitly_empty<CandidateType>) {
     return std::invoke(std::forward<Overload>(overload_set), CandidateType {});
   }
-  else if constexpr (std::invocable<Overload&, dsrl::proxy<CandidateType>>) {
-    return std::invoke(std::forward<Overload>(overload_set), rbe::deserialize<CandidateType>(buffer, dsrl::lazy));
+  else if constexpr (std::invocable<Overload&, rbe::dsrl::proxy<CandidateType>>) {
+    return std::invoke(std::forward<Overload>(overload_set), rbe::deserialize<CandidateType>(buffer, rbe::dsrl::lazy));
   }
   else if constexpr (std::invocable<Overload&, CandidateType>) {
-    return std::invoke(std::forward<Overload>(overload_set), rbe::deserialize<CandidateType>(buffer, dsrl::eager));
+    return std::invoke(std::forward<Overload>(overload_set), rbe::deserialize<CandidateType>(buffer, rbe::dsrl::eager));
   }
 }
 
 
-} // namespace rbe::dsrl::detail
+} // namespace rbe::frames::dsrl::detail
 
-// ===== rbe/framing/frame_concepts.hpp =====
+// ===== rbe/frames/frame_concepts.hpp =====
 
 /**
  * @file frame_concepts.hpp
  * @date 11/09/2026
  * @brief Level-agnostic core of the framing concepts
  *
- * A frame exists at three levels: the rbe:: vocabulary type the user writes (rbe::frame, see
- * frame.hpp), and its rbe::dsrl:: / rbe::srl:: lowerings. Lowering only rewrites the payload
+ * A frame exists at three levels: the rbe:: vocabulary type the user writes (rbe::frames::frame, see
+ * frame.hpp), and its rbe::frames::dsrl:: / rbe::frames::srl:: lowerings. Lowering only rewrites the payload
  * *representation*, never the shape of a frame nor the categories a payload may fall into, so the shape
- * (rbe::is_frame) and the payload of a lowered frame (rbe::frame_payload) are written once here and reused by
- * every level. What each level adds on top -- the traits it must expose, the API it must offer -- lives with
- * that level: rbe::frame_serder (frame_serder_concepts.hpp), rbe::dsrl::is_frame, rbe::srl::is_frame.
+ * (rbe::frames::is_frame) and the payload of a lowered frame (rbe::frames::payload) are written once here and
+ * reused by every level. What each level adds on top -- the traits it must expose, the API it must offer -- lives with
+ * that level: rbe::frames::frame_serder (frame_serder_concepts.hpp), rbe::frames::dsrl::is_frame,
+ * rbe::frames::srl::is_frame.
  *
  * Everything that only depends on the shape -- the delimiting classification of
- * frame_delimiting_concepts.hpp and detail/payload_extent.hpp -- is therefore written against
- * rbe::is_frame and applies to a frame and to its lowerings alike.
+ * frame_delimiting_tags.hpp and frame_delimiting_concepts.hpp -- is therefore written against
+ * rbe::frames::is_frame and applies to a frame and to its lowerings alike.
+ */
+
+
+// --- Includes ---
+
+// ===== rbe/frames/frame_delimiting_tags.hpp =====
+
+/**
+ * @file frame_delimiting_tags.hpp
+ * @date 12/10/2026
+ * @brief The delimiting categories of a frame, as tag types
+ *
+ * The vocabulary of the classification, and nothing else: the tags, what counts as one, and what it
+ * means for a frame to declare its own. How a frame that declares nothing gets one is the deduction in
+ * detail/frame_delimiting.hpp, and the questions asked of the answer are the concepts in
+ * frame_delimiting_concepts.hpp.
+ *
+ * The tags mirror that hierarchy of concepts by deriving from one another, so a category refines its
+ * parent the way std::forward_iterator_tag refines std::input_iterator_tag: every concept over them is
+ * one std::derived_from, and an interior node is a usable answer on its own -- a frame with an extended
+ * header is implicitly delimited and neither of the two implicit leaves.
+ *
+ * Which tag a frame carries follows the same rule the standard library follows for iterators: it is
+ * deduced from what is structurally detectable, and declared where it is not. Every frame carries it as a
+ * `delimiting_concept` member -- rbe::frames::is_frame requires one -- and the default frames, rbe::frames::frame and
+ * rbe::frames::dsrl::frame, have frame_delimiting_tag deduce theirs from their shape.
+ *
+ * A frame that resolves its own length in code (a terminator scan, a length buried in the payload, a
+ * composite discriminant) is the case the shape cannot see, and usually the case the shape gets wrong:
+ * rbe::frames::dsrl::base_frame deliberately declares no tag, so such a frame has nothing to inherit and has to
+ * state its category, exactly as it has to supply its own make() and length().
  */
 
 
@@ -3699,9 +3731,69 @@ constexpr auto dispatch_matched(Overload overload_set, std::span<std::byte const
 
 // --- STD ---
 
-namespace rbe {
+namespace rbe::detail {
 
-// TODO: structural concepts, see rbe::dsrl::any / rbe::dsrl::many
+/// The common base of every tag, so that rbe::frames::delimiting_tag is one std::derived_from as well
+struct delimiting_tag { };
+
+} // namespace rbe::detail
+
+namespace rbe::frames {
+
+/*
+ * @verbatim
+ *   Frame
+ *   |-- custom_delimited                      Any complexity
+ *   |-- buffer_delimited                      O(1)
+ *   `-- self_delimited
+ *       |-- explicitly_delimited
+ *       |   |-- length_delimited        O(1)
+ *       |   `-- count_delimited
+ *       |       |-- static_stride_delimited   O(1)
+ *       |       `-- !static_stride_delimited  O(n)
+ *       `-- implicitly_delimited
+ *           |-- static_delimited              O(1), a compile-time constant
+ *           |-- dispatch_delimited            O(1), one id lookup
+ *           `-- (an extended header)          O(1), no leaf of its own
+ * @endverbatim
+ */
+struct buffer_delimited_tag : rbe::detail::delimiting_tag { };
+struct custom_delimited_tag : rbe::detail::delimiting_tag { };
+struct self_delimited_tag : rbe::detail::delimiting_tag { };
+struct explicitly_delimited_tag : self_delimited_tag { };
+struct length_delimited_tag : explicitly_delimited_tag { };
+struct count_delimited_tag : explicitly_delimited_tag { };
+struct static_stride_delimited_tag : count_delimited_tag { };
+struct implicitly_delimited_tag : self_delimited_tag { };
+struct static_delimited_tag : implicitly_delimited_tag { };
+struct dispatch_delimited_tag : implicitly_delimited_tag { };
+
+/**
+ * @brief One of the delimiting categories above
+ *
+ * The three roots are the exhaustive answer to "who knows where this frame ends": the frame itself
+ * (self_delimited_tag and its refinements), the buffer, or code the frame supplies.
+ */
+template<typename T>
+concept delimiting_tag = std::derived_from<T, rbe::detail::delimiting_tag>;
+
+/**
+ * @brief A type that states which delimiting category it belongs to
+ *
+ * This is the part of the frame shape that rbe::frames::is_frame and rbe::frames::dsrl::is_frame check, which is why it
+ * lives here and not with the concepts: the nested `requires` keeps a type without the member -- or with
+ * a member that is not a tag -- a non-match rather than a hard error.
+ */
+template<typename T>
+concept declares_delimiting_concept = requires { requires delimiting_tag<typename T::delimiting_concept>; };
+
+} // namespace rbe::frames
+
+// --- STD ---
+
+namespace rbe::frames {
+
+// TODO: structural concepts, see rbe::frames::dsrl::any / rbe::frames::dsrl::many
 template<typename T>
 concept is_any = std::derived_from<T, detail::any_tag>;
 
@@ -3715,55 +3807,73 @@ concept is_many = std::derived_from<T, detail::many_tag>;
  * concept shared by the vocabulary frame and by both lowerings.
  */
 template<typename T>
-concept frame_header = wirable<T>;
+concept header = wirable<T>;
 
 /**
  * @brief The shape shared by every frame, at every level
  *
- * rbe::frame, rbe::dsrl::frame and rbe::srl::frame all expose the same header_type / payload_type pair.
- * This is the weakest thing worth calling a frame, and the only thing the delimiting classification needs:
- * it says nothing about how the frame is (de)serialized, which is what the per-level concepts add.
+ * rbe::frames::frame, rbe::frames::dsrl::frame and rbe::frames::srl::frame all expose the same header_type /
+ * payload_type pair and, with it, the delimiting category they belong to. This is the weakest thing worth calling a
+ * frame, and the only thing the delimiting classification needs: it says nothing about how the frame is (de)serialized,
+ * which is what the per-level concepts add.
+ *
+ * The category is required here, as a member and not as the rbe::frames::delimiting_concept_t that reads it: the
+ * trait is constrained on this concept, so asking it here would make the concept depend on itself. What
+ * it costs is that a frame written from scratch, deriving from nothing, is not a frame until it declares
+ * one -- rbe::frames::frame and rbe::frames::dsrl::base_frame declare rbe::frames::frame_delimiting_tag for everything
+ * else.
  */
 template<typename T>
 concept is_frame = requires {
   typename T::header_type;
   typename T::payload_type;
-  requires frame_header<typename T::header_type>;
+  requires header<typename T::header_type>;
+  requires declares_delimiting_concept<T>;
 };
 
 template<typename T>
-concept frame_wirable = wirable<T> or explicitly_empty<T>;
+concept wirable_payload = wirable<T> or explicitly_empty<T>;
 
 template<typename T>
-concept frame_wirable_class = wirable_class<T> or explicitly_empty<T>;
+concept wirable_class_payload = wirable_class<T> or explicitly_empty<T>;
 
 /**
- * @brief The payload of a lowered frame, shared by rbe::dsrl and rbe::srl
+ * @brief The payload of a lowered frame, shared by rbe::frames::dsrl and rbe::frames::srl
  *
  * The payload categories are the same on both sides of the wire, and so is the concept: a deserializer views
  * the payload bytes read-only and a serializer writes into them, but a type constructible from
  * std::span<std::byte const> is also constructible from std::span<std::byte>, which converts to it, so
- * testing the writable span covers both lowerings. The vocabulary counterpart is rbe::frame_serder_payload.
+ * testing the writable span covers both lowerings. The vocabulary counterpart is rbe::frames::serder_payload.
  */
 template<typename T>
-concept frame_payload = //
-    frame_wirable<T> // wirable or explicitly_empty
+concept payload = //
+    wirable_payload<T> // wirable or explicitly_empty
     or is_frame<T> // a nested frame
     or is_any<T> // a set of alternatives resolved by an id
     or is_many<T> // a sequence of frames
     or std::constructible_from<T, std::span<std::byte>>; // an opaque view over the payload bytes
 
 template<is_frame T>
-using frame_header_t = T::header_type;
+using header_t = T::header_type;
 
 template<is_frame T>
-using frame_payload_t = T::payload_type;
+using payload_t = T::payload_type;
 
-} // namespace rbe
+/**
+ * @brief The frame a `many` is a run of, at any level
+ *
+ * The element type is what the stride -- and so the cost of walking the run -- is a property of, so the
+ * alias is level-agnostic like the rest of this header: rbe::frames::many, rbe::frames::dsrl::many and a many of the
+ * user's own all spell it `frame_type`.
+ */
+template<is_many T>
+using many_element_t = T::frame_type;
+
+} // namespace rbe::frames
 
 // --- STD ---
 
-namespace rbe::dsrl {
+namespace rbe::frames::dsrl {
 
 namespace detail {
 
@@ -3778,18 +3888,18 @@ concept has_get = requires(T const& frame) { frame.template get<I>(); } or requi
 /**
  * @brief A frame deserializer: a non-owning view over a frame's bytes that decodes it lazily
  *
- * On top of the shape, this is the API rbe::dsrl::frame offers and the one generic code (flatten, many)
+ * On top of the shape, this is the API rbe::frames::dsrl::frame offers and the one generic code (flatten, many)
  * relies on.
  *
  * @note one common mistake that the user might make
- * is that they might mix rbe::dsrl::frame with rbe::frame we could check
+ * is that they might mix rbe::frames::dsrl::frame with rbe::frames::frame we could check
  * if payload is a serder to provide them a btter error message. However
  * it's not possible to include here the serder concepts because it would
  * create a circular dependency, so we will have to live with the current error message
  * until we find a better way to do it.
  */
 template<typename T>
-concept is_frame = rbe::is_frame<T> and requires(T const ct) {
+concept is_frame = rbe::frames::is_frame<T> and requires(T const ct) {
   typename T::buffer_type;
   typename T::size_type;
 
@@ -3801,15 +3911,15 @@ concept is_frame = rbe::is_frame<T> and requires(T const ct) {
   { ct.data() } -> std::same_as<std::byte const*>;
 
   requires std::constructible_from<T, typename T::buffer_type>;
-  requires frame_header<typename T::header_type>;
-  requires frame_payload<typename T::payload_type>;
+  requires frames::header<typename T::header_type>;
+  requires frames::payload<typename T::payload_type>;
+  requires frames::declares_delimiting_concept<T>;
 };
 
 
 /// A frame that can be taken apart: `auto [header, payload] = frame`
 template<typename T>
 concept decomposable_frame = is_frame<T> and detail::has_get<T, 0> and detail::has_get<T, 1>;
-
 
 /**
  * @brief Checks whether Overload is an unambiguous dispatcher for every message in MsgList
@@ -3832,13 +3942,13 @@ concept decomposable_frame = is_frame<T> and detail::has_get<T, 0> and detail::h
 template<typename Overload, typename CandidateList>
 concept any_dispatcher = rbe::detail::no_throw(detail::diagnose_any_dispatcher<Overload, CandidateList>);
 
-} // namespace rbe::dsrl
+} // namespace rbe::frames::dsrl
 
 // --- STD ---
 
-namespace rbe::dsrl {
+namespace rbe::frames::dsrl {
 
-template<frame_wirable_class... Args>
+template<frames::wirable_class_payload... Args>
 class any : public rbe::detail::any_tag {
 public:
   using candidates  = rbe::detail::candidate_list<Args...>;
@@ -3945,13 +4055,13 @@ public:
     return index_ == candidates::template index_of<T>();
   }
 
-  template<rbe::detail::belongs_to<candidates> T, strategy S = lazy_t>
+  template<rbe::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
     requires(wirable_class<T>)
-  [[nodiscard]] constexpr auto as(S strategy = lazy) const -> std::optional<return_type<S, T>> {
-    return is<T>() ? std::optional<return_type<S, T>>(rbe::deserialize<T>(data_, strategy)) : std::nullopt;
+  [[nodiscard]] constexpr auto as(S strategy = rbe::dsrl::lazy) const -> std::optional<rbe::dsrl::return_type<S, T>> {
+    return is<T>() ? std::optional<rbe::dsrl::return_type<S, T>>(rbe::deserialize<T>(data_, strategy)) : std::nullopt;
   }
 
-  template<rbe::detail::belongs_to<candidates> T, strategy S = lazy_t>
+  template<rbe::detail::belongs_to<candidates> T, rbe::dsrl::strategy S = rbe::dsrl::lazy_t>
     requires(explicitly_empty<T>)
   [[nodiscard]] constexpr auto as() const -> std::optional<T> {
     return is<T>() ? std::optional<T>(T {}) : std::nullopt;
@@ -4020,9 +4130,9 @@ private:
   buffer_type data_;
 };
 
-} // namespace rbe::dsrl
+} // namespace rbe::frames::dsrl
 
-// ===== rbe/framing/srl/any.hpp =====
+// ===== rbe/frames/srl/any.hpp =====
 
 /**
  * @file any.hpp
@@ -4038,7 +4148,7 @@ private:
 // --- STD ---
 
 
-namespace rbe::srl {
+namespace rbe::frames::srl {
 
 
 template<wirable_class... Args>
@@ -4047,20 +4157,20 @@ public:
 private:
 };
 
-} // namespace rbe::srl
+} // namespace rbe::frames::srl
 
 
-namespace rbe {
+namespace rbe::frames {
 
-template<frame_wirable_class... Args>
+template<wirable_class_payload... Args>
 struct any : detail::any_tag {
   using dsrl_type = dsrl::any<Args...>;
   // using srl_type  = srl::any<Args...>;
 };
 
-} // namespace rbe
+} // namespace rbe::frames
 
-// ===== rbe/framing/blob.hpp =====
+// ===== rbe/frames/blob.hpp =====
 
 /**
  * @file blob.hpp
@@ -4075,16 +4185,16 @@ struct any : detail::any_tag {
 
 // --- STD ---
 
-namespace rbe {
+namespace rbe::frames {
 
 struct blob {
   using dsrl_type = std::span<std::byte const>;
   using srl_type  = std::span<std::byte>;
 };
 
-} // namespace rbe
+} // namespace rbe::frames
 
-// ===== rbe/framing/deserialize.hpp =====
+// ===== rbe/frames/deserialize.hpp =====
 
 /**
  * @file deserialize.hpp
@@ -4098,7 +4208,7 @@ struct blob {
 
 // --- Includes ---
 
-// ===== rbe/framing/frame_serder_concepts.hpp =====
+// ===== rbe/frames/frame_serder_concepts.hpp =====
 
 /**
  * @file frame_serder_concepts.hpp
@@ -4106,24 +4216,24 @@ struct blob {
  * @brief Vocabulary level of the framing concepts
  *
  * Only what the vocabulary level adds on top of the shared core (frame_concepts.hpp) lives here: the traits
- * a type must expose to be lowered (rbe::serder_traits), the payload a user may write
- * (rbe::frame_serder_payload) and the check that both lowerings of a frame are well formed
- * (rbe::frame_serder).
+ * a type must expose to be lowered (rbe::frames::serder_traits), the payload a user may write
+ * (rbe::frames::serder_payload) and the check that both lowerings of a frame are well formed
+ * (rbe::frames::frame_serder).
  */
 
 
 // --- Includes ---
 
-// ===== rbe/framing/srl/concepts.hpp =====
+// ===== rbe/frames/srl/concepts.hpp =====
 
 /**
  * @file frame_concepts.hpp
  * @date 16/09/2026
  * @brief Serialization level of the framing concepts
  *
- * Only what the srl lowering adds on top of the shared core (rbe/framing/frame_concepts.hpp) lives here.
- * The shape (rbe::is_frame), the header (rbe::frame_header) and the payload (rbe::frame_payload) are used
- * as-is from the enclosing namespace.
+ * Only what the srl lowering adds on top of the shared core (rbe/frames/frame_concepts.hpp) lives here.
+ * The shape (rbe::frames::is_frame), the header (rbe::frames::header) and the payload
+ * (rbe::frames::payload) are used as-is from the enclosing namespace.
  */
 
 
@@ -4131,27 +4241,28 @@ struct blob {
 
 // --- STD ---
 
-namespace rbe::srl {
+namespace rbe::frames::srl {
 
 /**
  * @brief A frame serializer
  *
- * @note only the shape is required for now; the API requirements land with rbe::srl::frame
+ * @note only the shape is required for now; the API requirements land with rbe::frames::srl::frame
  */
 template<typename T>
-concept is_frame = rbe::is_frame<T> and frame_payload<typename T::payload_type>;
+concept is_frame = rbe::frames::is_frame<T> and frames::payload<typename T::payload_type>;
 
-} // namespace rbe::srl
+} // namespace rbe::frames::srl
 
 // --- STD ---
 
-namespace rbe {
+namespace rbe::frames {
 
 /**
  * @brief A vocabulary type that knows how to lower itself to a (de)serializer
  *
- * rbe::frame, rbe::blob, rbe::many and rbe::any are the vocabulary types the user writes; each one names its
- * dsrl / srl counterpart, which is what rbe::detail::to_dsrl_t and rbe::detail::to_srl_t map through.
+ * rbe::frames::frame, rbe::frames::blob, rbe::frames::many and rbe::frames::any are the vocabulary types the user
+ * writes; each one names its dsrl / srl counterpart, which is what rbe::detail::to_dsrl_t and rbe::detail::to_srl_t map
+ * through.
  */
 template<typename T>
 concept serder_traits = requires {
@@ -4162,22 +4273,22 @@ concept serder_traits = requires {
 /**
  * @brief The payload of a vocabulary frame
  *
- * The vocabulary level does not spell the payload categories out the way rbe::frame_payload does:
+ * The vocabulary level does not spell the payload categories out the way rbe::frames::payload does:
  * a payload is either a plain wirable message, lowered as-is, or a vocabulary type that lowers itself, which
  * is what blob, many, any and nested frames have in common.
  */
 template<typename T>
-concept frame_serder_payload = wirable<T> or serder_traits<T>;
+concept serder_payload = wirable<T> or serder_traits<T>;
 
 /**
  * @brief A vocabulary frame: a frame shape whose lowerings are both well formed
  *
- * This is what rbe::frame produces, and what a user writes their protocol with. Its lowerings are checked by
+ * This is what rbe::frames::frame produces, and what a user writes their protocol with. Its lowerings are checked by
  * the concept of their own level, so a malformed frame is rejected where it is written, not where it is used.
  */
 template<typename T>
 concept frame_serder = is_frame<T> and serder_traits<T> and requires {
-  requires frame_serder_payload<typename T::payload_type>;
+  requires serder_payload<typename T::payload_type>;
   requires dsrl::is_frame<typename T::dsrl_type>;
 
   // TODO:
@@ -4186,15 +4297,15 @@ concept frame_serder = is_frame<T> and serder_traits<T> and requires {
 };
 
 template<frame_serder T>
-using frame_value_t = T::value_type;
+using value_t = T::value_type;
 
 template<frame_serder T>
-using frame_dsrl_t = T::dsrl_type;
+using dsrl_t = T::dsrl_type;
 
 template<frame_serder T>
-using frame_srl_t = T::srl_type;
+using srl_t = T::srl_type;
 
-} // namespace rbe
+} // namespace rbe::frames
 
 // --- STD ---
 
@@ -4208,11 +4319,11 @@ namespace rbe {
  *
  * If this precondition is violated, reading the frame is undefined behavior. `try_deserialize` checks it.
  *
- * @tparam T A vocabulary frame, e.g. `rbe::frame<Header, Payload>` or a custom serder like `cboe::top::line`.
+ * @tparam T A vocabulary frame, e.g. `rbe::frames::frame<Header, Payload>` or a custom serder like `cboe::top::line`.
  * @param input The bytes of the frame, which the view keeps referring to: they must outlive it.
  * @return The `T::dsrl_type` view over `input`.
  */
-template<frame_serder T>
+template<frames::frame_serder T>
 [[nodiscard]] constexpr auto deserialize(std::span<std::byte const> const input) -> typename T::dsrl_type {
   return typename T::dsrl_type {input};
 }
@@ -4224,7 +4335,7 @@ template<frame_serder T>
  * @param input The bytes of the frame, which the view keeps referring to: they must outlive it.
  * @return The `T::dsrl_type` view over `input`, or `std::nullopt` if the header or the payload do not fit in it.
  */
-template<frame_serder T>
+template<frames::frame_serder T>
 [[nodiscard]] constexpr auto try_deserialize(std::span<std::byte const> const input)
     -> std::optional<typename T::dsrl_type> //
 {
@@ -4233,7 +4344,7 @@ template<frame_serder T>
 
 } // namespace rbe
 
-// ===== rbe/framing/dsrl/views.hpp =====
+// ===== rbe/frames/dsrl/views.hpp =====
 
 /**
  * @file views.hpp
@@ -4246,7 +4357,7 @@ template<frame_serder T>
 
 // --- Includes ---
 
-// ===== rbe/framing/dsrl/many.hpp =====
+// ===== rbe/frames/dsrl/many.hpp =====
 
 /**
  * @file many.hpp
@@ -4259,33 +4370,14 @@ template<frame_serder T>
 
 // --- Includes ---
 
-// ===== rbe/framing/frame_delimiting_concepts.hpp =====
+// ===== rbe/core/detail/split_span.hpp =====
 
 /**
- * @file frame_delimiting_concepts.hpp
- * @date 11/09/2026
- * @brief Compile-time classification of how a frame's length is resolved
+ * @file split_span.hpp
+ * @date 10/10/2026
+ * @brief Short description
  *
- * These concepts only look at the shape of a frame (rbe::is_frame), so they apply to an rbe:: vocabulary
- * frame and to its dsrl:: / srl:: lowerings alike: lowering never changes how a frame is delimited.
- *
- * @note 'delimited' word is used here rather than 'sized' to avoid confusion between length and size semantics
- * in the library: length is the value readen from the wire and size is the hardcoded size of a type in RBE.
- *
- */
-
-
-// --- Includes ---
-
-// ===== rbe/framing/detail/payload_extent.hpp =====
-
-/**
- * @file payload_extent.hpp
- * @date 14/09/2026
- * @brief Compile-time classification of where a frame resolves its payload length from
- *
- * The classification only looks at the structure of a frame (its header_type and payload_type), so it applies
- * equally to rbe:: vocabulary frames and to their dsrl:: / srl:: lowerings: lowering never changes the extent.
+ * Longer description
  */
 
 
@@ -4295,62 +4387,291 @@ template<frame_serder T>
 
 namespace rbe::detail {
 
-/**
- * @brief Where a frame resolves its payload length from, in priority order
- *
- * Wire values take precedence over static sizes. Shared by dsrl::frame::payload_length() and the
- * rbe::self_delimiting_frame / rbe::buffer_delimited_frame concepts, so the runtime resolution and the
- * compile-time classification cannot drift apart.
- */
-enum class payload_extent : std::uint8_t {
-  payload_length_field, ///< payload_length annotated header field
-  frame_length_field, ///< frame_length annotated header field minus header_length
-  nested_frame, ///< the nested frame's own length(), self-delimiting only if the nested frame is
-  static_size, ///< rbe::wire_size_of<payload_type>()
-  any_id, ///< rbe::any whose alternatives imply their length from the id
-  buffer_end, ///< the payload extends to the end of the buffer (blob, span constructible, many)
+template<typename T, std::size_t Extent = std::dynamic_extent>
+class split_span : std::span<T, Extent> {
+  using base = std::span<T, Extent>;
+
+public:
+  // --- Type traits ---
+
+  using buffer_type = std::span<T, Extent>;
+  using left_type   = std::span<T>;
+  using right_type  = std::span<T>;
+  using typename base::element_type;
+  using typename base::size_type;
+  using typename base::value_type;
+
+  // --- Constructors ---
+
+  using base::base;
+
+  // --- Member functions ---
+
+  using base::data;
+  using base::size;
+  using base::size_bytes;
+
+  [[nodiscard]] constexpr auto left() const -> left_type { return this->first(middle()); }
+
+  [[nodiscard]] constexpr auto right() const -> right_type { return this->subspan(middle()); }
+
+  [[nodiscard]] constexpr auto middle() const -> size_type { return middle_; }
+
+  constexpr auto middle(size_type const position) -> void {
+    assert(position <= size());
+    middle_ = position;
+  }
+
+  constexpr auto advance(size_type const step) -> void {
+    assert(middle_ + step <= size());
+    middle_ += step;
+  }
+
+  constexpr auto retreat(size_type const step) -> void {
+    assert(step <= middle_);
+    middle_ -= step;
+  }
+
+  constexpr auto as_span() const -> buffer_type { return buffer_type {data(), size_bytes()}; }
+
+private:
+  size_type middle_ {0};
 };
 
-template<frame_header HeaderType, typename PayloadType>
-[[nodiscard]] consteval auto payload_extent_of() -> payload_extent {
-  if (contains_annotation<HeaderType, rbe::payload_length>) {
-    return payload_extent::payload_length_field;
-  }
-  if (contains_annotation<HeaderType, rbe::frame_length>) {
-    return payload_extent::frame_length_field;
-  }
-  if (is_frame<PayloadType>) {
-    return payload_extent::nested_frame;
-  }
-  if (wirable<PayloadType>) {
-    return payload_extent::static_size;
-  }
-  if (is_any<PayloadType>) {
-    return payload_extent::any_id;
-  }
-  return payload_extent::buffer_end;
-}
+template<typename T>
+split_span(T*, std::size_t) -> split_span<T>;
 
-// concepts cannot be recursive, so the walk through nested frames lives here
-template<is_frame T>
-[[nodiscard]] consteval auto is_self_delimiting() -> bool {
-  constexpr auto extent = payload_extent_of<typename T::header_type, typename T::payload_type>();
-  if constexpr (extent == payload_extent::nested_frame) {
-    return is_self_delimiting<typename T::payload_type>();
+template<typename T, std::size_t Extent>
+split_span(std::span<T, Extent>, std::size_t) -> split_span<T>;
+
+} // namespace rbe::detail
+
+// ===== rbe/frames/frame_delimiting_concepts.hpp =====
+
+/**
+ * @file frame_delimiting_concepts.hpp
+ * @date 11/09/2026
+ * @brief Classification of every frame by how its length is resolved from the wire.
+ *
+ * The concepts below form a hierarchy: each node refines its parent, and the leaves are mutually
+ * exclusive, so any given frame matches exactly one leaf. The right column is the algorithmic
+ * complexity of extracting the frame length for that category.
+ *
+ * @verbatim
+ *   Frame
+ *   |-- custom_delimited                     Any complexity
+ *   |-- buffer_delimited                     O(1)
+ *   `-- self_delimited
+ *       |-- explicitly_delimited
+ *       |   |-- length_delimited             O(1)
+ *       |   `-- count_delimited
+ *       |       |-- static_stride_delimited  O(1)
+ *       |       `-- !static_stride_delimited O(n)
+ *       `-- implicitly_delimited
+ *           |-- static_delimited             O(1), a compile-time constant
+ *           |-- dispatch_delimited           O(1), one id lookup
+ *           `-- (an extended header)               O(1), no leaf of its own
+ * @endverbatim
+ *
+ */
+
+
+// --- Includes ---
+
+// ===== rbe/frames/detail/frame_delimiting.hpp =====
+
+/**
+ * @file frame_delimiting.hpp
+ * @date 12/10/2026
+ * @brief How a frame gets its delimiting tag, and the walks a single tag cannot answer
+ *
+ * The deduction reads the frame itself -- the length annotations of its header and the category of its
+ * payload -- and is the single authority on the precedence between them: the wire is the golden source,
+ * so a header length field outranks whatever the payload types could have answered. dsrl::frame::length()
+ * resolves at runtime in that same order, and the two must be changed together.
+ *
+ * The walks are here for the reason the classification needs functions at all: concepts cannot recurse,
+ * and a tag speaks only for the frame that carries it. The size of a nested chain of static frames, and
+ * the cost of resolving one, are both properties of the whole chain.
+ *
+ * Everything here only looks at the shape of a frame (its header_type and payload_type), so it applies
+ * equally to rbe:: vocabulary frames and to their dsrl:: / srl:: lowerings: lowering never changes the
+ * category.
+ */
+
+
+// --- Includes ---
+
+// --- STD ---
+
+namespace rbe::detail {
+
+template<frames::header H, typename P>
+[[nodiscard]] consteval auto frame_delimiting() -> std::meta::info;
+
+/**
+ * @brief Whether the delimiting category of T refines Tag
+ *
+ * One std::derived_from is all a category test ever is, which is the point of the tags. The nested
+ * requires keeps a type with no category -- a non-frame, or a frame whose header and payload do not form
+ * one -- a non-match instead of a hard error.
+ */
+template<typename T, typename Tag>
+concept is_tag = requires { requires std::derived_from<typename T::delimiting_concept, Tag>; };
+
+/// Whether the element of a `many` has a compile-time-constant size, so the run can be strided over
+template<typename P>
+[[nodiscard]] consteval auto has_static_stride() -> bool {
+  if constexpr (frames::is_many<P> and requires { typename P::frame_type; }) {
+    return std::derived_from<typename frames::many_element_t<P>::delimiting_concept, frames::static_delimited_tag>;
   }
   else {
-    return extent != payload_extent::buffer_end;
+    return false;
   }
 }
 
-template<is_frame T>
-[[nodiscard]] consteval auto is_dispatch_delimited() -> bool {
-  constexpr auto extent = payload_extent_of<typename T::header_type, typename T::payload_type>();
-  if constexpr (extent == payload_extent::nested_frame) {
-    return is_dispatch_delimited<typename T::payload_type>();
+/**
+ * The deduction: which category the shape of a frame puts it in.
+ *
+ * The branches are in priority order and the order is the decision: the wire is the golden source, so a
+ * header that carries a length field is the authority however static the payload types are, and a count
+ * -- a length one step removed, bounding the run instead of the bytes -- comes right after it.
+ *
+ * The payload categories are tested before `frames::wirable_payload`, not after: a payload view is a class with no
+ * non-static data members of its own, so whether `wirable` rejects it is a property of
+ * detail::is_wirable_class_type (today, of its base-class exclusion) rather than of the classification.
+ * Testing the categories first makes the order mean what it says.
+ *
+ * A header annotated with rbe::header_length is the one case where a static payload does not make a
+ * static frame: the header declares its own length on the wire and may be extended past
+ * wire_size_of<header_type>(), so the frame resolves in O(1) without being a compile-time constant --
+ * frames::implicitly_delimited_tag, the interior node, and neither of its two leaves.
+ */
+template<frames::header H, typename P>
+[[nodiscard]] consteval auto frame_delimiting() -> std::meta::info {
+  constexpr auto extended_header = contains_annotation<H, rbe::header_length>;
+
+  if constexpr (contains_annotation<H, rbe::payload_length> or contains_annotation<H, rbe::frame_length>) {
+    return ^^frames::length_delimited_tag;
+  }
+  // lower priority than a byte length field: a count only settles the extent together with the stride.
+  //
+  // TODO(fork 3b): flipping `counted_runs_are_delimited` to true is the whole change, and it cannot land
+  // before rbe::frame_distance (fork 2): the dynamic-stride case is O(n) and dsrl::frame::length() has no
+  // way to report that. It is not a free switch either -- every counted run (aquis::packet, every
+  // HeaderWithCount frame) moves from buffer-delimited to count-delimited, in this classification and in
+  // the length() that reads it.
+  else if constexpr (
+      constexpr auto counted_runs_are_delimited = false;
+      counted_runs_are_delimited and contains_annotation<H, rbe::payload_count> and frames::is_many<P>
+  ) {
+    return has_static_stride<P>() ? ^^frames::static_stride_delimited_tag : ^^frames::count_delimited_tag;
+  }
+  else if constexpr (frames::is_frame<P>) {
+    // the nested frame's own category, not its shape: a declaration made deep in a chain of frames has to
+    // reach the outermost one, and reading the member rather than re-deducing is what carries it out.
+    using nested = typename P::delimiting_concept;
+
+    // an outer header adds bytes to a frame, it does not tell the inner one where to end
+    if constexpr (std::same_as<nested, frames::buffer_delimited_tag>) {
+      return ^^frames::buffer_delimited_tag;
+    }
+    else if constexpr (std::same_as<nested, frames::custom_delimited_tag>) {
+      return ^^frames::custom_delimited_tag;
+    }
+    else if constexpr (std::derived_from<nested, frames::static_delimited_tag>) {
+      return extended_header ? ^^frames::implicitly_delimited_tag : ^^frames::static_delimited_tag;
+    }
+    else if constexpr (std::derived_from<nested, frames::dispatch_delimited_tag>) {
+      return ^^frames::dispatch_delimited_tag; // the id the inner frame dispatches on settles the outer length too
+    }
+    else {
+      // the inner frame reads a field, counts its elements, scans for a terminator or has an extended
+      // header of its own: the outer frame has no field of its own, so it is implicit, and its cost is
+      // whatever the chain below it costs (see is_constant_length).
+      return ^^frames::implicitly_delimited_tag;
+    }
+  }
+  else if constexpr (frames::is_any<P>) {
+    return ^^frames::dispatch_delimited_tag; // the id picks the candidate, and the candidate is its own length
+  }
+  else if constexpr (frames::is_many<P>) {
+    return ^^frames::buffer_delimited_tag; // an unbounded run: with no count, it runs to the end of the buffer
+  }
+  else if constexpr (frames::wirable_payload<P>) {
+    // wirable, or explicitly empty: a header-only frame, whose payload is zero bytes wide.
+    // TODO: a variable-size wirable payload is frames::implicitly_delimited_tag and not frames::static_delimited_tag.
+    return extended_header ? ^^frames::implicitly_delimited_tag : ^^frames::static_delimited_tag;
   }
   else {
-    return extent == payload_extent::any_id;
+    return ^^frames::buffer_delimited_tag; // a blob, or any other view constructible from the payload bytes
+  }
+}
+
+/**
+ * @brief The length in bytes of a frame whose category says it is a compile-time constant
+ *
+ * Concepts cannot recurse and a tag does not carry a value, so the walk down the nested frames lives
+ * here. It answers with the size rather than with a bool because every caller needs the value: a nested
+ * frame adds it to its own header, a static-stride `many` multiplies it by the header count, and
+ * rbe::frames::static_length hands it to the user.
+ *
+ * The constraint is what keeps this honest about an extended header: such a frame is not
+ * frames::static_delimited_tag, so it never reaches here, however static its payload is.
+ */
+template<frames::is_frame T>
+  requires std::derived_from<typename T::delimiting_concept, frames::static_delimited_tag>
+[[nodiscard]] consteval auto static_frame_size() -> std::size_t {
+  using payload_type = frames::payload_t<T>;
+
+  constexpr auto header_size = rbe::wire_size_of<frames::header_t<T>>();
+
+  if constexpr (frames::is_frame<payload_type>) {
+    return header_size + static_frame_size<payload_type>();
+  }
+  else {
+    static_assert(
+        frames::wirable_payload<payload_type>,
+        "a frame declaring frames::static_delimited_tag must have a payload of a compile-time-constant size: a "
+        "wirable type, an explicitly empty one, or a nested frame that is itself static"
+    );
+    return header_size + rbe::wire_size_of<payload_type>();
+  }
+}
+
+/**
+ * @brief Whether resolving the frame length is O(1), which the outermost tag alone cannot answer
+ *
+ * The cost is a property of the whole chain: an outer frame pays whatever its nested frame's length
+ * costs, and `frames::implicitly_delimited_tag` says only that the outer frame reads no field of its own. So the
+ * walk goes down the payloads, and a single level that has to measure its elements one by one settles it
+ * for everything above.
+ *
+ * Three tags are not O(1): a counted run with no static stride (one element measured per element), a
+ * custom resolver, whose cost is whatever the user wrote, and a bare frames::self_delimited_tag -- a frame that
+ * declares only the root says that it finds its own end and nothing at all about what that costs, which
+ * is the terminator scan. A frame that does resolve in O(1) without fitting a leaf declares
+ * frames::implicitly_delimited_tag instead. Every other category reads a field, looks up an id, adds static
+ * sizes or takes the buffer size.
+ */
+template<frames::is_frame T>
+[[nodiscard]] consteval auto is_constant_length() -> bool {
+  using tag = typename T::delimiting_concept;
+
+  if constexpr (std::same_as<tag, frames::custom_delimited_tag> or std::same_as<tag, frames::self_delimited_tag>) {
+    return false;
+  }
+  else if constexpr (
+      std::derived_from<tag, frames::count_delimited_tag> and
+      not std::derived_from<tag, frames::static_stride_delimited_tag>
+  ) {
+    return false;
+  }
+  else if constexpr (frames::is_frame<frames::payload_t<T>>) {
+    return is_constant_length<frames::payload_t<T>>();
+  }
+  else {
+    return true;
   }
 }
 
@@ -4358,77 +4679,220 @@ template<is_frame T>
 
 // --- STD ---
 
-namespace rbe {
+namespace rbe::frames {
+
+// --- The traits the concepts below are written over ---
 
 /**
- * @brief A frame whose length can be resolved without looking at the size of the buffer
+ * @brief The category the shape of a frame puts it in, which is what every library frame declares
  *
- * The length comes from a header field (payload_length, frame_length), from static sizes, or from a nested
- * self-delimiting frame (see rbe::detail::payload_extent). Such a frame may be read from a larger buffer,
- * trailing bytes being padding, which is what allows a sequence of frames to share a single buffer.
+ * @tparam HeaderType  the header of the frame
+ * @tparam PayloadType the payload the header describes
+ */
+template<header HeaderType, typename PayloadType>
+using frame_delimiting_tag = [:detail::frame_delimiting<HeaderType, PayloadType>():];
+
+/**
+ * @brief The category a frame belongs to
+ *
+ * Every frame carries it as a member -- rbe::frames::is_frame requires it -- and a library frame has
+ * frame_delimiting_tag deduce it, so this is the spelling to read it by rather than a traits lookup.
+ */
+template<is_frame T>
+using delimiting_concept_t = typename T::delimiting_concept;
+
+
+/**
+ * @brief A frame whose length is resolved by user-provided logic.
+ *
+ * Escape hatch for delimiting schemes that none of the other categories model. Its complexity is
+ * whatever the custom resolver costs, so it sits outside the O(1) / O(n) classification.
+ *
+ * @note Never deduced: a frame is custom-delimited only by declaring `delimiting_concept`. A frame that
+ * does find its own end should declare the category it belongs to instead -- a terminator scan is
+ * `self_delimited_tag` -- and keep this for the schemes that fit nowhere.
+ *
+ * @tparam T The frame type to be evaluated.
  */
 template<typename T>
-concept self_delimiting_frame = is_frame<T> and detail::is_self_delimiting<T>();
+concept custom_delimited = is_frame<T> and detail::is_tag<T, custom_delimited_tag>;
 
 /**
- * @brief A frame whose payload extends to the end of the buffer it is read from
+ * @brief A frame that can find its own end without knowing the buffer size.
+ *
+ * The length is resolved from a header wire field, a `payload_count`, the static size of the payload
+ * types, or a nested frame that is itself self-delimiting (see `rbe::frames::delimiting_concept_t`).
+ * Such a frame may be read from a larger buffer, trailing bytes being either padding or the following
+ * frames, which is what lets a sequence of frames share a single buffer.
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+concept self_delimited = is_frame<T> and detail::is_tag<T, self_delimited_tag> and not custom_delimited<T>;
+
+/**
+ * @brief A frame whose payload extends to the end of the buffer it is read from.
  *
  * The buffer size is the frame length, so the buffer must cover exactly the frame: trailing bytes are
- * taken as payload, never as padding. Such a frame can only be the last one in a buffer.
- *
- * @note these frames are not iterable: a sequence of them cannot be split without an external length
- */
-template<typename T>
-concept buffer_delimited_frame = is_frame<T> and not detail::is_self_delimiting<T>();
-
-/**
- * @brief A frame whose length is explicitly resolved by reading a wire field.
- *
- * This concept requires the frame to be self-delimiting and checks if its
- * header contains an explicit annotation for either the total frame length
- * (`rbe::frame_length`) or the payload length (`rbe::payload_length`).
+ * taken as payload, never as padding. Such a frame can only be the last one in a buffer and a sequence
+ * of them cannot be split without an external length. Resolving its length is O(1) (the buffer size).
  *
  * @tparam T The frame type to be evaluated.
  */
 template<typename T>
-concept explicitly_delimited_frame = //
-    self_delimiting_frame<T> //
-    and (contains_annotation<frame_header_t<T>, rbe::frame_length> or
-         contains_annotation<frame_header_t<T>, rbe::payload_length>);
+concept buffer_delimited = is_frame<T> and detail::is_tag<T, buffer_delimited_tag> and not custom_delimited<T>;
 
 /**
- * @brief A frame whose length is resolved by the implicit size of its underlying types.
+ * @brief A self-delimiting frame whose length is resolved by reading a header wire field.
  *
- * This concept applies to self-delimiting frames that lack explicit length
- * annotations in their header.
- *
- * @note Determining the length of this kind of frame might be slower when the
- * payload is arbitrary (e.g., `std::any`), as it requires dynamic type
- * dispatching to calculate the total size. The `dispatch_delimited_frame` concept
- * is provided for cases where the payload is of type `rbe::any`.
+ * The header carries an explicit annotation for the total frame length (`rbe::frame_length`), the
+ * payload length (`rbe::payload_length`), or the element count (`rbe::payload_count`).
  *
  * @tparam T The frame type to be evaluated.
  */
 template<typename T>
-concept implicitly_delimited_frame = //
-    self_delimiting_frame<T> //
-    and not(contains_annotation<frame_header_t<T>, rbe::frame_length> or
-            contains_annotation<frame_header_t<T>, rbe::payload_length>);
+concept explicitly_delimited = self_delimited<T> and detail::is_tag<T, explicitly_delimited_tag>;
 
 /**
- * @brief A frame whose length is resolved dynamically at runtime, typically because its payload is of type `rbe::any`.
+ * @brief An explicitly-delimited frame whose length comes from a byte-length field.
+ *
+ * The header carries `rbe::frame_length` or `rbe::payload_length`, so the length is read directly as a
+ * number of bytes: O(1), regardless of what the payload holds.
+ *
+ * @tparam T The frame type to be evaluated.
  */
 template<typename T>
-concept dispatch_delimited_frame = self_delimiting_frame<T> and detail::is_dispatch_delimited<T>();
+concept length_delimited = explicitly_delimited<T> and detail::is_tag<T, length_delimited_tag>;
 
-} // namespace rbe
+/**
+ * @brief An explicitly-delimited frame whose length comes from an element count.
+ *
+ * The payload is a `many` run and the header carries `rbe::payload_count` (and no byte-length field),
+ * so the length is the sum of the element lengths. Resolving it is O(1) when the element has a static
+ * stride (see `static_stride_delimited`) and O(n) otherwise, since each element must be measured.
+ *
+ * @note Matches no type yet: a `payload_count` over a `many` is still classified as buffer-delimited
+ * (fork 3b, see the TODO in `rbe::detail::frame_delimiting`).
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+concept count_delimited = explicitly_delimited<T> and detail::is_tag<T, count_delimited_tag>;
+
+/**
+ * @brief A self-delimiting frame whose length is resolved from its types, with no wire field.
+ *
+ * The header carries no length or count annotation, so the length is derived from the implicit size of
+ * the underlying payload types rather than read off the wire.
+ *
+ * @note Even though all explicitly-delimited frames can also be resolved from their types, the wire is always
+ * considered the golden source in RBE. So a frame cannot be both at the same time, this severs more as a
+ * fallback for when the wire is missing a length field than as a category of its own.
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+concept implicitly_delimited = self_delimited<T> and detail::is_tag<T, implicitly_delimited_tag>;
+
+/**
+ * @brief An implicitly-delimited frame whose length is a compile-time constant.
+ *
+ * Every byte of the frame is fixed by its types: a header of static size over a payload that is itself
+ * statically sized, recursively through nested frames. `rbe::frames::static_length<T>` is that constant.
+ *
+ * A header annotated with `rbe::header_length` disqualifies the frame however static its payload is: the
+ * header declares its own length on the wire and may be extended past `wire_size_of<header_type>()`, so
+ * such a frame resolves in O(1) without being a compile-time constant. It is implicitly delimited and
+ * `constant_length`, and it is neither of the two leaves -- which is why `constant_length` is not their
+ * union.
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+concept static_delimited = implicitly_delimited<T> and detail::is_tag<T, static_delimited_tag>;
+
+/**
+ * @brief An implicitly-delimited frame whose length is settled by the id that selects its payload.
+ *
+ * The payload is an `rbe::frames::any` (or a nested chain ending in one), so the length is the wire size of the
+ * candidate the header's id selects: O(1), one lookup, but a runtime value and not a compile-time
+ * constant, which is what separates it from `static_delimited`.
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+concept dispatch_delimited = implicitly_delimited<T> and detail::is_tag<T, dispatch_delimited_tag>;
+
+/**
+ * @brief The length in bytes of a `static_delimited` frame.
+ *
+ * The category says the constant exists; this is its value, which is what a nested frame adds to its own
+ * header and what a static-stride `many` multiplies by its count.
+ *
+ * @note The walk lives in `detail::static_frame_size`: concepts cannot recurse, and a tag answers
+ * whether the frame is a constant, not which one.
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+  requires static_delimited<T>
+inline constexpr std::size_t static_length = detail::static_frame_size<T>();
+
+/**
+ * @brief A `many` whose elements all occupy the same compile-time-constant number of bytes.
+ *
+ * The stride is a property of the element, so this is a `many` concept and not a frame one: a frame that
+ * delimits by a count inherits its cost from it (see `static_stride_delimited`).
+ *
+ * @tparam T The `many` to be evaluated.
+ */
+template<typename T>
+concept static_stride = is_many<T> and requires { requires static_delimited<many_element_t<T>>; };
+
+/**
+ * @brief A `many` whose elements have to be measured one by one to be stepped over.
+ *
+ * Walking the run is O(n): each element resolves its own length before the next one can be reached.
+ *
+ * @tparam T The `many` to be evaluated.
+ */
+template<typename T>
+concept dynamic_stride = is_many<T> and not static_stride<T>;
+
+/**
+ * @brief A count-delimited frame whose elements each have a compile-time-constant size.
+ *
+ * Because the element stride is static, the total length is `count * stride`, so a `payload_count`
+ * payload that would otherwise be O(n) is resolved in O(1).
+ *
+ * @note Matches no type yet, for the same reason `count_delimited` does not.
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+concept static_stride_delimited = count_delimited<T> and detail::is_tag<T, static_stride_delimited_tag>;
+
+/**
+ * @brief A frame whose length is resolved in O(1), the cost axis of the classification.
+ *
+ * Not a category and not the union of the O(1) categories: the cost belongs to the whole chain of
+ * nested frames, while a tag only speaks for the frame that carries it. The walk is in
+ * `detail::is_constant_length`, and only two categories are not O(1) -- a counted run with no
+ * static stride, and a custom resolver.
+ *
+ * @tparam T The frame type to be evaluated.
+ */
+template<typename T>
+concept constant_length = is_frame<T> and detail::is_constant_length<T>();
+
+} // namespace rbe::frames
 
 // --- STD ---
 
-namespace rbe::dsrl {
+namespace rbe::frames::dsrl {
 
 template<is_frame T>
-  requires self_delimiting_frame<T>
+  requires frames::self_delimited<T>
 class many : public rbe::detail::many_tag {
 public:
   using frame_type  = T;
@@ -4490,12 +4954,12 @@ public:
   }
 
   explicit constexpr many(buffer_type const data, size_type count = std::numeric_limits<size_type>::max()) :
-    current_(frame_type::make(data)), data_(data), left_(count) { }
+    current_(frame_type::make(data)), data_(data.data(), data.size_bytes()), left_(count) { }
 
   constexpr auto next() {
     assert(not done());
-    data_    = data_.subspan(current_->length());
-    current_ = frame_type::make(data_);
+    data_.advance(current_->length());
+    current_ = frame_type::make(remainder());
     --left_;
   }
 
@@ -4506,29 +4970,29 @@ public:
 
   [[nodiscard]] constexpr auto done() const -> bool { return not current_ or left_ == 0; }
 
-  [[nodiscard]] constexpr auto remainder() const -> buffer_type { return data_; }
+  [[nodiscard]] constexpr auto remainder() const -> buffer_type { return data_.right(); }
 
-  [[nodiscard]] constexpr auto has_seen_partial() const -> bool { return done() and not data_.empty(); }
+  [[nodiscard]] constexpr auto has_seen_partial() const -> bool { return done() and not remainder().empty(); }
 
   [[nodiscard]] constexpr auto begin() -> iterator { return iterator(this); }
 
   [[nodiscard]] constexpr auto end() -> std::default_sentinel_t { return std::default_sentinel; }
 
-  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return data_; }
+  [[nodiscard]] constexpr auto as_span() const -> buffer_type { return remainder(); }
 
-  [[nodiscard]] constexpr auto data() const -> std::byte const* { return data_.data(); }
+  [[nodiscard]] constexpr auto data() const -> std::byte const* { return remainder().data(); }
 
 private:
   std::optional<frame_type> current_;
-  buffer_type data_;
+  rbe::detail::split_span<std::byte const> data_;
   size_type left_;
 };
 
-} // namespace rbe::dsrl
+} // namespace rbe::frames::dsrl
 
 // --- STD ---
 
-namespace rbe::views {
+namespace rbe::frames::views {
 
 namespace detail {
 
@@ -4546,7 +5010,7 @@ template<typename A, typename B>
 } // namespace detail
 
 template<dsrl::is_frame T>
-  requires self_delimiting_frame<T>
+  requires frames::self_delimited<T>
 struct many_fn : std::ranges::range_adaptor_closure<many_fn<T>> {
 
   [[nodiscard]] constexpr auto operator()(std::span<std::byte const> const data) const -> dsrl::many<T> {
@@ -4555,7 +5019,7 @@ struct many_fn : std::ranges::range_adaptor_closure<many_fn<T>> {
 };
 
 template<dsrl::is_frame T>
-  requires self_delimiting_frame<T>
+  requires frames::self_delimited<T>
 [[nodiscard]] constexpr auto many() -> many_fn<T> {
   return {};
 }
@@ -4584,9 +5048,16 @@ template<typename... Ids>
   return std::views::filter([](auto const& frame) { return not frame.payload().known_id(); });
 }
 
-} // namespace rbe::views
+} // namespace rbe::frames::views
 
-// ===== rbe/framing/frame.hpp =====
+/// The short spelling, the way std::views names std::ranges::views: the adaptors live in
+/// rbe::frames::views and this is what a pipeline writes. An alias and nothing else, so there is a single
+/// home for them -- rbe::views cannot hold members of its own as long as this exists.
+namespace rbe {
+namespace views = frames::views;
+} // namespace rbe
+
+// ===== rbe/frames/frame.hpp =====
 
 /**
  * @file frame.hpp
@@ -4597,7 +5068,7 @@ template<typename... Ids>
 
 // --- Includes ---
 
-// ===== rbe/framing/detail/to_dsrl_type.hpp =====
+// ===== rbe/frames/detail/to_dsrl_type.hpp =====
 
 /**
  * @file dsrl_type_converter.hpp
@@ -4619,7 +5090,7 @@ struct to_dsrl {
   using type = T;
 };
 
-template<serder_traits T>
+template<frames::serder_traits T>
 struct to_dsrl<T> {
   using type = typename T::dsrl_type;
 };
@@ -4629,7 +5100,7 @@ using to_dsrl_t = typename to_dsrl<T>::type;
 
 } // namespace rbe::detail
 
-// ===== rbe/framing/detail/to_srl_type.hpp =====
+// ===== rbe/frames/detail/to_srl_type.hpp =====
 
 /**
  * @file to_srl_type.hpp
@@ -4651,7 +5122,7 @@ struct to_srl {
   using type = T;
 };
 
-template<serder_traits T>
+template<frames::serder_traits T>
 struct to_srl<T> {
   using type = typename T::srl_type;
 };
@@ -4661,7 +5132,7 @@ using to_srl_t = typename to_srl<T>::type;
 
 } // namespace rbe::detail
 
-// ===== rbe/framing/dsrl/frame.hpp =====
+// ===== rbe/frames/dsrl/frame.hpp =====
 
 /**
  * @file frame.hpp
@@ -4672,7 +5143,7 @@ using to_srl_t = typename to_srl<T>::type;
 
 // --- Includes ---
 
-// ===== rbe/framing/dsrl/base_frame.hpp =====
+// ===== rbe/frames/dsrl/base_frame.hpp =====
 
 /**
  * @file base_frame.hpp
@@ -4683,7 +5154,7 @@ using to_srl_t = typename to_srl<T>::type;
 
 // --- Includes ---
 
-// ===== rbe/framing/dsrl/flatten.hpp =====
+// ===== rbe/frames/dsrl/flatten.hpp =====
 
 /**
  * @file flatten.hpp
@@ -4699,7 +5170,7 @@ using to_srl_t = typename to_srl<T>::type;
 // --- STD ---
 
 
-namespace rbe::dsrl {
+namespace rbe::frames::dsrl {
 
 /// The header of every nested frame followed by the innermost payload: `auto [soup, itch, payload] = flatten(frame)`
 template<is_frame T>
@@ -4712,9 +5183,9 @@ constexpr auto flatten(T const& frame) {
   }
 }
 
-} // namespace rbe::dsrl
+} // namespace rbe::frames::dsrl
 
-// ===== rbe/framing/dsrl/header.hpp =====
+// ===== rbe/frames/dsrl/header.hpp =====
 
 /**
  * @file header.hpp
@@ -4727,11 +5198,11 @@ constexpr auto flatten(T const& frame) {
 
 // --- STD ---
 
-namespace rbe::dsrl {
+namespace rbe::frames::dsrl {
 
-template<frame_header T>
+template<frames::header T>
 class header : private rbe::dsrl::proxy<T> {
-  using base = proxy<T>;
+  using base = rbe::dsrl::proxy<T>;
   constexpr explicit header(base const b) : base(b) { }
 
 public:
@@ -4879,9 +5350,9 @@ public:
   }
 };
 
-} // namespace rbe::dsrl
+} // namespace rbe::frames::dsrl
 
-// ===== rbe/framing/dsrl/payload.hpp =====
+// ===== rbe/frames/dsrl/payload.hpp =====
 
 /**
  * @file payload.hpp
@@ -4905,11 +5376,11 @@ public:
 
 // --- STD ---
 
-namespace rbe::dsrl {
+namespace rbe::frames::dsrl {
 
 namespace detail {
 
-template<frame_payload T>
+template<frames::payload T>
 struct normalize_payload {
   using type = T;
 };
@@ -4917,10 +5388,10 @@ struct normalize_payload {
 // NOTE: `not is_frame<T>` because rbe::wirable only inspects a class's own non-static data members: a frame
 // view whose state lives in base_frame has none of its own and passes for wirable. That is a gap in
 // detail::is_wirable_class_type (bases are ignored), not a property of frames; the guard keeps it out of here.
-template<frame_payload T>
-  requires(frame_wirable<T> and not is_frame<T>)
+template<frames::payload T>
+  requires(frames::wirable_payload<T> and not is_frame<T>)
 struct normalize_payload<T> {
-  using type = proxy<T>;
+  using type = rbe::dsrl::proxy<T>;
 };
 
 template<typename P>
@@ -4928,10 +5399,10 @@ concept has_make = requires(std::span<std::byte const> const bytes) {
   { P::make(bytes) } -> std::same_as<std::optional<P>>;
 };
 
-template<frame_header H>
-constexpr auto payload_count(H const hdr) -> std::size_t {
-  if constexpr (H::has_count) {
-    return hdr.count();
+template<frames::header H>
+constexpr auto payload_count(header<H> const hdr) -> std::size_t {
+  if constexpr (header<H>::has_count) {
+    return hdr.payload_count();
   }
   else {
     return std::numeric_limits<std::size_t>::max();
@@ -4940,8 +5411,8 @@ constexpr auto payload_count(H const hdr) -> std::size_t {
 
 } // namespace detail
 
-/// The view a frame hands back for a payload declared as P: proxy<T> for a wirable T, P itself otherwise
-template<frame_payload P>
+/// The view a frame hands back for a payload declared as P: rbe::dsrl::proxy<T> for a wirable T, P itself otherwise
+template<frames::payload P>
 using payload_view_t = typename detail::normalize_payload<P>::type;
 
 
@@ -4953,7 +5424,7 @@ using payload_view_t = typename detail::normalize_payload<P>::type;
  * step 3 narrows itself if it can. Narrow contract: `rest` holds the extent the header declares.
  * try_payload_extent is the wide form.
  */
-template<frame_payload P, frame_header H>
+template<frames::payload P, frames::header H>
 [[nodiscard]] constexpr auto payload_extent([[maybe_unused]] header<H> const hdr, std::span<std::byte const> const rest)
     -> std::span<std::byte const> {
   if constexpr (header<H>::delimits_payload) {
@@ -4965,7 +5436,7 @@ template<frame_payload P, frame_header H>
 }
 
 /// Wide form of payload_extent: nullopt when `rest` does not hold the extent the header declares
-template<frame_payload P, frame_header H>
+template<frames::payload P, frames::header H>
 [[nodiscard]] constexpr auto
 try_payload_extent([[maybe_unused]] header<H> const hdr, std::span<std::byte const> const rest)
     -> std::optional<std::span<std::byte const>> {
@@ -4985,18 +5456,18 @@ try_payload_extent([[maybe_unused]] header<H> const hdr, std::span<std::byte con
  * beyond that stay reachable through the frame's payload_span(), not through the view. Narrow contract:
  * the payload fits in `bytes`. try_construct_payload is the wide form.
  */
-template<frame_payload P, frame_header H>
+template<frames::payload P, frames::header H>
 [[nodiscard]] constexpr auto
 construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte const> const bytes) -> payload_view_t<P> {
   using view = payload_view_t<P>;
-  if constexpr (is_any<view>) {
+  if constexpr (frames::is_any<view>) {
     static_assert(
         header<H>::has_id,
         "an any payload selects its candidate by the header's rbe::id field, and this header has none"
     );
     return view {hdr.id(), bytes};
   }
-  else if constexpr (is_many<view>) {
+  else if constexpr (frames::is_many<view>) {
     return view {bytes, detail::payload_count(hdr)}; // many
   }
   else {
@@ -5005,20 +5476,20 @@ construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte cons
 }
 
 /// Wide form of construct_payload: nullopt when the payload does not fit in `bytes`
-template<frame_payload P, frame_header H>
+template<frames::payload P, frames::header H>
 [[nodiscard]] constexpr auto
 try_construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte const> const bytes)
     -> std::optional<payload_view_t<P>> //
 {
   using view = payload_view_t<P>;
-  if constexpr (is_any<view>) {
+  if constexpr (frames::is_any<view>) {
     static_assert(
         header<H>::has_id,
         "an any payload selects its candidate by the header's rbe::id field, and this header has none"
     );
     return view::make(hdr.id(), bytes); // any
   }
-  else if constexpr (is_many<view>) {
+  else if constexpr (frames::is_many<view>) {
     return view::make(bytes, detail::payload_count(hdr)); // many
   }
   else if constexpr (detail::has_make<view>) {
@@ -5029,11 +5500,50 @@ try_construct_payload([[maybe_unused]] header<H> const hdr, std::span<std::byte 
   }
 }
 
-} // namespace rbe::dsrl
+} // namespace rbe::frames::dsrl
 
 // --- STD ---
 
-namespace rbe::dsrl {
+namespace rbe::frames::dsrl {
+
+// NOTE: the payload view is built eagerly -- in make() and in the narrow constructor -- and stored, so a nested
+// frame resolves the whole chain down to the innermost payload at construction. Two reasons, in the order that
+// actually decides it:
+//
+//   1. In a wide-contract make(), constructing the payload *is* the precondition check: a proxy verifies that T's
+//      wire size fits, an any that the candidate its id selects fits, a nested frame recurses through its own
+//      make(). There is no cheaper oracle for "do these bytes hold this payload", and a separate validation pass
+//      would have to repeat exactly what those constructors already do.
+//   2. It resolves once what a payload rebuilt on access would resolve per call. This only pays off for the frames
+//      whose length comes from the payload rather than from a header field: a dispatch-delimited frame costs an id
+//      lookup per length(), and length() is what as_span(), payload_span() and many's iteration all end up
+//      calling. This was taken to be the main reason and it is not -- the win is narrower than expected (cboe TOP
+//      looked like an instance of it and turned out to be terminator-delimited, not id-delimited).
+//
+// The price is size, and work a caller may never use:
+//
+//   - sizeof is the header view -- the buffer span, 16 bytes -- plus the payload view, so it follows the
+//     composition of the frame instead of staying at 16: a many is 40 bytes, a frame of many 56, a frame of a frame
+//     of many 72. Frames travel by value while iterating (many::current(), operator*), so this is per element.
+//   - the whole nested chain is built even when the caller only reads a header field.
+//
+// What the alternatives really trade is not eager against lazy -- make() has to construct either way, per (1) --
+// but how much of what make() built survives it:
+//
+//   - Keep nothing: make() checks its preconditions and throws the result away, the narrow constructor just keeps
+//     the span, and payload() rebuilds on every call. sizeof returns to a constant 16 bytes and nothing is paid up
+//     front, at the price of rebuilding on every length() too, which for an implicitly delimited chain means one
+//     level rebuilt per level, on each call.
+//   - Keep the extent make() resolved, one size_type: sizeof is a constant 24 bytes, length() stays O(1) for every
+//     delimiting category with no re-dispatch, and only payload() rebuilds -- free for a proxy, a span or a many,
+//     one id lookup again for an any.
+//   - Keep the view, which is what this does: nothing is ever resolved twice, and sizeof grows with the nesting.
+//
+// Keeping the view is the decision: it is the only one that does not get more expensive when variable-size
+// payloads arrive, and the only one that does not put a third construction protocol on every payload
+// category. The measurements behind it, and the one refinement still open (caching the frame length), are
+// in docs/explanation/frame-storage.md.
+//
 
 /**
  * @brief The view_interface of frames
@@ -5049,14 +5559,15 @@ namespace rbe::dsrl {
  * The derived operations dispatch to the most derived type (deducing this), so as_span(), payload_span()
  * and flatten() follow a custom length().
  */
-template<frame_header HeaderType, frame_payload PayloadType>
+template<frames::header HeaderType, frames::payload PayloadType>
 class base_frame {
 public:
   // --- Type traits ---
 
-  using header_type         = HeaderType;
-  using payload_type        = PayloadType;
-  using header_return_type  = rbe::dsrl::header<header_type>; // qualified: header() below would change its meaning
+  using header_type  = HeaderType;
+  using payload_type = PayloadType;
+  using header_return_type =
+      rbe::frames::dsrl::header<header_type>; // qualified: header() below would change its meaning
   using payload_return_type = payload_view_t<payload_type>;
   using buffer_type         = std::span<std::byte const>;
   using size_type           = std::size_t;
@@ -5095,9 +5606,7 @@ public:
     return self.as_span().subspan(self.header().length());
   }
 
-  [[nodiscard]] constexpr auto flatten(this auto const& self) {
-    return rbe::dsrl::flatten(self);
-  }
+  [[nodiscard]] constexpr auto flatten(this auto const& self) { return rbe::frames::dsrl::flatten(self); }
 
 protected:
   constexpr base_frame(header_return_type const hdr, payload_return_type const payload) :
@@ -5108,21 +5617,21 @@ private:
   payload_return_type payload_;
 };
 
-} // namespace rbe::dsrl
+} // namespace rbe::frames::dsrl
 
 // A frame is a pair of header and payload, which is what makes `for (auto [header, payload] : many)` work. Any
 // frame qualifies, the library's or a user's, as long as it provides get<0> (header) and get<1> (payload): base_frame
 // does, a frame of the user that does not derive from it supplies its own.
-template<rbe::dsrl::decomposable_frame T>
+template<rbe::frames::dsrl::decomposable_frame T>
 struct std::tuple_size<T> : std::integral_constant<std::size_t, 2> { };
 
-template<std::size_t I, rbe::dsrl::decomposable_frame T>
+template<std::size_t I, rbe::frames::dsrl::decomposable_frame T>
   requires(I < 2)
 struct std::tuple_element<I, T> {
   using type = std::conditional_t<I == 0, typename T::header_return_type, typename T::payload_return_type>;
 };
 
-// ===== rbe/framing/dsrl/detail/payload_size.hpp =====
+// ===== rbe/frames/dsrl/detail/payload_size.hpp =====
 
 /**
  * @file payload_size.hpp
@@ -5133,7 +5642,7 @@ struct std::tuple_element<I, T> {
 
 // --- STD ---
 
-namespace rbe::dsrl::detail {
+namespace rbe::frames::dsrl::detail {
 
 template<typename T>
 concept member_size = requires(T const& payload) {
@@ -5171,11 +5680,11 @@ struct payload_size_fn {
 
 inline constexpr payload_size_fn payload_length {};
 
-} // namespace rbe::dsrl::detail
+} // namespace rbe::frames::dsrl::detail
 
 // --- STD ---
 
-namespace rbe::dsrl {
+namespace rbe::frames::dsrl {
 
 /**
  * @brief A frame view over a header and the payload it describes
@@ -5185,13 +5694,16 @@ namespace rbe::dsrl {
  * (try_payload_extent) and build the view (try_construct_payload) -- and length() follows the same precedence as
  * the extent: a header that declares a length is the authority, otherwise header plus payload.
  */
-template<frame_header HeaderType, frame_payload PayloadType>
+template<frames::header HeaderType, frames::payload PayloadType>
 class frame : public base_frame<HeaderType, PayloadType> {
   using base = base_frame<HeaderType, PayloadType>;
 
 public:
   // --- Type traits ---
 
+  /// The delimiting category, deduced from the shape. A frame that swaps the extent out builds on
+  /// base_frame instead, which declares none, and states its own (see cboe::top::line_view).
+  using delimiting_concept = frames::frame_delimiting_tag<HeaderType, PayloadType>;
   using typename base::buffer_type;
   using typename base::header_return_type;
   using typename base::header_type;
@@ -5228,10 +5740,10 @@ public:
   // --- Member functions ---
 
   [[nodiscard]] constexpr auto length() const -> size_type {
-    if constexpr (buffer_delimited_frame<frame>) {
+    if constexpr (frames::buffer_delimited<frame>) {
       return this->buffer().size();
     }
-    else if constexpr (header_return_type::delimits_payload) {
+    else if constexpr (frames::length_delimited<frame>) {
       return this->header().frame_length();
     }
     else {
@@ -5250,9 +5762,9 @@ private:
   }
 };
 
-} // namespace rbe::dsrl
+} // namespace rbe::frames::dsrl
 
-// ===== rbe/framing/srl/frame.hpp =====
+// ===== rbe/frames/srl/frame.hpp =====
 
 /**
  * @file frame.hpp
@@ -5267,17 +5779,17 @@ private:
 
 // --- STD ---
 
-namespace rbe::srl {
+namespace rbe::frames::srl {
 
-template<frame_header HeaderType, frame_payload PaylaodType>
+template<frames::header HeaderType, frames::payload PaylaodType>
 class frame {
   // TODO:
 };
 
 
-} // namespace rbe::srl
+} // namespace rbe::frames::srl
 
-// ===== rbe/framing/value_type.hpp =====
+// ===== rbe/frames/value_type.hpp =====
 
 /**
  * @file value_type.hpp
@@ -5291,17 +5803,18 @@ class frame {
 // --- STD ---
 
 
-namespace rbe {
+namespace rbe::frames {
 
 // TODO:
-template<frame_header HeaderType, frame_serder_payload PayloadType>
+template<header HeaderType, serder_payload PayloadType>
 using value_type = void;
 
-} // namespace rbe
+} // namespace rbe::frames
 
 // --- STD ---
 
-namespace rbe {
+namespace rbe::frames {
+
 
 /**
  * @brief Frame serder builder class
@@ -5310,18 +5823,20 @@ namespace rbe {
  * and deserialization type aliases following serder_traits. This way, the user can define
  * their frame only once and extract both srl and dsrl types from it.
  */
-template<frame_header HeaderType, frame_serder_payload PayloadType>
+template<header HeaderType, serder_payload PayloadType>
 struct frame {
-  using header_type  = HeaderType;
-  using payload_type = PayloadType;
-  using dsrl_type    = dsrl::frame<header_type, detail::to_dsrl_t<payload_type>>;
+  using header_type        = HeaderType;
+  using payload_type       = PayloadType;
+  using delimiting_concept = frame_delimiting_tag<HeaderType, PayloadType>;
+
+  using dsrl_type = dsrl::frame<header_type, detail::to_dsrl_t<payload_type>>;
   // using srl_type     = srl::frame<header_type, detail::to_srl_t<payload_type>>;
-  // using value_type   = rbe::value_type<header_type, payload_type>;
+  // using value_type   = rbe::frames::value_type<header_type, payload_type>;
 };
 
-} // namespace rbe
+} // namespace rbe::frames
 
-// ===== rbe/framing/many.hpp =====
+// ===== rbe/frames/many.hpp =====
 
 /**
  * @file many.hpp
@@ -5334,7 +5849,7 @@ struct frame {
 
 // --- Includes ---
 
-// ===== rbe/framing/srl/many.hpp =====
+// ===== rbe/frames/srl/many.hpp =====
 
 /**
  * @file many.hpp
@@ -5349,24 +5864,25 @@ struct frame {
 
 // --- STD ---
 
-namespace rbe::srl {
+namespace rbe::frames::srl {
 
 template<typename T>
 class many { };
 
-} // namespace rbe::srl
+} // namespace rbe::frames::srl
 
 // --- STD ---
 
-namespace rbe {
+namespace rbe::frames {
 
 template<frame_serder T>
 struct many : detail::many_tag {
-  using dsrl_type = dsrl::many<typename T::dsrl_type>;
+  using frame_type = T; ///< the element, as rbe::frames::many_element_t spells it at every level
+  using dsrl_type  = dsrl::many<typename T::dsrl_type>;
   // TODO: using srl_type  = srl::many<typename T::srl_type>;
 };
 
-} // namespace rbe
+} // namespace rbe::frames
 
 // ===== rbe/srl.hpp =====
 

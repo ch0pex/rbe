@@ -37,9 +37,7 @@ struct compiletime_error : std::logic_error {
 #define RBE_LOCATION __FILE__ ":" RBE_STRINGIFY(__LINE__) " -> "
 
 // 1. RBE_RUN_TEST_CASE
-#define RBE_RUN_TEST_CASE(test_func, ...)                                                                              \
-  consteval { test_func(__VA_OPT__(__VA_ARGS__)); }                                                                    \
-  test_func(__VA_OPT__(__VA_ARGS__));
+#define RBE_RUN_TEST_CASE(test_func, ...) test_func(__VA_OPT__(__VA_ARGS__));
 
 // 2. RBE_TEST_CASE
 #define RBE_TEST_CASE(name, test_func, ...)                                                                            \

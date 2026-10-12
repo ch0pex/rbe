@@ -13,9 +13,9 @@
 #include "common_serde.hpp"
 #include "test_macros.hpp"
 
-#include <rbe/framing/dsrl/flatten.hpp>
-#include <rbe/framing/dsrl/frame.hpp>
-#include <rbe/framing/dsrl/many.hpp>
+#include <rbe/frames/dsrl/flatten.hpp>
+#include <rbe/frames/dsrl/frame.hpp>
+#include <rbe/frames/dsrl/many.hpp>
 
 // --- STD ---
 #include <cstddef>
@@ -29,14 +29,14 @@ namespace {
 using blob = std::span<std::byte const>;
 
 /// One level: PlainHeader (4 bytes) + a static u32
-using flat_frame = rbe::dsrl::frame<PlainHeader, std::uint32_t>;
+using flat_frame = rbe::frames::dsrl::frame<PlainHeader, std::uint32_t>;
 /// Two levels: PlainHeader wraps a frame whose length field bounds it
-using inner_frame  = rbe::dsrl::frame<FrameLengthHeader, blob>;
-using nested_frame = rbe::dsrl::frame<PlainHeader, inner_frame>;
+using inner_frame  = rbe::frames::dsrl::frame<FrameLengthHeader, blob>;
+using nested_frame = rbe::frames::dsrl::frame<PlainHeader, inner_frame>;
 /// Three levels
-using deep_frame = rbe::dsrl::frame<PlainHeader, nested_frame>;
+using deep_frame = rbe::frames::dsrl::frame<PlainHeader, nested_frame>;
 /// A many is not a frame: flatten stops at it
-using packet_frame = rbe::dsrl::frame<PlainHeader, rbe::dsrl::many<inner_frame>>;
+using packet_frame = rbe::frames::dsrl::frame<PlainHeader, rbe::frames::dsrl::many<inner_frame>>;
 
 // type, sequence (LE) | payload
 constexpr auto flat_bytes = bytes(0x01, 0x00, 0x02, 0x00, 0x11, 0x22, 0x33, 0x44);
@@ -51,15 +51,15 @@ constexpr auto packet_bytes = bytes(0x01, 0x00, 0x02, 0x00, 0x07, 0x05, 0x00, 0x
 // shape: one element per header plus the payload
 // ============================================================
 
-static_assert(std::tuple_size_v<decltype(rbe::dsrl::flatten(std::declval<flat_frame>()))> == 2);
-static_assert(std::tuple_size_v<decltype(rbe::dsrl::flatten(std::declval<nested_frame>()))> == 3);
-static_assert(std::tuple_size_v<decltype(rbe::dsrl::flatten(std::declval<deep_frame>()))> == 4);
-static_assert(std::tuple_size_v<decltype(rbe::dsrl::flatten(std::declval<packet_frame>()))> == 2);
+static_assert(std::tuple_size_v<decltype(rbe::frames::dsrl::flatten(std::declval<flat_frame>()))> == 2);
+static_assert(std::tuple_size_v<decltype(rbe::frames::dsrl::flatten(std::declval<nested_frame>()))> == 3);
+static_assert(std::tuple_size_v<decltype(rbe::frames::dsrl::flatten(std::declval<deep_frame>()))> == 4);
+static_assert(std::tuple_size_v<decltype(rbe::frames::dsrl::flatten(std::declval<packet_frame>()))> == 2);
 
 // clang-format off
-static_assert(std::is_same_v<std::tuple_element_t<0, decltype(rbe::dsrl::flatten(std::declval<nested_frame>()))>, nested_frame::header_return_type>);
-static_assert(std::is_same_v<std::tuple_element_t<1, decltype(rbe::dsrl::flatten(std::declval<nested_frame>()))>, inner_frame::header_return_type>);
-static_assert(std::is_same_v<std::tuple_element_t<2, decltype(rbe::dsrl::flatten(std::declval<nested_frame>()))>, inner_frame::payload_return_type>);
+static_assert(std::is_same_v<std::tuple_element_t<0, decltype(rbe::frames::dsrl::flatten(std::declval<nested_frame>()))>, nested_frame::header_return_type>);
+static_assert(std::is_same_v<std::tuple_element_t<1, decltype(rbe::frames::dsrl::flatten(std::declval<nested_frame>()))>, inner_frame::header_return_type>);
+static_assert(std::is_same_v<std::tuple_element_t<2, decltype(rbe::frames::dsrl::flatten(std::declval<nested_frame>()))>, inner_frame::payload_return_type>);
 // clang-format on
 
 // ============================================================
@@ -116,7 +116,7 @@ constexpr auto flatten_stops_at_a_many_payload() {
 constexpr auto member_and_free_flatten_agree() {
   auto const frame                                  = nested_frame::make(nested_bytes).value();
   auto const [outer, inner, payload]                = frame.flatten();
-  auto const [free_outer, free_inner, free_payload] = rbe::dsrl::flatten(frame);
+  auto const [free_outer, free_inner, free_payload] = rbe::frames::dsrl::flatten(frame);
 
   RBE_CHECK(outer.as_span().data() == free_outer.as_span().data());
   RBE_CHECK(inner.as_span().data() == free_inner.as_span().data());

@@ -16,8 +16,8 @@
 #include "markets/nasdaq.hpp"
 #include "markets/opra.hpp"
 
-#include <rbe/framing/deserialize.hpp>
-#include <rbe/framing/dsrl/views.hpp>
+#include <rbe/frames/deserialize.hpp>
+#include <rbe/frames/dsrl/views.hpp>
 
 #include <array>
 #include <cstddef>
@@ -32,24 +32,24 @@
 // --- System ---
 
 // Every protocol composes into frames, classified at compile time by how they are delimited.
-static_assert(rbe::self_delimiting_frame<aquis::message>);
-static_assert(rbe::buffer_delimited_frame<aquis::packet>); // PacketHeader has no length: the UDP datagram bounds it
-static_assert(rbe::self_delimiting_frame<cboe::pitch::message>);
-static_assert(rbe::self_delimiting_frame<cboe::pitch::packet>);
-static_assert(rbe::self_delimiting_frame<lse::message>);
-static_assert(rbe::self_delimiting_frame<cboe::top::message>); // the any alternatives imply their length
-static_assert(rbe::dispatch_delimited_frame<cboe::top::message>);
+static_assert(rbe::frames::self_delimited<aquis::message>);
+static_assert(rbe::frames::buffer_delimited<aquis::packet>); // PacketHeader has no length: the UDP datagram bounds it
+static_assert(rbe::frames::self_delimited<cboe::pitch::message>);
+static_assert(rbe::frames::self_delimited<cboe::pitch::packet>);
+static_assert(rbe::frames::self_delimited<lse::message>);
+static_assert(rbe::frames::self_delimited<cboe::top::message>); // the any alternatives imply their length
+static_assert(rbe::frames::dispatch_delimited<cboe::top::message>);
 // A custom frame built on base_frame is a frame like any other: it composes with many and classifies.
-static_assert(rbe::dsrl::is_frame<cboe::top::line_view>);
-static_assert(rbe::frame_serder<cboe::top::line>);
-static_assert(rbe::self_delimiting_frame<cboe::top::line>);
-static_assert(rbe::frame_serder_payload<cboe::top::lines>);
-static_assert(rbe::self_delimiting_frame<lse::packet>);
-static_assert(rbe::self_delimiting_frame<nasdaq::message>); // the any alternatives imply their length
-static_assert(rbe::dispatch_delimited_frame<nasdaq::message>);
-static_assert(rbe::self_delimiting_frame<nasdaq::packet>);
-static_assert(rbe::self_delimiting_frame<opra::message>); // the any alternatives imply their length
-static_assert(rbe::dispatch_delimited_frame<opra::message>);
+static_assert(rbe::frames::dsrl::is_frame<cboe::top::line_view>);
+static_assert(rbe::frames::frame_serder<cboe::top::line>);
+static_assert(rbe::frames::self_delimited<cboe::top::line>);
+static_assert(rbe::frames::serder_payload<cboe::top::lines>);
+static_assert(rbe::frames::self_delimited<lse::packet>);
+static_assert(rbe::frames::self_delimited<nasdaq::message>); // the any alternatives imply their length
+static_assert(rbe::frames::dispatch_delimited<nasdaq::message>);
+static_assert(rbe::frames::self_delimited<nasdaq::packet>);
+static_assert(rbe::frames::self_delimited<opra::message>); // the any alternatives imply their length
+static_assert(rbe::frames::dispatch_delimited<opra::message>);
 
 // --- Usage ---
 
