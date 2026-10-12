@@ -77,12 +77,27 @@ public:
 
   // --- Member functions ---
 
-  [[nodiscard]] constexpr auto length() const -> size_type {
+  /// Only for a frame whose category chain resolves in O(1): everything else answers through
+  /// frames::distance, and has no length() for a caller to reach for by mistake (see frames::length).
+  ///
+  /// The shape is not the whole condition: a nested frame has to be able to answer too, and a
+  /// hand-written one may have declared a category while supplying no length() at all. Asking its member
+  /// is what keeps the two halves of the axis recursing by the same rule, so this exists only when the
+  /// body below actually compiles.
+  [[nodiscard]] constexpr auto length() const -> size_type
+    requires(rbe::detail::is_constant_length<frame>() and
+             (not frames::is_frame<PayloadType> or rbe::detail::member_length<PayloadType>))
+  {
     if constexpr (frames::buffer_delimited<frame>) {
       return this->buffer().size();
     }
     else if constexpr (frames::length_delimited<frame>) {
       return this->header().frame_length();
+    }
+    // the count bounds the run without reading an element, so the payload view is never asked (a `many`
+    // reports no extent of its own; what it was handed is this, settled in step 2 by counted_extent)
+    else if constexpr (frames::static_stride_delimited<frame>) {
+      return this->header().length() + counted_extent<payload_type>(this->header());
     }
     else {
       return this->header().length() + detail::payload_length(this->payload());

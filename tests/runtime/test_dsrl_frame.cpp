@@ -304,7 +304,7 @@ class line_view : public rbe::frames::dsrl::base_frame<MessageIdHeader, dsrl::an
   using base = rbe::frames::dsrl::base_frame<MessageIdHeader, dsrl::any_test>;
 
 public:
-  /// the '\n' scan, which the shape cannot see: self-delimiting, and O(n)
+  /// the '\n' scan, which the shape cannot see: self-delimiting, by no mechanism the hierarchy names
   using delimiting_concept = rbe::frames::self_delimited_tag;
 
   static constexpr auto make(buffer_type const buf) -> std::optional<line_view> {
@@ -353,11 +353,13 @@ private:
 };
 
 // the two primitives are all it took: it is a frame, and the category it declares is the one it has --
-// the terminator scan, which is O(n): by its shape it would have been implicit and O(1)
+// the terminator scan, where by its shape it would have been implicitly delimited
 static_assert(rbe::frames::dsrl::is_frame<line_view>);
 static_assert(rbe::frames::self_delimited<line_view>);
 static_assert(not rbe::frames::implicitly_delimited<line_view>);
-static_assert(not rbe::frames::constant_length<line_view>); // a scan is O(n)
+// constant_length reports what the library can deduce, and takes a declared tag's resolution on trust:
+// the scan is make()'s and length() returns the stored line_length_, which is the contract it signs
+static_assert(rbe::frames::constant_length<line_view>);
 
 constexpr auto custom_frame_follows_its_own_length() {
   // id 0 (msg_1, 4 bytes) '\n' | id 9 (unknown) 2 bytes '\n' '\n' | id 2 (msg_3, 1 byte) '\n'
@@ -417,7 +419,7 @@ constexpr auto buffer_delimited_frame_length() {
   RBE_CHECK(f.payload().as_span().size() == 88);
 }
 
-constexpr auto buffer_delimited_but_header_has_count() {
+constexpr auto counted_static_run_delimits_the_frame() {
   static constexpr auto wire = bytes(
       // -- Frame header --- HeaderWithCount (4 bytes, big-endian)
       0x00, 0x02, // count = 2 (big-endian)
@@ -463,49 +465,93 @@ constexpr auto buffer_delimited_but_header_has_count() {
   );
 
   // we are going to test here:
-  // - frame propagates payload_count to many
-  // - buffer delimited frames can be forward iterated if the frame payload is many thanks to many.remainder()
+  // - the count bounds the frame, so trailing bytes are not payload and payload_span() is the run
+  // - a stream of such frames is walked by length(), the frame being self-delimiting
 
-  auto const padding           = bytes(pad, pad, pad, pad, pad, pad, pad, pad);
+  auto const padding          = bytes(pad, pad, pad, pad, pad, pad, pad, pad);
   auto const wire_with_padding = std::views::concat(wire, padding) | std::ranges::to<std::vector>();
-  auto const wire_two_frames   = std::views::concat(wire, wire) | std::ranges::to<std::vector>();
   auto const wire_two_and_pad  = std::views::concat(wire, wire, padding) | std::ranges::to<std::vector>();
 
   using many_frame = rbe::frames::frame<HeaderWithCount, rbe::frames::many<msg_frame>>;
-  // TODO:  theoretically since this frame has a count and the stride is fixed
-  // it could be considered a self-delimiting frame. To this point this is
-  // still an open question
-  static_assert(rbe::frames::buffer_delimited<many_frame>);
+  // the count and a constant element size settle the extent between them, with no element read:
+  // header + count * static_length<msg_frame>. A dynamic stride would not (fork 3c).
+  static_assert(rbe::frames::static_stride_delimited<many_frame>);
+  static_assert(rbe::frames::constant_length<many_frame>);
 
-
-  // --- frame propagates payload_count to many ---
+  // --- the count bounds the frame: the padding is outside it ---
   {
-    auto const frame_with_padding = rbe::deserialize<many_frame>(wire_with_padding);
-    RBE_CHECK(frame_with_padding.header().payload_count() == 2);
-    RBE_CHECK(frame_with_padding.length() == wire.size() + padding.size());
-    auto payload = frame_with_padding.payload();
+    auto const f = rbe::deserialize<many_frame>(wire_with_padding);
+    RBE_CHECK(f.header().payload_count() == 2);
+    RBE_CHECK(f.length() == wire.size()); // the run, not the buffer it arrived in
+    RBE_CHECK(f.as_span().size() == wire.size());
+    RBE_CHECK(f.buffer().size() == wire.size() + padding.size()); // buffer() stays untrimmed
+    RBE_CHECK(f.payload_span().size() == 2 * 48);
+
+    auto payload = f.payload();
     for (auto const msg: payload) {
       RBE_CHECK(msg.length() == 48);
     }
-    RBE_CHECK(payload.remainder().size() == padding.size());
-    RBE_CHECK(std::ranges::equal(payload.remainder(), padding));
+    // step 2 handed the many the run and nothing else, so the padding is not its remainder any more
+    RBE_CHECK(payload.remainder().empty());
   }
 
+  // --- a stream of them is walked by length(), which is what the count bought ---
   {
-    auto frame = rbe::deserialize<many_frame>(wire_two_frames);
-    while (true) {
-
-      // consume input range
-      auto payload = frame.payload();
-
-      RBE_CHECK(std::ranges::distance(payload) == 2);
-      if (payload.remainder().empty()) {
-        break;
-      }
-      // the second frame is the reaminder of the first payload because many stopped at the end of the count
-      frame = rbe::deserialize<many_frame>(payload.remainder());
+    auto rest = std::span<std::byte const> {wire_two_and_pad};
+    for (std::size_t i = 0; i < 2; ++i) {
+      auto const f = rbe::deserialize<many_frame>(rest);
+      RBE_CHECK(f.header().payload_count() == 2);
+      RBE_CHECK(std::ranges::distance(f.payload()) == 2);
+      RBE_CHECK(f.length() == wire.size());
+      rest = rest.subspan(f.length());
     }
+    RBE_CHECK(rest.size() == padding.size());
+    RBE_CHECK(std::ranges::equal(rest, padding));
   }
+}
+
+// --- Frame with a counted run of variable-size elements ---
+
+/// The count delimits the run, but only by measuring every element: the frame has no length() to call and
+/// rbe::frames::distance is the walk that answers for it.
+constexpr auto counted_dynamic_run_answers_through_distance() {
+  using counted_lines = frame<HeaderWithCount, rbe::frames::dsrl::many<line_view>>;
+
+  static_assert(rbe::frames::count_delimited<counted_lines>);
+  static_assert(not rbe::frames::static_stride_delimited<counted_lines>);
+  static_assert(not rbe::frames::constant_length<counted_lines>);
+  static_assert(not rbe::detail::member_length<counted_lines>); // nothing to reach for by accident
+  // and the spans that derive from length() are gone with it, the view_interface way -- not asserted here
+  // because GCC hard-errors on a `requires { f.as_span(); }` probe of a constrained deducing-this member
+
+  constexpr auto wire = std::array<std::byte, 27> {
+    // HeaderWithCount, big-endian: count = 3, flags = 0
+    std::byte {0x00}, std::byte {0x03}, std::byte {0x00}, std::byte {0x00}, //
+    // three LF-terminated lines of 9, 8 and 6 bytes
+    std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {0x11}, std::byte {0x11},
+    std::byte {0x11}, std::byte {0x11}, std::byte {'\n'}, //
+    std::byte {0x09}, std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {'A'},  std::byte {'B'},
+    std::byte {'\n'}, std::byte {'\n'}, //
+    std::byte {0x02}, std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {'x'},  std::byte {'\n'},
+  };
+
+  auto const f = counted_lines {wire};
+  RBE_CHECK(f.header().payload_count() == 3);
+  // the header plus the three measured lines: 4 + 9 + 8 + 6
+  RBE_CHECK(rbe::frames::distance(f) == 27);
+
+  auto run         = f.payload();
+  std::size_t seen = 0;
+  for (auto const line: run) {
+    RBE_CHECK(line.length() == std::array<std::size_t, 3> {9, 8, 6}[seen]);
+    ++seen;
+  }
+  RBE_CHECK(seen == 3);
+
+  // flatten is not derived from length(): it walks header() and payload(), so it works here as anywhere
+  auto [count_header, lines] = f.flatten(); // non-const: a run is iterated as an lvalue
+  RBE_CHECK(count_header.payload_count() == 3);
+  RBE_CHECK(std::ranges::distance(lines) == 3);
 }
 
 // clang-format off
@@ -526,7 +572,8 @@ TEST_SUITE("dsrl_frame - length and buffer accessors") {
   RBE_TEST_CASE("dsrl_frame - custom frame: a base_frame with its own length() drives as_span, payload_span and the payload", custom_frame_follows_its_own_length);
   RBE_TEST_CASE("dsrl_frame - custom frame: many iterates by the custom length and steps over an unknown id", many_iterates_a_custom_frame_by_line);
   RBE_TEST_CASE("dsrl_frame - many without length field: the frame length is the buffer size", buffer_delimited_frame_length);
-  RBE_TEST_CASE("dsrl_frame - many without length field: the frame propagates payload_count to many and many.remainder() can be used to forward iterate", buffer_delimited_but_header_has_count);
+  RBE_TEST_CASE("dsrl_frame - many with a count: a constant element size makes the count delimit the frame", counted_static_run_delimits_the_frame);
+  RBE_TEST_CASE("dsrl_frame - many with a count: a variable element size leaves only frames::distance", counted_dynamic_run_answers_through_distance);
 }
 // clang-format on
 

@@ -74,7 +74,12 @@ struct static_delimited_tag : implicitly_delimited_tag { };
  * The two roots are the exhaustive answer to "who knows where this frame ends": the frame itself
  * (self_delimited_tag and its refinements) or the buffer it was handed. A frame that resolves its own
  * length in code is not a third answer -- it is the first one, and it says so by declaring
- * self_delimited_tag, the bare root, which claims nothing about what the resolution costs.
+ * self_delimited_tag, the bare root: it finds its own end, by no mechanism the hierarchy below names.
+ *
+ * A tag answers the mechanism and only the mechanism. What the resolution costs is the other axis
+ * (rbe::frames::constant_length), which the library deduces from the chain of tags, and a frame that
+ * resolves itself in code is presumed to honour the O(1) length() contract every frame signs rather than
+ * being asked to declare a cost -- see rbe::detail::is_constant_length.
  */
 template<typename T>
 concept delimiting_tag = std::derived_from<T, rbe::detail::delimiting_tag>;

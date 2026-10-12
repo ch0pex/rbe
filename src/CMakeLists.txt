@@ -91,6 +91,7 @@ target_sources(
         rbe/frames/frame_delimiting_concepts.hpp
         rbe/frames/frame_delimiting_tags.hpp
         rbe/frames/frame_serder_concepts.hpp
+        rbe/frames/length.hpp
         rbe/frames/many.hpp
         rbe/frames/value_type.hpp
 

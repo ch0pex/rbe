@@ -87,15 +87,13 @@ template<frames::header H, typename P>
   }
   // lower priority than a byte length field: a count only settles the extent together with the stride.
   //
-  // TODO(fork 3b): flipping `counted_runs_are_delimited` to true is the whole change, and it cannot land
-  // before rbe::frame_distance (fork 2): the dynamic-stride case is O(n) and dsrl::frame::length() has no
-  // way to report that. It is not a free switch either -- every counted run (aquis::packet, every
-  // HeaderWithCount frame) moves from buffer-delimited to count-delimited, in this classification and in
-  // the length() that reads it.
-  else if constexpr (
-      constexpr auto counted_runs_are_delimited = false;
-      counted_runs_are_delimited and contains_annotation<H, rbe::payload_count> and frames::is_many<P>
-  ) {
+  // A static stride settles it without touching an element: the run is count * static_length<U>, read off
+  // the header. A dynamic stride settles it too -- the count still says where the run ends -- but only by
+  // measuring every element, so the frame is count-delimited and not constant: it carries no length() and
+  // answers through frames::distance. What it must not be is buffer-delimited: the count outranks whatever
+  // the buffer happens to measure (the wire is the golden source), so the bytes after the last element are
+  // not payload, however well the buffer happens to fit.
+  else if constexpr (contains_annotation<H, rbe::payload_count> and frames::is_many<P>) {
     return has_static_stride<P>() ? ^^frames::static_stride_delimited_tag : ^^frames::count_delimited_tag;
   }
   else if constexpr (frames::is_frame<P>) {
@@ -167,28 +165,33 @@ template<frames::is_frame T>
 }
 
 /**
- * @brief Whether resolving the frame length is O(1), which the outermost tag alone cannot answer
+ * @brief Whether the shape of a frame says its extent resolves in O(1), which is what gives it a length()
  *
- * The cost is a property of the whole chain: an outer frame pays whatever its nested frame's length
- * costs, and `frames::implicitly_delimited_tag` says only that the outer frame reads no field of its own. So the
- * walk goes down the payloads, and a single level that has to measure its elements one by one settles it
- * for everything above.
+ * The cost is a property of the whole chain: an outer frame pays whatever resolving its nested frame
+ * costs, and `frames::implicitly_delimited_tag` says only that the outer frame reads no field of its own.
+ * So the walk goes down the payloads, and a single level that has to measure its elements one by one
+ * settles it for everything above.
  *
- * Three tags are not O(1): a counted run with no static stride (one element measured per element), a
- * custom resolver, whose cost is whatever the user wrote, and a bare frames::self_delimited_tag -- a frame that
- * declares only the root says that it finds its own end and nothing at all about what that costs, which
- * is the terminator scan. A frame that does resolve in O(1) without fitting a leaf declares
- * frames::implicitly_delimited_tag instead. Every other category reads a field, looks up an id, adds static
- * sizes or takes the buffer size.
+ * One category is not O(1): a counted run with no static stride, where one element has to be measured per
+ * element. Every other category reads a field, looks up an id, adds static sizes, multiplies a count by a
+ * stride or takes the buffer size. Nothing is deduced into that category yet -- a run a count cannot
+ * bound without walking stays buffer-delimited (fork 3c) -- so the branch below is the specification of
+ * what to do when one arrives, and today every frame is constant.
+ *
+ * This is the deduced half of the cost axis and it has exactly one client:
+ * rbe::frames::dsrl::frame::length() exists if and only if this returns true, so a frame whose extent
+ * cannot be had in O(1) carries no length() to be called by accident and answers through
+ * rbe::frames::distance instead. The public axis is the detected half, rbe::frames::constant_length, which
+ * asks whether the member is there; for the library's own frames the two agree by construction, and for a
+ * hand-written frame the member is the only authority. A declared tag therefore never carries a cost
+ * claim: it says how the frame is delimited, and whether that resolution is cheap is answered by writing
+ * length() or by not writing it.
  */
 template<frames::is_frame T>
 [[nodiscard]] consteval auto is_constant_length() -> bool {
   using tag = typename T::delimiting_concept;
 
-  if constexpr (std::same_as<tag, frames::self_delimited_tag>) {
-    return false;
-  }
-  else if constexpr (
+  if constexpr (
       std::derived_from<tag, frames::count_delimited_tag> and
       not std::derived_from<tag, frames::static_stride_delimited_tag>
   ) {

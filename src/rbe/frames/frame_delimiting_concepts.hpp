@@ -73,9 +73,10 @@ using delimiting_concept_t = typename T::delimiting_concept;
  * frames, which is what lets a sequence of frames share a single buffer.
  *
  * It is also the escape hatch: a frame that resolves its own length in code -- a terminator scan, a
- * length buried in the payload -- declares `self_delimited_tag`, the bare root, which says that the
- * frame finds its own end and nothing about what that costs (so it is not `constant_length`). See
- * `cboe::top::line_view`.
+ * length buried in the payload -- declares `self_delimited_tag`, the bare root, which says that the frame
+ * finds its own end by none of the mechanisms its refinements name. Like any other frame it then contracts
+ * for an O(1) `length()`, which means resolving the extent once in `make()` and keeping it; see
+ * `cboe::top::line_view`, where the scan is the make() and `length()` returns the stored result.
  *
  * @tparam T The frame type to be evaluated.
  */
@@ -123,8 +124,10 @@ concept length_delimited = explicitly_delimited<T> and detail::is_tag<T, length_
  * so the length is the sum of the element lengths. Resolving it is O(1) when the element has a static
  * stride (see `static_stride_delimited`) and O(n) otherwise, since each element must be measured.
  *
- * @note Matches no type yet: a `payload_count` over a `many` is still classified as buffer-delimited
- * (fork 3b, see the TODO in `rbe::detail::frame_delimiting`).
+ * @note Only its `static_stride_delimited` leaf is deduced today. A count over a run of variable-size
+ * elements would delimit it too, by walking it, and that walk has nowhere to live yet (fork 3c): such a
+ * run stays `buffer_delimited`, as it is with no count at all. So this node matches exactly what its leaf
+ * matches, and the difference is reserved for 3c.
  *
  * @tparam T The frame type to be evaluated.
  */
@@ -204,26 +207,12 @@ concept dynamic_stride = is_many<T> and not static_stride<T>;
  * @brief A count-delimited frame whose elements each have a compile-time-constant size.
  *
  * Because the element stride is static, the total length is `count * stride`, so a `payload_count`
- * payload that would otherwise be O(n) is resolved in O(1).
- *
- * @note Matches no type yet, for the same reason `count_delimited` does not.
+ * payload that would otherwise be O(n) is resolved in O(1). `rbe::frames::dsrl::counted_extent` is the
+ * runtime half of this, and `dsrl::frame::length()` reads it without touching an element.
  *
  * @tparam T The frame type to be evaluated.
  */
 template<typename T>
 concept static_stride_delimited = count_delimited<T> and detail::is_tag<T, static_stride_delimited_tag>;
-
-/**
- * @brief A frame whose length is resolved in O(1), the cost axis of the classification.
- *
- * Not a category and not the union of the O(1) categories: the cost belongs to the whole chain of
- * nested frames, while a tag only speaks for the frame that carries it. The walk is in
- * `detail::is_constant_length`, and only two categories are not O(1) -- a counted run with no
- * static stride, and a custom resolver.
- *
- * @tparam T The frame type to be evaluated.
- */
-template<typename T>
-concept constant_length = is_frame<T> and detail::is_constant_length<T>();
 
 } // namespace rbe::frames

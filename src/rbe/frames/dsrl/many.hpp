@@ -16,6 +16,7 @@
 #include <rbe/core/detail/split_span.hpp>
 #include <rbe/frames/detail/base_tags.hpp>
 #include <rbe/frames/dsrl/concepts.hpp>
+#include <rbe/frames/length.hpp>
 #include <rbe/frames/frame_delimiting_concepts.hpp>
 
 // --- STD ---
@@ -28,7 +29,7 @@
 namespace rbe::frames::dsrl {
 
 template<is_frame T>
-  requires frames::self_delimited<T>
+  requires frames::self_delimited<T> and frames::constant_length<T>
 class many : public rbe::detail::many_tag {
 public:
   using frame_type  = T;

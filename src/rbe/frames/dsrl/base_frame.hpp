@@ -16,6 +16,7 @@
 #include <rbe/frames/dsrl/header.hpp>
 #include <rbe/frames/dsrl/payload.hpp>
 #include <rbe/frames/frame_concepts.hpp>
+#include <rbe/frames/length.hpp>
 
 // --- STD ---
 #include <cstddef>
@@ -98,7 +99,7 @@ public:
   /// Tuple-like access so a frame decomposes into its two parts: `auto [header, payload] = frame`
   template<std::size_t I>
     requires(I < 2)
-  [[nodiscard]] constexpr auto get() const {
+  [[nodiscard]] constexpr auto get() const -> std::conditional_t<I == 0, header_return_type, payload_return_type> {
     if constexpr (I == 0) {
       return header();
     }
@@ -107,23 +108,25 @@ public:
     }
   }
 
-  [[nodiscard]] constexpr auto data() const -> std::byte const* { return header_.data(); }
+  [[nodiscard]] constexpr auto flatten(this auto const& self) { return rbe::frames::dsrl::flatten(self); }
 
-  [[nodiscard]] constexpr auto buffer() const -> buffer_type { return header_.buffer(); }
-
-  // --- Spans, all derived from length() ---
-
-  [[nodiscard]] constexpr auto as_span(this auto const& self) -> buffer_type {
+  template<typename Self>
+    requires frames::constant_length<Self>
+  [[nodiscard]] constexpr auto as_span(this Self const& self) -> buffer_type {
     return buffer_type {self.data(), self.length()};
   }
 
   [[nodiscard]] constexpr auto header_span() const -> buffer_type { return header_.as_span(); }
 
-  [[nodiscard]] constexpr auto payload_span(this auto const& self) -> buffer_type {
+  template<typename Self>
+    requires frames::constant_length<Self>
+  [[nodiscard]] constexpr auto payload_span(this Self const& self) -> buffer_type {
     return self.as_span().subspan(self.header().length());
   }
 
-  [[nodiscard]] constexpr auto flatten(this auto const& self) { return rbe::frames::dsrl::flatten(self); }
+  [[nodiscard]] constexpr auto data() const -> std::byte const* { return header_.data(); }
+
+  [[nodiscard]] constexpr auto buffer() const -> buffer_type { return header_.buffer(); }
 
 protected:
   constexpr base_frame(header_return_type const hdr, payload_return_type const payload) :

@@ -25,6 +25,7 @@
 #include <rbe/dsrl/proxy.hpp>
 #include <rbe/frames/dsrl/header.hpp>
 #include <rbe/frames/frame_concepts.hpp>
+#include <rbe/frames/frame_delimiting_concepts.hpp>
 
 // --- STD ---
 #include <concepts>
@@ -65,6 +66,16 @@ constexpr auto payload_count(header<H> const hdr) -> std::size_t {
   }
 }
 
+/**
+ * @brief A run whose extent the header settles: a count field over elements of a compile-time-constant size
+ *
+ * The one shape where a count delimits without walking anything, and the same condition
+ * rbe::detail::frame_delimiting reads to hand such a frame frames::static_stride_delimited_tag -- the two
+ * must agree, since one settles the bytes and the other the category of the frame over them.
+ */
+template<typename P, typename H>
+concept counted_static_run = header<H>::has_count and frames::static_stride<P>;
+
 } // namespace detail
 
 /// The view a frame hands back for a payload declared as P: rbe::dsrl::proxy<T> for a wirable T, P itself otherwise
@@ -72,19 +83,31 @@ template<frames::payload P>
 using payload_view_t = typename detail::normalize_payload<P>::type;
 
 
+/// The bytes a count field bounds: the run is `count` elements of a constant size, and no element is read
+template<frames::payload P, frames::header H>
+  requires detail::counted_static_run<P, H>
+[[nodiscard]] constexpr auto counted_extent(header<H> const hdr) -> std::size_t {
+  return hdr.payload_count() * frames::static_length<frames::many_element_t<P>>;
+}
+
 /**
  * @brief The bytes the payload declared as P occupies at the start of `rest`, the bytes after the header
  *
  * The extent the header declares (payload_length / frame_length) when it declares one, whatever the
- * payload is; otherwise `rest`, the payload runs to the end of the buffer and the view built over it in
- * step 3 narrows itself if it can. Narrow contract: `rest` holds the extent the header declares.
- * try_payload_extent is the wide form.
+ * payload is; then a count over a static-stride run, which the header settles just as well (the only
+ * place the payload *type* takes part in step 2, and the runtime half of
+ * frames::static_stride_delimited); otherwise `rest`, the payload runs to the end of the buffer and the
+ * view built over it in step 3 narrows itself if it can. Narrow contract: `rest` holds the extent the
+ * header declares. try_payload_extent is the wide form.
  */
 template<frames::payload P, frames::header H>
 [[nodiscard]] constexpr auto payload_extent([[maybe_unused]] header<H> const hdr, std::span<std::byte const> const rest)
     -> std::span<std::byte const> {
   if constexpr (header<H>::delimits_payload) {
     return rest.first(hdr.payload_length());
+  }
+  else if constexpr (detail::counted_static_run<P, H>) {
+    return rest.first(counted_extent<P>(hdr));
   }
   else {
     return rest;
@@ -98,6 +121,10 @@ try_payload_extent([[maybe_unused]] header<H> const hdr, std::span<std::byte con
     -> std::optional<std::span<std::byte const>> {
   if constexpr (header<H>::delimits_payload) {
     return rest.size() >= hdr.payload_length() ? std::optional {rest.first(hdr.payload_length())} : std::nullopt;
+  }
+  else if constexpr (detail::counted_static_run<P, H>) {
+    auto const extent = counted_extent<P>(hdr);
+    return rest.size() >= extent ? std::optional {rest.first(extent)} : std::nullopt;
   }
   else {
     return rest;

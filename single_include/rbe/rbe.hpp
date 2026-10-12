@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Alvaro Cabrera Barrio
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
-// rbe 0.0.1: single header, auto-generated from the library headers (81 headers).
+// rbe 0.0.1: single header, auto-generated from the library headers (82 headers).
 
 #pragma once
 
@@ -3770,7 +3770,12 @@ struct static_delimited_tag : implicitly_delimited_tag { };
  * The two roots are the exhaustive answer to "who knows where this frame ends": the frame itself
  * (self_delimited_tag and its refinements) or the buffer it was handed. A frame that resolves its own
  * length in code is not a third answer -- it is the first one, and it says so by declaring
- * self_delimited_tag, the bare root, which claims nothing about what the resolution costs.
+ * self_delimited_tag, the bare root: it finds its own end, by no mechanism the hierarchy below names.
+ *
+ * A tag answers the mechanism and only the mechanism. What the resolution costs is the other axis
+ * (rbe::frames::constant_length), which the library deduces from the chain of tags, and a frame that
+ * resolves itself in code is presumed to honour the O(1) length() contract every frame signs rather than
+ * being asked to declare a cost -- see rbe::detail::is_constant_length.
  */
 template<typename T>
 concept delimiting_tag = std::derived_from<T, rbe::detail::delimiting_tag>;
@@ -3889,6 +3894,13 @@ concept has_get = requires(T const& frame) { frame.template get<I>(); } or requi
  * On top of the shape, this is the API rbe::frames::dsrl::frame offers and the one generic code (flatten, many)
  * relies on.
  *
+ * length() is deliberately **not** required: a frame has one when its extent is available in O(1) and has
+ * none when it is not, which is what makes rbe::frames::constant_length a detection rather than a promise
+ * (see length.hpp). Every frame answers rbe::frames::distance, and the operations derived from the extent
+ * -- as_span(), payload_span(), and being an element of a many -- follow length(), so they are available
+ * on exactly the frames that can afford them. flatten() is not one of them: it walks header() and
+ * payload(), so it works on every frame.
+ *
  * @note one common mistake that the user might make
  * is that they might mix rbe::frames::dsrl::frame with rbe::frames::frame we could check
  * if payload is a serder to provide them a btter error message. However
@@ -3897,15 +3909,13 @@ concept has_get = requires(T const& frame) { frame.template get<I>(); } or requi
  * until we find a better way to do it.
  */
 template<typename T>
-concept is_frame = rbe::frames::is_frame<T> and requires(T const ct) {
+concept is_frame = rbe::frames::is_frame<T> and requires(T const ct, typename T::buffer_type const buffer) {
   typename T::buffer_type;
   typename T::size_type;
 
-  { T::make(ct.as_span()) } -> std::same_as<std::optional<T>>;
+  { T::make(buffer) } -> std::same_as<std::optional<T>>;
   { ct.header() } -> std::same_as<typename T::header_return_type>;
   { ct.payload() } -> std::same_as<typename T::payload_return_type>;
-  { ct.length() } -> std::same_as<typename T::size_type>;
-  { ct.as_span() } -> std::same_as<typename T::buffer_type>;
   { ct.data() } -> std::same_as<std::byte const*>;
 
   requires std::constructible_from<T, typename T::buffer_type>;
@@ -3913,7 +3923,6 @@ concept is_frame = rbe::frames::is_frame<T> and requires(T const ct) {
   requires frames::payload<typename T::payload_type>;
   requires frames::declares_delimiting_concept<T>;
 };
-
 
 /// A frame that can be taken apart: `auto [header, payload] = frame`
 template<typename T>
@@ -4444,31 +4453,37 @@ split_span(std::span<T, Extent>, std::size_t) -> split_span<T>;
 
 } // namespace rbe::detail
 
-// ===== rbe/frames/frame_delimiting_concepts.hpp =====
+// ===== rbe/frames/length.hpp =====
 
 /**
- * @file frame_delimiting_concepts.hpp
- * @date 11/09/2026
- * @brief Classification of every frame by how its length is resolved from the wire.
+ * @file length.hpp
+ * @date 13/10/2026
+ * @brief The extent of a frame in bytes: the O(1) one, the one that may walk, and the axis between them
  *
- * The concepts below form a hierarchy: each node refines its parent, and the leaves are mutually
- * exclusive, so any given frame matches exactly one leaf. The right column is the algorithmic
- * complexity of extracting the frame length for that category.
+ * The pair mirrors std::ranges::size and std::ranges::distance, and for the same reason: one of them is a
+ * question only some types can answer cheaply, the other is an algorithm every type can answer.
  *
- * @verbatim
- *   Frame
- *   |-- buffer_delimited                     O(1)
- *   `-- self_delimited
- *       |-- explicitly_delimited
- *       |   |-- length_delimited             O(1)
- *       |   `-- count_delimited
- *       |       |-- static_stride_delimited  O(1)
- *       |       `-- !static_stride_delimited O(n)
- *       `-- implicitly_delimited
- *           |-- static_delimited             O(1), a compile-time constant
- *           `-- (an id, an extended header)  O(1), no leaf of its own
- * @endverbatim
+ *   rbe::frames::length(f)     the frame's byte extent, O(1). Exists only for a frame that has length().
+ *   rbe::frames::distance(f)   the same number, by walking when it has to. Exists for every frame.
+ *   rbe::frames::constant_length<F>   whether the first one is available
  *
+ * `length()` is a **member and only a member**: a frame is always a class its author writes, so there is
+ * nothing to adapt from the outside (which is what ADL buys std::ranges::size, whose range may be a C
+ * array). That makes its presence unambiguous, and the presence is the whole cost axis: a frame carries
+ * length() when it can answer in O(1) and carries none when it cannot, so constant_length detects rather
+ * than believes. It is std::ranges::sized_range exactly, which only works because the member is optional
+ * -- rbe::frames::dsrl::is_frame required it until this header existed, and the detection was a tautology.
+ *
+ * The detection concepts live in rbe::detail and not in a rbe::frames::detail: such a namespace would
+ * shadow rbe::detail for every unqualified rbe::detail:: inside rbe::frames, which is where the rest of the
+ * classification reads its machinery from.
+ *
+ * `distance` is the algorithm, not a second customization point, which is the shape std chose too: if you
+ * can compute the extent cheaply you expose length(), and if you cannot, walking is the only
+ * implementation left. It is still extensible, unlike ranges::distance, because a frame does not always
+ * carry something to walk the way a range carries ++: a frame may supply its own `distance()` member, or a
+ * `frame_distance(f)` found by ADL, and the library's own walk -- header plus the elements of the run --
+ * is the last resort.
  */
 
 
@@ -4552,15 +4567,13 @@ template<frames::header H, typename P>
   }
   // lower priority than a byte length field: a count only settles the extent together with the stride.
   //
-  // TODO(fork 3b): flipping `counted_runs_are_delimited` to true is the whole change, and it cannot land
-  // before rbe::frame_distance (fork 2): the dynamic-stride case is O(n) and dsrl::frame::length() has no
-  // way to report that. It is not a free switch either -- every counted run (aquis::packet, every
-  // HeaderWithCount frame) moves from buffer-delimited to count-delimited, in this classification and in
-  // the length() that reads it.
-  else if constexpr (
-      constexpr auto counted_runs_are_delimited = false;
-      counted_runs_are_delimited and contains_annotation<H, rbe::payload_count> and frames::is_many<P>
-  ) {
+  // A static stride settles it without touching an element: the run is count * static_length<U>, read off
+  // the header. A dynamic stride settles it too -- the count still says where the run ends -- but only by
+  // measuring every element, so the frame is count-delimited and not constant: it carries no length() and
+  // answers through frames::distance. What it must not be is buffer-delimited: the count outranks whatever
+  // the buffer happens to measure (the wire is the golden source), so the bytes after the last element are
+  // not payload, however well the buffer happens to fit.
+  else if constexpr (contains_annotation<H, rbe::payload_count> and frames::is_many<P>) {
     return has_static_stride<P>() ? ^^frames::static_stride_delimited_tag : ^^frames::count_delimited_tag;
   }
   else if constexpr (frames::is_frame<P>) {
@@ -4632,28 +4645,33 @@ template<frames::is_frame T>
 }
 
 /**
- * @brief Whether resolving the frame length is O(1), which the outermost tag alone cannot answer
+ * @brief Whether the shape of a frame says its extent resolves in O(1), which is what gives it a length()
  *
- * The cost is a property of the whole chain: an outer frame pays whatever its nested frame's length
- * costs, and `frames::implicitly_delimited_tag` says only that the outer frame reads no field of its own. So the
- * walk goes down the payloads, and a single level that has to measure its elements one by one settles it
- * for everything above.
+ * The cost is a property of the whole chain: an outer frame pays whatever resolving its nested frame
+ * costs, and `frames::implicitly_delimited_tag` says only that the outer frame reads no field of its own.
+ * So the walk goes down the payloads, and a single level that has to measure its elements one by one
+ * settles it for everything above.
  *
- * Three tags are not O(1): a counted run with no static stride (one element measured per element), a
- * custom resolver, whose cost is whatever the user wrote, and a bare frames::self_delimited_tag -- a frame that
- * declares only the root says that it finds its own end and nothing at all about what that costs, which
- * is the terminator scan. A frame that does resolve in O(1) without fitting a leaf declares
- * frames::implicitly_delimited_tag instead. Every other category reads a field, looks up an id, adds static
- * sizes or takes the buffer size.
+ * One category is not O(1): a counted run with no static stride, where one element has to be measured per
+ * element. Every other category reads a field, looks up an id, adds static sizes, multiplies a count by a
+ * stride or takes the buffer size. Nothing is deduced into that category yet -- a run a count cannot
+ * bound without walking stays buffer-delimited (fork 3c) -- so the branch below is the specification of
+ * what to do when one arrives, and today every frame is constant.
+ *
+ * This is the deduced half of the cost axis and it has exactly one client:
+ * rbe::frames::dsrl::frame::length() exists if and only if this returns true, so a frame whose extent
+ * cannot be had in O(1) carries no length() to be called by accident and answers through
+ * rbe::frames::distance instead. The public axis is the detected half, rbe::frames::constant_length, which
+ * asks whether the member is there; for the library's own frames the two agree by construction, and for a
+ * hand-written frame the member is the only authority. A declared tag therefore never carries a cost
+ * claim: it says how the frame is delimited, and whether that resolution is cheap is answered by writing
+ * length() or by not writing it.
  */
 template<frames::is_frame T>
 [[nodiscard]] consteval auto is_constant_length() -> bool {
   using tag = typename T::delimiting_concept;
 
-  if constexpr (std::same_as<tag, frames::self_delimited_tag>) {
-    return false;
-  }
-  else if constexpr (
+  if constexpr (
       std::derived_from<tag, frames::count_delimited_tag> and
       not std::derived_from<tag, frames::static_stride_delimited_tag>
   ) {
@@ -4668,6 +4686,162 @@ template<frames::is_frame T>
 }
 
 } // namespace rbe::detail
+
+// --- STD ---
+
+// The detection concepts live in rbe::detail and NOT in a rbe::frames::detail: such a namespace shadows
+// rbe::detail for every unqualified rbe::detail:: inside rbe::frames, which is where the delimiting
+// classification reads its machinery from (see A10 in docs/explanation/frame-delimiting-decisions.md).
+namespace rbe::detail {
+
+/// A frame that resolves its extent in O(1) and says so by carrying the member
+template<typename T>
+concept member_length = requires(T const& frame) {
+  { frame.length() } -> std::convertible_to<std::size_t>;
+};
+
+/// A frame that resolves its extent in its own way, at its own cost
+template<typename T>
+concept member_distance = requires(T const& frame) {
+  { frame.distance() } -> std::convertible_to<std::size_t>;
+};
+
+/// ...or declares that resolution next to its type instead of inside it
+template<typename T>
+concept adl_distance = requires(T const& frame) {
+  { frame_distance(frame) } -> std::convertible_to<std::size_t>; // found by ADL in T's own namespace
+};
+
+/// A frame that answers for its own extent, cheaply or not: the three ways frames::distance reaches one
+template<typename T>
+concept resolves_extent = member_length<T> or member_distance<T> or adl_distance<T>;
+
+/// A vocabulary frame, which declares types and no members at all: its API is the view it lowers to
+template<typename T>
+concept lowers_to_view = requires { typename T::dsrl_type; };
+
+/// A frame whose extent is its header plus the elements of its payload, measured one by one
+template<typename T>
+concept walkable_run = requires(T const& frame) {
+  { frame.header().length() } -> std::convertible_to<std::size_t>;
+  requires std::ranges::input_range<decltype(frame.payload())>;
+};
+
+} // namespace rbe::detail
+
+namespace rbe::frames {
+
+/**
+ * @brief The byte extent of a frame, in O(1)
+ *
+ * Available only for a frame that carries `length()`, which is the frame stating that it can answer
+ * without walking anything -- see `constant_length`. The expensive counterpart is `distance`.
+ */
+struct length_fn {
+  template<is_frame F>
+    requires rbe::detail::member_length<F>
+  [[nodiscard]] constexpr auto operator()(F const& frame) const -> std::size_t {
+    return frame.length();
+  }
+};
+
+inline constexpr length_fn length {};
+
+/**
+ * @brief A frame whose byte extent is available in O(1), the cost axis of the classification
+ *
+ * The frame answers for itself, by carrying `length()` or by not carrying it -- there is nothing to
+ * declare and nothing to opt out of, which is `std::ranges::sized_range` and the reason the axis detects
+ * rather than believes.
+ *
+ * One kind of frame cannot answer, and it is the kind the user writes: the vocabulary
+ * `rbe::frames::frame` declares types and no members at all. It delegates to the view it lowers to, which
+ * is the type that has the API, and the answer is the same one by construction -- lowering never changes
+ * the delimiting category, so it never changes whether `dsrl::frame::length()` exists. Delegating rather
+ * than falling back on the deduced walk is what keeps a single answer per frame: a hand-written view that
+ * opts out by supplying `distance()` instead of `length()` must not come back as `constant_length` just
+ * because the vocabulary type above it has no member to inspect.
+ *
+ * @tparam F The frame type to be evaluated.
+ */
+template<typename F>
+concept constant_length = //
+    is_frame<F> //
+    and (rbe::detail::member_length<F> //
+         or (not rbe::detail::resolves_extent<F> //
+             and rbe::detail::lowers_to_view<F> //
+             and rbe::detail::member_length<typename F::dsrl_type>));
+
+/**
+ * @brief The byte extent of any frame, walking when that is the only way to it
+ *
+ * Complexity:
+ *  - O(1) only guaranted if the frame carries length()
+ *  - O(n) or more depending on adl / member distance implementations provided by the user
+ *
+ * Chain of calls, in priority order:
+ *   - frame.length() -> frame.distance() -> frame_distance(frame) -> header.length() + sum(distance(element) * count)
+ */
+struct distance_fn {
+  template<is_frame F>
+    requires rbe::detail::member_length<F> or rbe::detail::member_distance<F> or rbe::detail::adl_distance<F> or
+             rbe::detail::walkable_run<F>
+  [[nodiscard]] constexpr auto operator()(F const& frame) const -> std::size_t {
+    if constexpr (rbe::detail::member_length<F>) {
+      return frame.length();
+    }
+    else if constexpr (rbe::detail::member_distance<F>) {
+      return frame.distance();
+    }
+    else if constexpr (rbe::detail::adl_distance<F>) {
+      return frame_distance(frame);
+    }
+    else {
+      // the run bounds the frame and only its elements bound the run: this is the O(n) the cost axis is
+      // there to announce, and the reason such a frame carries no length() to be called by accident
+      auto run   = frame.payload(); // by value: iterating a run advances it
+      auto total = std::size_t {frame.header().length()};
+      for (auto const& element: run) {
+        total += (*this)(element);
+      }
+      return total;
+    }
+  }
+};
+
+inline constexpr distance_fn distance {};
+
+} // namespace rbe::frames
+
+// ===== rbe/frames/frame_delimiting_concepts.hpp =====
+
+/**
+ * @file frame_delimiting_concepts.hpp
+ * @date 11/09/2026
+ * @brief Classification of every frame by how its length is resolved from the wire.
+ *
+ * The concepts below form a hierarchy: each node refines its parent, and the leaves are mutually
+ * exclusive, so any given frame matches exactly one leaf. The right column is the algorithmic
+ * complexity of extracting the frame length for that category.
+ *
+ * @verbatim
+ *   Frame
+ *   |-- buffer_delimited                     O(1)
+ *   `-- self_delimited
+ *       |-- explicitly_delimited
+ *       |   |-- length_delimited             O(1)
+ *       |   `-- count_delimited
+ *       |       |-- static_stride_delimited  O(1)
+ *       |       `-- !static_stride_delimited O(n)
+ *       `-- implicitly_delimited
+ *           |-- static_delimited             O(1), a compile-time constant
+ *           `-- (an id, an extended header)  O(1), no leaf of its own
+ * @endverbatim
+ *
+ */
+
+
+// --- Includes ---
 
 // --- STD ---
 
@@ -4703,9 +4877,10 @@ using delimiting_concept_t = typename T::delimiting_concept;
  * frames, which is what lets a sequence of frames share a single buffer.
  *
  * It is also the escape hatch: a frame that resolves its own length in code -- a terminator scan, a
- * length buried in the payload -- declares `self_delimited_tag`, the bare root, which says that the
- * frame finds its own end and nothing about what that costs (so it is not `constant_length`). See
- * `cboe::top::line_view`.
+ * length buried in the payload -- declares `self_delimited_tag`, the bare root, which says that the frame
+ * finds its own end by none of the mechanisms its refinements name. Like any other frame it then contracts
+ * for an O(1) `length()`, which means resolving the extent once in `make()` and keeping it; see
+ * `cboe::top::line_view`, where the scan is the make() and `length()` returns the stored result.
  *
  * @tparam T The frame type to be evaluated.
  */
@@ -4753,8 +4928,10 @@ concept length_delimited = explicitly_delimited<T> and detail::is_tag<T, length_
  * so the length is the sum of the element lengths. Resolving it is O(1) when the element has a static
  * stride (see `static_stride_delimited`) and O(n) otherwise, since each element must be measured.
  *
- * @note Matches no type yet: a `payload_count` over a `many` is still classified as buffer-delimited
- * (fork 3b, see the TODO in `rbe::detail::frame_delimiting`).
+ * @note Only its `static_stride_delimited` leaf is deduced today. A count over a run of variable-size
+ * elements would delimit it too, by walking it, and that walk has nowhere to live yet (fork 3c): such a
+ * run stays `buffer_delimited`, as it is with no count at all. So this node matches exactly what its leaf
+ * matches, and the difference is reserved for 3c.
  *
  * @tparam T The frame type to be evaluated.
  */
@@ -4834,27 +5011,13 @@ concept dynamic_stride = is_many<T> and not static_stride<T>;
  * @brief A count-delimited frame whose elements each have a compile-time-constant size.
  *
  * Because the element stride is static, the total length is `count * stride`, so a `payload_count`
- * payload that would otherwise be O(n) is resolved in O(1).
- *
- * @note Matches no type yet, for the same reason `count_delimited` does not.
+ * payload that would otherwise be O(n) is resolved in O(1). `rbe::frames::dsrl::counted_extent` is the
+ * runtime half of this, and `dsrl::frame::length()` reads it without touching an element.
  *
  * @tparam T The frame type to be evaluated.
  */
 template<typename T>
 concept static_stride_delimited = count_delimited<T> and detail::is_tag<T, static_stride_delimited_tag>;
-
-/**
- * @brief A frame whose length is resolved in O(1), the cost axis of the classification.
- *
- * Not a category and not the union of the O(1) categories: the cost belongs to the whole chain of
- * nested frames, while a tag only speaks for the frame that carries it. The walk is in
- * `detail::is_constant_length`, and only two categories are not O(1) -- a counted run with no
- * static stride, and a custom resolver.
- *
- * @tparam T The frame type to be evaluated.
- */
-template<typename T>
-concept constant_length = is_frame<T> and detail::is_constant_length<T>();
 
 } // namespace rbe::frames
 
@@ -4863,7 +5026,7 @@ concept constant_length = is_frame<T> and detail::is_constant_length<T>();
 namespace rbe::frames::dsrl {
 
 template<is_frame T>
-  requires frames::self_delimited<T>
+  requires frames::self_delimited<T> and frames::constant_length<T>
 class many : public rbe::detail::many_tag {
 public:
   using frame_type  = T;
@@ -5380,6 +5543,16 @@ constexpr auto payload_count(header<H> const hdr) -> std::size_t {
   }
 }
 
+/**
+ * @brief A run whose extent the header settles: a count field over elements of a compile-time-constant size
+ *
+ * The one shape where a count delimits without walking anything, and the same condition
+ * rbe::detail::frame_delimiting reads to hand such a frame frames::static_stride_delimited_tag -- the two
+ * must agree, since one settles the bytes and the other the category of the frame over them.
+ */
+template<typename P, typename H>
+concept counted_static_run = header<H>::has_count and frames::static_stride<P>;
+
 } // namespace detail
 
 /// The view a frame hands back for a payload declared as P: rbe::dsrl::proxy<T> for a wirable T, P itself otherwise
@@ -5387,19 +5560,31 @@ template<frames::payload P>
 using payload_view_t = typename detail::normalize_payload<P>::type;
 
 
+/// The bytes a count field bounds: the run is `count` elements of a constant size, and no element is read
+template<frames::payload P, frames::header H>
+  requires detail::counted_static_run<P, H>
+[[nodiscard]] constexpr auto counted_extent(header<H> const hdr) -> std::size_t {
+  return hdr.payload_count() * frames::static_length<frames::many_element_t<P>>;
+}
+
 /**
  * @brief The bytes the payload declared as P occupies at the start of `rest`, the bytes after the header
  *
  * The extent the header declares (payload_length / frame_length) when it declares one, whatever the
- * payload is; otherwise `rest`, the payload runs to the end of the buffer and the view built over it in
- * step 3 narrows itself if it can. Narrow contract: `rest` holds the extent the header declares.
- * try_payload_extent is the wide form.
+ * payload is; then a count over a static-stride run, which the header settles just as well (the only
+ * place the payload *type* takes part in step 2, and the runtime half of
+ * frames::static_stride_delimited); otherwise `rest`, the payload runs to the end of the buffer and the
+ * view built over it in step 3 narrows itself if it can. Narrow contract: `rest` holds the extent the
+ * header declares. try_payload_extent is the wide form.
  */
 template<frames::payload P, frames::header H>
 [[nodiscard]] constexpr auto payload_extent([[maybe_unused]] header<H> const hdr, std::span<std::byte const> const rest)
     -> std::span<std::byte const> {
   if constexpr (header<H>::delimits_payload) {
     return rest.first(hdr.payload_length());
+  }
+  else if constexpr (detail::counted_static_run<P, H>) {
+    return rest.first(counted_extent<P>(hdr));
   }
   else {
     return rest;
@@ -5413,6 +5598,10 @@ try_payload_extent([[maybe_unused]] header<H> const hdr, std::span<std::byte con
     -> std::optional<std::span<std::byte const>> {
   if constexpr (header<H>::delimits_payload) {
     return rest.size() >= hdr.payload_length() ? std::optional {rest.first(hdr.payload_length())} : std::nullopt;
+  }
+  else if constexpr (detail::counted_static_run<P, H>) {
+    auto const extent = counted_extent<P>(hdr);
+    return rest.size() >= extent ? std::optional {rest.first(extent)} : std::nullopt;
   }
   else {
     return rest;
@@ -5552,7 +5741,7 @@ public:
   /// Tuple-like access so a frame decomposes into its two parts: `auto [header, payload] = frame`
   template<std::size_t I>
     requires(I < 2)
-  [[nodiscard]] constexpr auto get() const {
+  [[nodiscard]] constexpr auto get() const -> std::conditional_t<I == 0, header_return_type, payload_return_type> {
     if constexpr (I == 0) {
       return header();
     }
@@ -5561,23 +5750,25 @@ public:
     }
   }
 
-  [[nodiscard]] constexpr auto data() const -> std::byte const* { return header_.data(); }
+  [[nodiscard]] constexpr auto flatten(this auto const& self) { return rbe::frames::dsrl::flatten(self); }
 
-  [[nodiscard]] constexpr auto buffer() const -> buffer_type { return header_.buffer(); }
-
-  // --- Spans, all derived from length() ---
-
-  [[nodiscard]] constexpr auto as_span(this auto const& self) -> buffer_type {
+  template<typename Self>
+    requires frames::constant_length<Self>
+  [[nodiscard]] constexpr auto as_span(this Self const& self) -> buffer_type {
     return buffer_type {self.data(), self.length()};
   }
 
   [[nodiscard]] constexpr auto header_span() const -> buffer_type { return header_.as_span(); }
 
-  [[nodiscard]] constexpr auto payload_span(this auto const& self) -> buffer_type {
+  template<typename Self>
+    requires frames::constant_length<Self>
+  [[nodiscard]] constexpr auto payload_span(this Self const& self) -> buffer_type {
     return self.as_span().subspan(self.header().length());
   }
 
-  [[nodiscard]] constexpr auto flatten(this auto const& self) { return rbe::frames::dsrl::flatten(self); }
+  [[nodiscard]] constexpr auto data() const -> std::byte const* { return header_.data(); }
+
+  [[nodiscard]] constexpr auto buffer() const -> buffer_type { return header_.buffer(); }
 
 protected:
   constexpr base_frame(header_return_type const hdr, payload_return_type const payload) :
@@ -5710,12 +5901,27 @@ public:
 
   // --- Member functions ---
 
-  [[nodiscard]] constexpr auto length() const -> size_type {
+  /// Only for a frame whose category chain resolves in O(1): everything else answers through
+  /// frames::distance, and has no length() for a caller to reach for by mistake (see frames::length).
+  ///
+  /// The shape is not the whole condition: a nested frame has to be able to answer too, and a
+  /// hand-written one may have declared a category while supplying no length() at all. Asking its member
+  /// is what keeps the two halves of the axis recursing by the same rule, so this exists only when the
+  /// body below actually compiles.
+  [[nodiscard]] constexpr auto length() const -> size_type
+    requires(rbe::detail::is_constant_length<frame>() and
+             (not frames::is_frame<PayloadType> or rbe::detail::member_length<PayloadType>))
+  {
     if constexpr (frames::buffer_delimited<frame>) {
       return this->buffer().size();
     }
     else if constexpr (frames::length_delimited<frame>) {
       return this->header().frame_length();
+    }
+    // the count bounds the run without reading an element, so the payload view is never asked (a `many`
+    // reports no extent of its own; what it was handed is this, settled in step 2 by counted_extent)
+    else if constexpr (frames::static_stride_delimited<frame>) {
+      return this->header().length() + counted_extent<payload_type>(this->header());
     }
     else {
       return this->header().length() + detail::payload_length(this->payload());

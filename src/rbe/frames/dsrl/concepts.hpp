@@ -44,6 +44,13 @@ concept has_get = requires(T const& frame) { frame.template get<I>(); } or requi
  * On top of the shape, this is the API rbe::frames::dsrl::frame offers and the one generic code (flatten, many)
  * relies on.
  *
+ * length() is deliberately **not** required: a frame has one when its extent is available in O(1) and has
+ * none when it is not, which is what makes rbe::frames::constant_length a detection rather than a promise
+ * (see length.hpp). Every frame answers rbe::frames::distance, and the operations derived from the extent
+ * -- as_span(), payload_span(), and being an element of a many -- follow length(), so they are available
+ * on exactly the frames that can afford them. flatten() is not one of them: it walks header() and
+ * payload(), so it works on every frame.
+ *
  * @note one common mistake that the user might make
  * is that they might mix rbe::frames::dsrl::frame with rbe::frames::frame we could check
  * if payload is a serder to provide them a btter error message. However
@@ -52,15 +59,13 @@ concept has_get = requires(T const& frame) { frame.template get<I>(); } or requi
  * until we find a better way to do it.
  */
 template<typename T>
-concept is_frame = rbe::frames::is_frame<T> and requires(T const ct) {
+concept is_frame = rbe::frames::is_frame<T> and requires(T const ct, typename T::buffer_type const buffer) {
   typename T::buffer_type;
   typename T::size_type;
 
-  { T::make(ct.as_span()) } -> std::same_as<std::optional<T>>;
+  { T::make(buffer) } -> std::same_as<std::optional<T>>;
   { ct.header() } -> std::same_as<typename T::header_return_type>;
   { ct.payload() } -> std::same_as<typename T::payload_return_type>;
-  { ct.length() } -> std::same_as<typename T::size_type>;
-  { ct.as_span() } -> std::same_as<typename T::buffer_type>;
   { ct.data() } -> std::same_as<std::byte const*>;
 
   requires std::constructible_from<T, typename T::buffer_type>;
@@ -68,7 +73,6 @@ concept is_frame = rbe::frames::is_frame<T> and requires(T const ct) {
   requires frames::payload<typename T::payload_type>;
   requires frames::declares_delimiting_concept<T>;
 };
-
 
 /// A frame that can be taken apart: `auto [header, payload] = frame`
 template<typename T>

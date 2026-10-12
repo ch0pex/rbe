@@ -23,6 +23,7 @@
 #include <rbe/frames/frame_delimiting_concepts.hpp>
 #include <rbe/frames/frame_delimiting_tags.hpp>
 #include <rbe/frames/frame_serder_concepts.hpp>
+#include <rbe/frames/length.hpp>
 #include <rbe/frames/many.hpp>
 #include <rbe/frames/srl/concepts.hpp>
 #include <rbe/frames/value_type.hpp>

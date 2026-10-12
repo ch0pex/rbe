@@ -33,7 +33,11 @@
 
 // Every protocol composes into frames, classified at compile time by how they are delimited.
 static_assert(rbe::frames::self_delimited<aquis::message>);
-static_assert(rbe::frames::buffer_delimited<aquis::packet>); // PacketHeader has no length: the UDP datagram bounds it
+// PacketHeader carries no length, only a count, and a message has no constant size: the count delimits the
+// packet by measuring every message, so it is count-delimited and not constant_length -- it has no
+// length(), and rbe::frames::distance(packet) is the walk that answers for it
+static_assert(rbe::frames::count_delimited<aquis::packet>);
+static_assert(not rbe::frames::constant_length<aquis::packet>);
 static_assert(rbe::frames::self_delimited<cboe::pitch::message>);
 static_assert(rbe::frames::self_delimited<cboe::pitch::packet>);
 static_assert(rbe::frames::self_delimited<lse::message>);

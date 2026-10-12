@@ -978,18 +978,17 @@ class line_view : public rbe::frames::dsrl::base_frame<Header, messages::dsrl_ty
   using base = rbe::frames::dsrl::base_frame<Header, messages::dsrl_type>;
 
 public:
-  /// The scan for the terminator is not detectable from the shape, and the shape would get it wrong: the
-  /// line ends at the first LF, whatever the id says. Self-delimiting, and O(n) -- the bare root states
-  /// exactly that and nothing about a cost it does not have.
+  /// The scan for the terminator is not detectable from the shape, and the shape would get it wrong. For
+  /// this case is necessary to declare the delimiting concept explicitly.
   using delimiting_concept = rbe::frames::self_delimited_tag;
 
-  static constexpr auto make(buffer_type const buf) -> std::optional<line_view> {
+  static constexpr auto make(buffer_type const buf, std::size_t const scanned_offset = 0) -> std::optional<line_view> {
     auto const hdr = header_return_type::make(buf); // step 1
     if (not hdr.has_value()) {
       return std::nullopt;
     }
     auto const rest   = buf.subspan(hdr->length());
-    auto const extent = line_extent(rest); // step 2: the only custom part
+    auto const extent = line_extent(rest, scanned_offset); // step 2: the only custom part
     if (not extent.has_value()) {
       return std::nullopt; // incomplete line: wait for more bytes
     }
@@ -1005,9 +1004,18 @@ public:
 
 private:
   /// up to and including the terminating LF, then every LF that follows it; nullopt if the line is not complete yet
-  static constexpr auto line_extent(buffer_type const rest) -> std::optional<size_type> {
-    auto const lf = std::ranges::find(rest, std::byte {'\n'});
-    return lf == rest.end() ? std::nullopt : std::make_optional(std::distance(rest.begin(), lf) + 1);
+  static constexpr auto line_extent(buffer_type const rest, std::size_t const scanned_offset = 0)
+      -> std::optional<size_type> {
+    auto const safe_offset = std::min(scanned_offset, rest.size());
+    auto const unsearched  = rest.subspan(safe_offset);
+    auto const lf          = std::ranges::find(unsearched, std::byte {'\n'});
+
+    if (lf == unsearched.end()) {
+      return std::nullopt;
+    }
+
+    // Calculate total extent from the beginning of 'rest', not from 'unsearched'
+    return std::make_optional(std::ranges::distance(rest.begin(), lf) + 1);
   }
 
   constexpr line_view(header_return_type const hdr, payload_return_type const p, size_type const n) :

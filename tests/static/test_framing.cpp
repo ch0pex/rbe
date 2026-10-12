@@ -145,9 +145,15 @@ static_assert(
 static_assert(
     std::same_as<frame_delimiting_tag<WithHeaderLength, MessageWithHeader>, rbe::frames::implicitly_delimited_tag>
 );
-// a count does not settle the extent yet, so a run still reaches the end of the buffer (fork 3b)
+// a count settles the extent when the element has a constant size: count * stride, no element read
 static_assert(
-    std::same_as<frame_delimiting_tag<HeaderWithCount, rbe::frames::many<msg_frame>>, rbe::frames::buffer_delimited_tag>
+    std::same_as<
+        frame_delimiting_tag<HeaderWithCount, rbe::frames::many<msg_frame>>, rbe::frames::static_stride_delimited_tag>
+);
+// and when it has not, the count still delimits the run -- by measuring every element, so the frame is
+// count-delimited without being constant: what it must not be is bounded by a buffer it does not own
+static_assert(
+    std::same_as<frame_delimiting_tag<HeaderWithCount, rbe::frames::many<any_frame>>, rbe::frames::count_delimited_tag>
 );
 
 // lowering never changes the category, so dsrl::frame::length() agrees with the rbe:: classification
@@ -247,6 +253,7 @@ using extended_header_frame = rbe::frames::frame<WithHeaderLength, MessageWithHe
 // explicitly_empty types, while rbe::frames::payload does
 using empty_payload_frame = rbe::frames::dsrl::frame<PlainHeader, ExplictlyEmpty>;
 using count_frame         = rbe::frames::frame<HeaderWithCount, rbe::frames::many<msg_frame>>;
+using dynamic_count_frame = rbe::frames::frame<HeaderWithCount, rbe::frames::many<any_frame>>;
 
 // the mechanism axis agrees with the rbe:: concepts it replaces
 static_assert(rbe::frames::self_delimited<msg_frame>);
@@ -318,10 +325,22 @@ static_assert(rbe::frames::constant_length<nested>);
 static_assert(rbe::frames::constant_length<packet>);
 static_assert(not rbe::frames::constant_length<MessageWithHeader>); // not a frame
 
-// --- the count mechanism is not classified yet (fork 3b): a header count still runs to the buffer end ---
-static_assert(rbe::frames::buffer_delimited<count_frame>);
-static_assert(not rbe::frames::count_delimited<count_frame>);
-static_assert(not rbe::frames::static_stride_delimited<count_frame>);
+// --- the count mechanism, for the one stride it settles without walking anything ---
+static_assert(rbe::frames::static_stride_delimited<count_frame>);
+static_assert(rbe::frames::count_delimited<count_frame>); // the leaf refines it
+static_assert(rbe::frames::explicitly_delimited<count_frame>); // the count is a field on the wire
+static_assert(rbe::frames::constant_length<count_frame>);
+static_assert(rbe::frames::static_stride<rbe::frames::many<msg_frame>>);
+
+// a dynamic stride delimits by walking: self-delimiting, and the first category that is not O(1), so such
+// a frame carries no length() at all and answers through rbe::frames::distance
+static_assert(rbe::frames::count_delimited<dynamic_count_frame>);
+static_assert(not rbe::frames::static_stride_delimited<dynamic_count_frame>);
+static_assert(not rbe::frames::constant_length<dynamic_count_frame>);
+static_assert(not rbe::frames::constant_length<dynamic_count_frame::dsrl_type>);
+static_assert(not rbe::detail::member_length<dynamic_count_frame::dsrl_type>); // no length() to call at all
+static_assert(requires(dynamic_count_frame::dsrl_type const f) { rbe::frames::distance(f); });
+static_assert(rbe::frames::dynamic_stride<rbe::frames::many<any_frame>>);
 
 // --- the tags themselves: refinement is derivation, so a concept is one derived_from ---
 static_assert(std::derived_from<rbe::frames::static_delimited_tag, rbe::frames::implicitly_delimited_tag>);
@@ -329,7 +348,7 @@ static_assert(std::derived_from<rbe::frames::length_delimited_tag, rbe::frames::
 static_assert(std::derived_from<rbe::frames::static_stride_delimited_tag, rbe::frames::count_delimited_tag>);
 static_assert(std::derived_from<rbe::frames::implicitly_delimited_tag, rbe::frames::self_delimited_tag>);
 static_assert(std::derived_from<rbe::frames::explicitly_delimited_tag, rbe::frames::self_delimited_tag>);
-// the buffer and a custom resolver are not the frame finding its own end
+// the buffer bounding a frame is not the frame finding its own end
 static_assert(not std::derived_from<rbe::frames::buffer_delimited_tag, rbe::frames::self_delimited_tag>);
 
 // every frame carries its category as a member, at both levels
@@ -338,7 +357,7 @@ static_assert(std::same_as<msg_frame::dsrl_type::delimiting_concept, rbe::frames
 static_assert(std::same_as<any_frame::delimiting_concept, rbe::frames::implicitly_delimited_tag>);
 static_assert(std::same_as<blob_frame::delimiting_concept, rbe::frames::buffer_delimited_tag>);
 static_assert(std::same_as<nested::delimiting_concept, rbe::frames::static_delimited_tag>);
-static_assert(std::same_as<count_frame::delimiting_concept, rbe::frames::buffer_delimited_tag>); // until fork 3b
+static_assert(std::same_as<count_frame::delimiting_concept, rbe::frames::static_stride_delimited_tag>);
 static_assert(std::same_as<extended_header_frame::delimiting_concept, rbe::frames::implicitly_delimited_tag>);
 static_assert(
     std::same_as<
@@ -352,8 +371,8 @@ static_assert(std::same_as<
               rbe::frames::frame_delimiting_tag<CommonHeader, MessageWithHeader>>);
 
 // --- a frame that resolves its own length: the declaration wins over the deduction ---
-// a '\n' terminated line. Its shape says buffer-delimited -- a blob runs to the end of the buffer --
-// and the scan says otherwise: self-delimiting, and O(n), which is what the bare root tag states.
+// a '\n' terminated line. Its shape says buffer-delimited -- a blob runs to the end of the buffer -- and
+// the scan says otherwise: self-delimiting, by no mechanism the hierarchy names, which is the bare root.
 struct terminated_line : rbe::frames::dsrl::base_frame<PlainHeader, rbe::frames::blob::dsrl_type> {
   using delimiting_concept = rbe::frames::self_delimited_tag;
 };
@@ -362,7 +381,9 @@ static_assert(std::same_as<rbe::frames::delimiting_concept_t<terminated_line>, r
 static_assert(rbe::frames::self_delimited<terminated_line>);
 static_assert(not rbe::frames::buffer_delimited<terminated_line>); // what the shape alone would have said
 static_assert(not rbe::frames::static_delimited<terminated_line>);
-static_assert(not rbe::frames::constant_length<terminated_line>); // a scan is O(n)
+// the tag reports the mechanism and only that: what the resolution costs is answered by the member, and
+// this fixture declares a category without defining length() at all, so it answers nothing
+static_assert(not rbe::frames::constant_length<terminated_line>);
 
 // a declaration made inside a chain of frames reaches the outermost frame, which is what a walk over the
 // shapes alone cannot do: by shape, a frame over a blob-payload frame is buffer-delimited
@@ -372,7 +393,10 @@ static_assert(std::same_as<
               rbe::frames::buffer_delimited_tag>);
 static_assert(rbe::frames::self_delimited<wrapped_line>);
 static_assert(rbe::frames::implicitly_delimited<wrapped_line>);
-static_assert(not rbe::frames::constant_length<wrapped_line>); // the cost of the chain, not of the outer frame
+// the cost is the chain's and not the outer frame's, which is why the condition recurses: the inner frame
+// cannot answer in O(1), so neither can this one, and it has no length() either
+static_assert(not rbe::frames::constant_length<wrapped_line>);
+static_assert(not rbe::detail::member_length<wrapped_line>);
 
 
 // ============================================================
