@@ -851,4 +851,8 @@ non-total `candidate_list::wire_size`), the same one variable-size candidates ne
 - [ ] Rewrite `cboe::top::line` as a vocabulary serder plus `line_view`, replacing the sketch in `example/markets/cboe.hpp`.
 - [ ] `dsrl/flatten.hpp` calls `header(strategy)` / `payload(strategy)`, which `frame` no longer has.
 - [ ] `frame<H, blob>::make` calls `std::span::make` on the hardened path, which is ill-formed; only the constructor works for a span payload.
+- [ ] Decide between the two frame-storage designs in [frame-storage.md](frame-storage.md): the resolved
+      payload view (today) versus `header<H>` plus a cached frame length; it needs the size-only length
+      resolver this file's [§2](#2-a-frame-is-a-view-the-buffer-may-be-larger-than-the-frame) lists as
+      implemented and which is no longer in the code.
 - [ ] Fold these notes and framing.md into user-facing documentation.
