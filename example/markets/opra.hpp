@@ -25,7 +25,7 @@
  * from the (category, indicator) tuple as defined in §5.
  *
  * The message `Header` is declared once and composed with the message set
- * through `rbe::frame` (see `message` at the end). This is a partial model:
+ * through `rbe::frames::frame` (see `message` at the end). This is a partial model:
  * `rbe::id` only dispatches on `msg_category`, while OPRA also needs
  * `msg_type` for some categories and `msg_indicator` to size the optional
  * BBO appendages, and Administrative messages carry their length inside
@@ -401,7 +401,7 @@ struct[[= rbe::pack_be]] DoubleAppendage {
 // Category 'a' – Equity and Index Last Sale (spec §6.01), 43 bytes.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::last_sale)]] EquityIndexLastSale {
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::last_sale) ]] EquityIndexLastSale {
   symbol_t security_symbol;
   std::uint8_t reserved1 {};
   ExpirationBlock expiration;
@@ -419,7 +419,7 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::last_sale)]] EquityIndexLastSa
 // Category 'd' – Open Interest (spec §6.02), 30 bytes.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::open_interest)]] OpenInterest {
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::open_interest) ]] OpenInterest {
   symbol_t security_symbol;
   std::uint8_t reserved {};
   ExpirationBlock expiration;
@@ -432,7 +432,7 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::open_interest)]] OpenInterest 
 // Category 'f' – Equity and Index End of Day Summary (spec §6.03), 72 bytes.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::eod_summary)]] EquityIndexEodSummary {
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::eod_summary) ]] EquityIndexEodSummary {
   symbol_t security_symbol;
   std::uint8_t reserved {};
   ExpirationBlock expiration;
@@ -458,7 +458,7 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::eod_summary)]] EquityIndexEodS
 // selected by the BBO Indicator in the Message Header).
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::long_quote)]] LongQuote {
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::long_quote) ]] LongQuote {
   symbol_t security_symbol;
   std::uint8_t reserved {};
   ExpirationBlock expiration;
@@ -477,7 +477,7 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::long_quote)]] LongQuote {
 // Premium Price Denominator implied 'B'.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::short_quote)]] ShortQuote {
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::short_quote) ]] ShortQuote {
   short_symbol_t security_symbol;
   ExpirationBlock expiration;
   short_price_t strike_price;
@@ -495,7 +495,7 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::short_quote)]] ShortQuote {
 // sent one per block.
 // ─────────────────────────────────────────────────────────────────────
 
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::administrative)]] Administrative {
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::administrative) ]] Administrative {
   std::uint16_t msg_data_length {}; ///< Length of the trailing Message Data field, 0–200.
   // Message Data (variable, printable ASCII) follows on the wire.
 };
@@ -507,14 +507,14 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::administrative)]] Administrati
 // ─────────────────────────────────────────────────────────────────────
 
 // Header-only: annotated rbe::empty so it is wirable with a size of 0 and can be an alternative of `messages`.
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::control), = rbe::empty]] Control {};
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::control), = rbe::empty ]] Control { };
 
 // ─────────────────────────────────────────────────────────────────────
 // Category 'R' – Series Mapping Message (spec §6.07), 155 bytes.
 // ─────────────────────────────────────────────────────────────────────
 
 // TODO: also discriminated by msg_type == series_mapping_type_t::series_mapping, which rbe::id cannot express yet.
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::series_mapping)]] SeriesMapping {
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::series_mapping) ]] SeriesMapping {
   symbol_t security_symbol;
   ExpirationBlock expiration;
   denominator_code_t strike_price_denom;
@@ -529,7 +529,7 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::series_mapping)]] SeriesMappin
 
 /// Underlying Value – Last Sale (Message Type ' '), 27 bytes (spec §6.08.1).
 // TODO: also discriminated by msg_type == underlying_value_type_t::last_sale, which rbe::id cannot express yet.
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::underlying_value)]] UnderlyingValueLastSale {
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::underlying_value) ]] UnderlyingValueLastSale {
   symbol_t security_symbol;
   std::uint8_t reserved1 {};
   denominator_code_t index_value_denom;
@@ -539,7 +539,7 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::underlying_value)]] Underlying
 
 /// Underlying Value – Bid and Offer (Message Type 'I'), 27 bytes (spec §6.08.2).
 // TODO: also discriminated by msg_type == underlying_value_type_t::bid_and_offer, which rbe::id cannot express yet.
-struct[[= rbe::pack_be, = rbe::id(msg_category_t::underlying_value)]] UnderlyingValueBidOffer {
+struct[[ = rbe::pack_be, = rbe::id(msg_category_t::underlying_value) ]] UnderlyingValueBidOffer {
   symbol_t security_symbol;
   std::uint8_t reserved {};
   denominator_code_t index_value_denom;
@@ -557,16 +557,16 @@ struct[[= rbe::pack_be, = rbe::id(msg_category_t::underlying_value)]] Underlying
 // TODO: `UnderlyingValueBidOffer` is left out because it answers to the same category as
 //       `UnderlyingValueLastSale`: telling them apart needs the composite discriminant the two
 //       structs above already flag, and a candidate list may not declare one id twice.
-using messages = rbe::any<
+using messages = rbe::frames::any<
     EquityIndexLastSale, OpenInterest, EquityIndexEodSummary, LongQuote, ShortQuote, Administrative, Control,
     SeriesMapping, UnderlyingValueLastSale>;
 
 /// One OPRA message: `Header` followed by the message selected by `msg_category`.
 /// TODO: the length is implied by the message category and the BBO indicator;
 ///       until that is expressible the payload runs to the end of the buffer.
-using message = rbe::frame<Header, messages>;
+using message = rbe::frames::frame<Header, messages>;
 
-// TODO: `rbe::frame<BlockHeader, rbe::many<message>>` needs `message` to be
+// TODO: `rbe::frames::frame<BlockHeader, rbe::frames::many<message>>` needs `message` to be
 //       self-delimiting (implied lengths and composite discriminants).
 
 } // namespace opra

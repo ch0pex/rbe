@@ -31,7 +31,7 @@ lower to the types that actually view or write bytes:
 | `blob` | `std::span<std::byte const>` | `std::span<std::byte>` |
 | wirable `T` | `T` (the strategy decides the return type) | `T` |
 
-- The header is never lowered, only the payload (`rbe/framing/detail/to_dsrl_type.hpp`).
+- The header is never lowered, only the payload (`rbe/frames/detail/to_dsrl_type.hpp`).
 - Lowering recurses through nesting and is idempotent.
 
 **Implemented. Wire-format properties are level-agnostic.** Classifying how a frame is delimited describes
@@ -74,7 +74,7 @@ actually differs between levels:
 
 ## 2. A frame is a view; the buffer may be larger than the frame
 
-**Implemented** in `rbe/framing/dsrl/frame.hpp`.
+**Implemented** in `rbe/frames/dsrl/frame.hpp`.
 
 `dsrl::frame` and `dsrl::proxy` are non-owning views over a `std::span<std::byte const>`. **Both narrow their
 span at construction**, so they always view exactly their object (`data_.size() == length()`). Construction
@@ -171,7 +171,7 @@ computed layout. Remaining inconsistency:
 - **`payload_length()`** — `length() - header_length()`, by the identity above.
 
 The classification is a single compile-time function, `rbe::detail::payload_extent_of<H, P>()` in
-`rbe/framing/detail/payload_extent.hpp`. `dsrl::frame::parse_length()` branches on it with `if constexpr`,
+`rbe/frames/detail/payload_extent.hpp`. `dsrl::frame::parse_length()` branches on it with `if constexpr`,
 and the concepts in [§4](#4-self-delimiting-and-buffer-delimited-frames) are built on it, so the runtime
 resolution and the compile-time classification cannot drift apart.
 
@@ -186,7 +186,7 @@ elements rather than bytes (see [framing.md](framing.md#length-semantics)).
 
 ## 4. Self-delimiting and buffer-delimited frames
 
-**Implemented** in `rbe/framing/frame_concepts.hpp`:
+**Implemented** in `rbe/frames/frame_concepts.hpp`:
 
 ```cpp
 template<typename T>
@@ -807,6 +807,23 @@ non-total `candidate_list::wire_size`), the same one variable-size candidates ne
 | An extra span stored in `frame` for `buffer()` | `header_.buffer()` already is that span, with no state. |
 | `rbe::any_frame<H, Msgs...>` | The id is just one header field; a custom frame that needs another one reads it off `header()` in step 2 or 3. |
 | Have `payload_extent_of` recognise custom frames structurally | It cannot: a custom frame's delimitation is not in its types. Hence the opt-in. |
+
+---
+
+## 12. Frame delimiting and the extent customization point
+
+**Open — written up separately.** The classification of §3/§4 assumes a frame's delimiting is a
+function of `header_type` and `payload_type`. Three shapes break that premise — terminator-delimited
+(cboe TOP), counted (`frame<HeaderWithCount, many<U>>`) and composite or in-body discriminants
+(OPRA) — and the custom-frame seam of §11 answers only the first, by hand.
+
+[Frame Delimiting and the Extent Customization Point](frame-delimiting.md) collects that analysis:
+the two axes it separates (*mechanism*, which is what §4 classifies, and *cost*, which is what
+`length()` actually costs), the fifteen inconsistencies in the code today, every fork still open for
+the extent customization point, and the contract (laws L1–L7) any extent rule has to satisfy. It
+supersedes the following entries of Pending work, which are now forks rather than tasks: constraining
+`many`, the `self_delimiting` opt-in, the explicit `is_self_delimiting` branches, and the checked
+`parse` factory's result type.
 
 ---
 

@@ -14,8 +14,8 @@
 #include "test_macros.hpp"
 
 #include <rbe/dsrl/deserialize.hpp>
-#include <rbe/framing/deserialize.hpp>
-#include <rbe/framing/frame.hpp>
+#include <rbe/frames/deserialize.hpp>
+#include <rbe/frames/frame.hpp>
 
 // --- STD ---
 #include <cstddef>
@@ -27,9 +27,9 @@
 namespace {
 
 /// 4 byte header, then a u32: 8 bytes in all
-using flat = rbe::frame<PlainHeader, std::uint32_t>;
+using flat = rbe::frames::frame<PlainHeader, std::uint32_t>;
 /// The length comes from the header: 3 byte header (type, length), payload up to the declared length
-using sized = rbe::frame<FrameLengthHeader, rbe::blob>;
+using sized = rbe::frames::frame<FrameLengthHeader, rbe::frames::blob>;
 
 static_assert(std::is_same_v<decltype(rbe::deserialize<flat>(bytes(0))), flat::dsrl_type>);
 static_assert(std::is_same_v<decltype(rbe::try_deserialize<flat>(bytes(0))), std::optional<flat::dsrl_type>>);
@@ -37,7 +37,7 @@ static_assert(std::is_same_v<decltype(rbe::try_deserialize<flat>(bytes(0))), std
 // The two families of overloads live side by side without overlapping: the framing ones take no strategy, the wirable
 // ones always do, and each is constrained to its own kind of type.
 static_assert(not rbe::wirable<flat>);
-static_assert(not rbe::frame_serder<MessageWithHeader>);
+static_assert(not rbe::frames::frame_serder<MessageWithHeader>);
 
 // Written as concepts over T: outside of a template a failed call is a hard error instead of a false requires
 template<typename T>
@@ -45,9 +45,11 @@ concept deserializable_bare = requires(std::span<std::byte const> b) { rbe::dese
 template<typename T>
 concept try_deserializable_bare = requires(std::span<std::byte const> b) { rbe::try_deserialize<T>(b); };
 template<typename T>
-concept deserializable_with_strategy = requires(std::span<std::byte const> b) { rbe::deserialize<T>(b, rbe::dsrl::eager); };
+concept deserializable_with_strategy =
+    requires(std::span<std::byte const> b) { rbe::deserialize<T>(b, rbe::dsrl::eager); };
 template<typename T>
-concept try_deserializable_with_strategy = requires(std::span<std::byte const> b) { rbe::try_deserialize<T>(b, rbe::dsrl::lazy); };
+concept try_deserializable_with_strategy =
+    requires(std::span<std::byte const> b) { rbe::try_deserialize<T>(b, rbe::dsrl::lazy); };
 
 // a frame is viewed without a strategy, and a wirable is never taken for a frame
 static_assert(deserializable_bare<flat>);

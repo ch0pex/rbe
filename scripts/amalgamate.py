@@ -8,7 +8,7 @@ includes are hoisted to the top, sorted and deduplicated.
 The default output keeps the path of the umbrella header, so `-I single_include` is a drop-in for `<rbe/rbe.hpp>`.
 
     scripts/amalgamate.py        # -> single_include/rbe/rbe.hpp
-    scripts/amalgamate.py -o build/rbe.hpp --entry rbe/framing.hpp
+    scripts/amalgamate.py -o build/rbe.hpp --entry rbe/frames.hpp
 """
 
 import argparse

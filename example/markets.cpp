@@ -16,8 +16,8 @@
 #include "markets/nasdaq.hpp"
 #include "markets/opra.hpp"
 
-#include <rbe/framing/deserialize.hpp>
-#include <rbe/framing/dsrl/views.hpp>
+#include <rbe/frames/deserialize.hpp>
+#include <rbe/frames/dsrl/views.hpp>
 
 #include <array>
 #include <cstddef>
@@ -32,24 +32,28 @@
 // --- System ---
 
 // Every protocol composes into frames, classified at compile time by how they are delimited.
-static_assert(rbe::self_delimiting_frame<aquis::message>);
-static_assert(rbe::buffer_delimited_frame<aquis::packet>); // PacketHeader has no length: the UDP datagram bounds it
-static_assert(rbe::self_delimiting_frame<cboe::pitch::message>);
-static_assert(rbe::self_delimiting_frame<cboe::pitch::packet>);
-static_assert(rbe::self_delimiting_frame<lse::message>);
-static_assert(rbe::self_delimiting_frame<cboe::top::message>); // the any alternatives imply their length
-static_assert(rbe::dispatch_delimited_frame<cboe::top::message>);
+static_assert(rbe::frames::self_delimited<aquis::message>);
+// PacketHeader carries no length, only a count, and a message has no constant size: the count delimits the
+// packet by measuring every message, so it is count-delimited and not constant_length -- it has no
+// length(), and rbe::frames::distance(packet) is the walk that answers for it
+static_assert(rbe::frames::count_delimited<aquis::packet>);
+static_assert(not rbe::frames::constant_length<aquis::packet>);
+static_assert(rbe::frames::self_delimited<cboe::pitch::message>);
+static_assert(rbe::frames::self_delimited<cboe::pitch::packet>);
+static_assert(rbe::frames::self_delimited<lse::message>);
+static_assert(rbe::frames::self_delimited<cboe::top::message>); // the any alternatives imply their length
+static_assert(rbe::frames::implicitly_delimited<cboe::top::message>); // the id settles it, in O(1)
 // A custom frame built on base_frame is a frame like any other: it composes with many and classifies.
-static_assert(rbe::dsrl::is_frame<cboe::top::line_view>);
-static_assert(rbe::frame_serder<cboe::top::line>);
-static_assert(rbe::self_delimiting_frame<cboe::top::line>);
-static_assert(rbe::frame_serder_payload<cboe::top::lines>);
-static_assert(rbe::self_delimiting_frame<lse::packet>);
-static_assert(rbe::self_delimiting_frame<nasdaq::message>); // the any alternatives imply their length
-static_assert(rbe::dispatch_delimited_frame<nasdaq::message>);
-static_assert(rbe::self_delimiting_frame<nasdaq::packet>);
-static_assert(rbe::self_delimiting_frame<opra::message>); // the any alternatives imply their length
-static_assert(rbe::dispatch_delimited_frame<opra::message>);
+static_assert(rbe::frames::dsrl::is_frame<cboe::top::line_view>);
+static_assert(rbe::frames::frame_serder<cboe::top::line>);
+static_assert(rbe::frames::self_delimited<cboe::top::line>);
+static_assert(rbe::frames::serder_payload<cboe::top::lines>);
+static_assert(rbe::frames::self_delimited<lse::packet>);
+static_assert(rbe::frames::self_delimited<nasdaq::message>); // the any alternatives imply their length
+static_assert(rbe::frames::implicitly_delimited<nasdaq::message>); // the id settles it, in O(1)
+static_assert(rbe::frames::self_delimited<nasdaq::packet>);
+static_assert(rbe::frames::self_delimited<opra::message>); // the any alternatives imply their length
+static_assert(rbe::frames::implicitly_delimited<opra::message>); // the id settles it, in O(1)
 
 // --- Usage ---
 
@@ -77,16 +81,12 @@ void aquis_packet() {
   using namespace aquis;
   constexpr auto header_size = rbe::wire_size_of<Header>();
 
-  auto const datagram = wire(
+  auto const datagram = wire( // clang-format off
       PacketHeader {.count = 3}, //
       Header {.msg_type = message_type_t::heartbeat, .length = header_size, .seq_no = 1},
-      Header {
-        .msg_type = message_type_t::order_cancel, .length = header_size + rbe::wire_size_of<OrderCancel>(), .seq_no = 2
-      },
+      Header {.msg_type = message_type_t::order_cancel, .length = header_size + rbe::wire_size_of<OrderCancel>(), .seq_no = 2},
       OrderCancel {.security_id = 7, .order_ref = 42, .timestamp = 1},
-      Header {
-        .msg_type = message_type_t::order_add, .length = header_size + rbe::wire_size_of<OrderAdd>(), .seq_no = 3
-      },
+      Header {.msg_type = message_type_t::order_add, .length = header_size + rbe::wire_size_of<OrderAdd>(), .seq_no = 3},
       OrderAdd {.security_id = 7, .side = side_t::buy, .quantity = 100, .price = 2500, .order_ref = 43, .timestamp = 2}
   );
 
@@ -98,11 +98,9 @@ void aquis_packet() {
     std::print("  seq {}: ", header.field<"seq_no">());
     payload.match(
         [](Heartbeat const&) { std::println("heartbeat"); },
-        [](proxy<OrderAdd> const& add) {
-          std::println("order add, {} @ {}", add.field<"quantity">(), add.field<"price">());
-        },
-        [](rbe::unmatched auto const& other) { std::println("not handled, id known: {}", other.known_id); }
-    );
+        [](proxy<OrderAdd> const add) { std::println("order add, {} @ {}", add.field<"quantity">(), add.field<"price">()); },
+        [](rbe::unmatched auto const other) { std::println("not handled, id known: {}", other.known_id); }
+    ); // clang-format on
   }
 }
 
@@ -132,13 +130,13 @@ void nasdaq_packet() {
   std::println("  soup length {}, itch tracking number {}", soup.field<"length">(), itch.field<"tracking_number">());
 
   payload.match(
-      [](proxy<AddOrder> const& add) {
+      [](proxy<AddOrder> const add) {
         std::println(
             "  add order {}: {} shares @ {}", add.field<"order_reference_number">(), add.field<"shares">(),
             add.field<"price">()
         );
       },
-      [](rbe::unmatched auto const& other) { std::println("  not handled, id known: {}", other.known_id); }
+      [](rbe::unmatched auto const other) { std::println("  not handled, id known: {}", other.known_id); }
   );
 }
 
@@ -170,8 +168,8 @@ void london_packet() {
 
   for (auto const [header, payload]: messages | rbe::views::with_ids(message_type_t::order_delete)) {
     payload.match(
-        [](proxy<OrderDelete> const& del) { std::println("  order {} deleted", del.field<"order_id">()); },
-        [](rbe::unmatched auto const&) { }
+        [](proxy<OrderDelete> const del) { std::println("  order {} deleted", del.field<"order_id">()); },
+        [](rbe::unmatched auto const) {}
     );
   }
 }
@@ -191,9 +189,9 @@ void cboe_top_lines() {
   std::println("cboe top:");
   for (auto const [header, payload]: stream | rbe::views::many<line_view>()) {
     payload.match( // clang-format off
-        [](proxy<Seconds> const& s) { std::println("  seconds {}", as_text(s.field<"seconds">().as_span())); },
-        [](proxy<Milliseconds> const& ms) { std::println("  milliseconds {}", as_text(ms.field<"milliseconds">().as_span())); },
-        [](rbe::unmatched auto const& other) { std::println("  skipped a line, id known: {}", other.known_id); }
+        [](proxy<Seconds> const s) { std::println("  seconds {}", as_text(s.field<"seconds">().as_span())); },
+        [](proxy<Milliseconds> const ms) { std::println("  milliseconds {}", as_text(ms.field<"milliseconds">().as_span())); },
+        [](rbe::unmatched auto const other) { std::println("  skipped a line, id known: {}", other.known_id); }
     ); // clang-format on
   }
 }
@@ -211,7 +209,7 @@ void opra_message() {
   auto const msg_type          = header.field<"msg_type">();
   payload.match(
       [msg_type](Control const&) { std::println("opra: control, type {}", msg_type); },
-      [](rbe::unmatched auto const& other) { std::println("opra: not handled, id known: {}", other.known_id); }
+      [](rbe::unmatched auto const other) { std::println("opra: not handled, id known: {}", other.known_id); }
   );
 }
 

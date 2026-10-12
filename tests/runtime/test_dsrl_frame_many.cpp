@@ -13,9 +13,9 @@
 #include "common_serde.hpp"
 #include "test_macros.hpp"
 
-#include <rbe/framing/dsrl/frame.hpp>
-#include <rbe/framing/dsrl/many.hpp>
-#include <rbe/framing/dsrl/views.hpp>
+#include <rbe/frames/dsrl/frame.hpp>
+#include <rbe/frames/dsrl/many.hpp>
+#include <rbe/frames/dsrl/views.hpp>
 
 // --- STD ---
 #include <array>
@@ -31,17 +31,17 @@ namespace {
 using blob = std::span<std::byte const>;
 
 /// Lengths come from a frame_length field: 3 byte header (type, length), payload up to the declared length
-using length_frame = rbe::dsrl::frame<FrameLengthHeader, blob>;
+using length_frame = rbe::frames::dsrl::frame<FrameLengthHeader, blob>;
 /// No length on the wire at all: header and payload sizes are known to the code, 4 + 4 bytes
-using static_frame = rbe::dsrl::frame<PlainHeader, std::uint32_t>;
+using static_frame = rbe::frames::dsrl::frame<PlainHeader, std::uint32_t>;
 /// The length comes from the candidate the id selects: 4 byte id, then msg_1 (4 bytes) or msg_3 (1 byte)
-using id_frame = rbe::dsrl::frame<MessageIdHeader, dsrl::any_test>;
+using id_frame = rbe::frames::dsrl::frame<MessageIdHeader, dsrl::any_test>;
 
-static_assert(rbe::self_delimiting_frame<length_frame>);
-static_assert(rbe::self_delimiting_frame<static_frame>);
-static_assert(rbe::self_delimiting_frame<id_frame>);
+static_assert(rbe::frames::self_delimited<length_frame>);
+static_assert(rbe::frames::self_delimited<static_frame>);
+static_assert(rbe::frames::self_delimited<id_frame>);
 
-using length_many = rbe::dsrl::many<length_frame>;
+using length_many = rbe::frames::dsrl::many<length_frame>;
 static_assert(std::input_iterator<length_many::iterator>);
 static_assert(std::sentinel_for<std::default_sentinel_t, length_many::iterator>);
 static_assert(std::ranges::input_range<length_many>);
@@ -64,7 +64,7 @@ constexpr auto iterates_every_frame() {
   constexpr auto lengths       = std::array<std::size_t, 3> {5, 3, 7};
   constexpr auto payload_sizes = std::array<std::size_t, 3> {2, 0, 4};
 
-  auto frames      = rbe::dsrl::many<length_frame> {three_frames};
+  auto frames      = rbe::frames::dsrl::many<length_frame> {three_frames};
   std::size_t seen = 0;
   for (auto const frame: frames) {
     RBE_REQUIRE(seen < lengths.size());
@@ -80,7 +80,7 @@ constexpr auto iterates_every_frame() {
 }
 
 constexpr auto frames_view_the_original_buffer() {
-  auto frames = rbe::dsrl::many<length_frame> {three_frames};
+  auto frames = rbe::frames::dsrl::many<length_frame> {three_frames};
 
   RBE_CHECK(frames.current().data() == three_frames.data());
   frames.next();
@@ -97,7 +97,7 @@ constexpr auto static_frames_split_by_their_size() {
     wire[i] = std::byte {0x11};
   }
 
-  auto frames      = rbe::dsrl::many<static_frame> {wire};
+  auto frames      = rbe::frames::dsrl::many<static_frame> {wire};
   std::size_t seen = 0;
   for (auto const frame: frames) {
     RBE_CHECK(frame.length() == 8);
@@ -113,7 +113,7 @@ constexpr auto static_frames_split_by_their_size() {
 // ============================================================
 
 constexpr auto manual_stepping() {
-  auto frames = rbe::dsrl::many<length_frame> {three_frames};
+  auto frames = rbe::frames::dsrl::many<length_frame> {three_frames};
 
   RBE_REQUIRE(not frames.done());
   RBE_CHECK(frames.current().length() == 5);
@@ -135,7 +135,7 @@ constexpr auto manual_stepping() {
 }
 
 constexpr auto iterator_operations() {
-  auto frames = rbe::dsrl::many<length_frame> {three_frames};
+  auto frames = rbe::frames::dsrl::many<length_frame> {three_frames};
   auto it     = frames.begin();
 
   RBE_CHECK(it != frames.end());
@@ -155,7 +155,7 @@ constexpr auto iterator_operations() {
 // ============================================================
 
 constexpr auto empty_buffer() {
-  auto frames = rbe::dsrl::many<length_frame> {blob {}};
+  auto frames = rbe::frames::dsrl::many<length_frame> {blob {}};
 
   RBE_CHECK(frames.done());
   RBE_CHECK(frames.begin() == frames.end());
@@ -165,7 +165,7 @@ constexpr auto empty_buffer() {
 
 constexpr auto exactly_one_frame() {
   auto const wire = bytes(0x01, 0x05, 0x00, 0xAA, 0xAA);
-  auto frames     = rbe::dsrl::many<length_frame> {wire};
+  auto frames     = rbe::frames::dsrl::many<length_frame> {wire};
 
   RBE_REQUIRE(not frames.done());
   RBE_CHECK(frames.current().length() == wire.size());
@@ -178,7 +178,7 @@ constexpr auto partial_header_after_whole_frames() {
   // the frame_length field is not even complete: 2 of the 3 header bytes
   auto const wire = bytes(0x01, 0x05, 0x00, 0xAA, 0xAA, 0x04, 0x09);
 
-  auto frames      = rbe::dsrl::many<length_frame> {wire};
+  auto frames      = rbe::frames::dsrl::many<length_frame> {wire};
   std::size_t seen = 0;
   for ([[maybe_unused]] auto const frame: frames) {
     ++seen;
@@ -194,7 +194,7 @@ constexpr auto partial_payload_after_whole_frames() {
   // the header declares 9 bytes, only 4 arrived
   auto const wire = bytes(0x01, 0x05, 0x00, 0xAA, 0xAA, 0x04, 0x09, 0x00, 0xCC);
 
-  auto frames = rbe::dsrl::many<length_frame> {wire};
+  auto frames = rbe::frames::dsrl::many<length_frame> {wire};
   frames.next();
   RBE_CHECK(frames.done());
   RBE_CHECK(frames.has_seen_partial());
@@ -203,7 +203,7 @@ constexpr auto partial_payload_after_whole_frames() {
 
 constexpr auto partial_first_frame() {
   auto const wire = bytes(0x01, 0x05, 0x00, 0xAA);
-  auto frames     = rbe::dsrl::many<length_frame> {wire};
+  auto frames     = rbe::frames::dsrl::many<length_frame> {wire};
 
   RBE_CHECK(frames.done());
   RBE_CHECK(frames.has_seen_partial());
@@ -212,7 +212,7 @@ constexpr auto partial_first_frame() {
 }
 
 constexpr auto make_always_yields_a_many() {
-  auto const frames = rbe::dsrl::many<length_frame>::make(blob {});
+  auto const frames = rbe::frames::dsrl::many<length_frame>::make(blob {});
   // an empty or incomplete buffer is not an error, it is a many that is already done
   RBE_REQUIRE(frames.has_value());
   RBE_CHECK(frames->done());
@@ -230,7 +230,7 @@ constexpr auto id_frames_split_by_their_candidate() {
       0x00, 0x00, 0x00, 0x00, 0x22, 0x22
   );
 
-  auto frames      = rbe::dsrl::many<id_frame> {wire};
+  auto frames      = rbe::frames::dsrl::many<id_frame> {wire};
   std::size_t seen = 0;
   for (auto const frame: frames) {
     if (seen == 0) {
@@ -255,7 +255,7 @@ constexpr auto unknown_id_takes_the_rest_of_the_buffer() {
       0x09, 0x00, 0x00, 0x00, 'A', 'B', 'C', 'D', 'E', 'F'
   );
 
-  auto frames      = rbe::dsrl::many<id_frame> {wire};
+  auto frames      = rbe::frames::dsrl::many<id_frame> {wire};
   std::size_t seen = 0;
   for (auto const frame: frames) {
     if (seen == 1) {
@@ -305,7 +305,7 @@ constexpr auto mixed_ids = bytes(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
 constexpr auto frames_decompose_into_header_and_payload() {
   constexpr auto payload_sizes = std::array<std::size_t, 3> {2, 0, 4};
 
-  auto frames = rbe::dsrl::many<length_frame> {three_frames};
+  auto frames = rbe::frames::dsrl::many<length_frame> {three_frames};
   auto index  = std::size_t {0};
   for (auto const [header, payload]: frames) {
     RBE_CHECK(header.length() == 3);
@@ -328,7 +328,7 @@ constexpr auto known_and_unknown_ids_split_the_frames() {
 }
 
 constexpr auto count_specified_many() {
-  auto frames = rbe::dsrl::many<length_frame> {three_frames, 2};
+  auto frames = rbe::frames::dsrl::many<length_frame> {three_frames, 2};
   RBE_CHECK(std::ranges::distance(frames) == 2);
   RBE_CHECK(frames.has_seen_partial());
   RBE_CHECK(frames.remainder().size() == 7);

@@ -10,16 +10,17 @@
 
 // --- Includes ---
 #include "common_frame.hpp"
+#include "common_serde.hpp"
 #include "rbe/dsrl/deserialize.hpp"
 #include "test_macros.hpp"
 
 #include <rbe/annotations/alignment.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/length.hpp>
-#include <rbe/framing/dsrl/base_frame.hpp>
-#include <rbe/framing/dsrl/frame.hpp>
-#include <rbe/framing/dsrl/many.hpp>
-#include <rbe/framing/dsrl/payload.hpp>
+#include <rbe/frames/dsrl/base_frame.hpp>
+#include <rbe/frames/dsrl/frame.hpp>
+#include <rbe/frames/dsrl/many.hpp>
+#include <rbe/frames/dsrl/payload.hpp>
 
 // --- STD ---
 #include <algorithm>
@@ -44,19 +45,22 @@ constexpr auto buffer(std::initializer_list<std::uint8_t> const prefix) -> std::
 
 
 // ============================================================
-// payload extent: payload_length() resolves from the same classification as rbe::self_delimiting_frame
+// the delimiting tag: payload_length() resolves in the same order the tag is deduced in
 // ============================================================
-using rbe::detail::payload_extent;
-using rbe::detail::payload_extent_of;
-using rbe::dsrl::frame;
+using rbe::frames::frame_delimiting_tag;
+using rbe::frames::dsrl::frame;
 
-static_assert(payload_extent_of<PayloadLengthHeader, blob>() == payload_extent::payload_length_field);
-static_assert(payload_extent_of<FrameLengthHeader, blob>() == payload_extent::frame_length_field);
-static_assert(payload_extent_of<PlainHeader, frame<FrameLengthHeader, blob>>() == payload_extent::nested_frame);
-static_assert(payload_extent_of<PlainHeader, std::uint32_t>() == payload_extent::static_size);
-static_assert(payload_extent_of<PlainHeader, blob>() == payload_extent::buffer_end);
+static_assert(std::same_as<frame_delimiting_tag<PayloadLengthHeader, blob>, rbe::frames::length_delimited_tag>);
+static_assert(std::same_as<frame_delimiting_tag<FrameLengthHeader, blob>, rbe::frames::length_delimited_tag>);
+static_assert(std::same_as<
+              frame_delimiting_tag<PlainHeader, frame<FrameLengthHeader, blob>>,
+              rbe::frames::implicitly_delimited_tag>); // the nested frame reads the field, this one does not
+static_assert(std::same_as<frame_delimiting_tag<PlainHeader, std::uint32_t>, rbe::frames::static_delimited_tag>);
+static_assert(std::same_as<frame_delimiting_tag<PlainHeader, blob>, rbe::frames::buffer_delimited_tag>);
 // a length field takes precedence over the static size of the payload
-static_assert(payload_extent_of<PayloadLengthHeader, std::uint32_t>() == payload_extent::payload_length_field);
+static_assert(
+    std::same_as<frame_delimiting_tag<PayloadLengthHeader, std::uint32_t>, rbe::frames::length_delimited_tag>
+);
 
 // ============================================================
 // frame_length: frame_length = wire_size_of<hdr> + wire_size_of<payload>
@@ -64,7 +68,7 @@ static_assert(payload_extent_of<PayloadLengthHeader, std::uint32_t>() == payload
 
 constexpr auto static_sizes() {
   auto const plain_buffer = buffer({0x01, 0x00, 0x02, 0x00});
-  auto const plain        = rbe::dsrl::frame<PlainHeader, std::uint32_t>::make(plain_buffer).value();
+  auto const plain        = rbe::frames::dsrl::frame<PlainHeader, std::uint32_t>::make(plain_buffer).value();
 
   RBE_CHECK(plain.header().length() == 4);
   RBE_CHECK(plain.payload().size() == 4);
@@ -81,7 +85,7 @@ constexpr auto static_sizes() {
 
 constexpr auto no_annotations_blob() {
   auto const plain_buffer = buffer({0x01, 0x00, 0x02, 0x00});
-  auto const greedy       = rbe::dsrl::frame<PlainHeader, blob> {plain_buffer};
+  auto const greedy       = rbe::frames::dsrl::frame<PlainHeader, blob> {plain_buffer};
   RBE_CHECK(greedy.payload().size() == buffer_size - greedy.header().length());
   RBE_CHECK(greedy.length() == buffer_size);
   RBE_CHECK(greedy.as_span().size() == buffer_size);
@@ -94,7 +98,7 @@ constexpr auto no_annotations_blob() {
 
 constexpr auto frame_hdr_length() {
   auto const frame_length_buffer = buffer({0x07, 0x0A, 0x00});
-  auto const with_frame_length   = rbe::dsrl::frame<FrameLengthHeader, blob>::make(frame_length_buffer).value();
+  auto const with_frame_length   = rbe::frames::dsrl::frame<FrameLengthHeader, blob>::make(frame_length_buffer).value();
 
   RBE_CHECK(with_frame_length.header().length() == 3);
   RBE_CHECK(with_frame_length.length() == 10);
@@ -105,7 +109,8 @@ constexpr auto frame_hdr_length() {
 
 constexpr auto frame_length_hdr_plus_payload() {
   auto const payload_length_buffer = buffer({0x05, 0x00});
-  auto const with_payload_length   = rbe::dsrl::frame<PayloadLengthHeader, blob>::make(payload_length_buffer).value();
+  auto const with_payload_length =
+      rbe::frames::dsrl::frame<PayloadLengthHeader, blob>::make(payload_length_buffer).value();
 
   RBE_CHECK(with_payload_length.header().length() == 2);
   RBE_CHECK(with_payload_length.payload().size() == 5);
@@ -119,7 +124,7 @@ constexpr auto frame_length_hdr_plus_payload() {
 constexpr auto frame_payload_starts_after_header_length() {
   auto const header_length_buffer = buffer({0x06, 0x00});
   auto const with_header_length =
-      rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(header_length_buffer).value();
+      rbe::frames::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(header_length_buffer).value();
 
   RBE_CHECK(with_header_length.header().length() == 6);
   RBE_CHECK(with_header_length.header().as_span().size() == 6);
@@ -135,7 +140,7 @@ constexpr auto frame_payload_starts_after_header_length() {
 
 constexpr auto header_proxy_extended_spans() {
   auto const extended_buffer = buffer({0x06, 0xAB});
-  auto const hdr = rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(extended_buffer).value().header();
+  auto const hdr = rbe::frames::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(extended_buffer).value().header();
 
   RBE_CHECK(hdr.length() == 6); // length: what the wire declares the header occupies
   RBE_CHECK(hdr.size() == 2); // size: wire_size_of<HeaderLengthHeader>, known to the code
@@ -155,7 +160,7 @@ constexpr auto header_proxy_extended_spans() {
 
 constexpr auto header_proxy_unextended_spans() {
   auto const exact_buffer = buffer({0x02, 0xAB});
-  auto const hdr          = rbe::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(exact_buffer).value().header();
+  auto const hdr = rbe::frames::dsrl::frame<HeaderLengthHeader, std::uint32_t>::make(exact_buffer).value().header();
 
   RBE_CHECK_FALSE(hdr.is_extended());
   RBE_CHECK(hdr.as_span().size() == hdr.known_span().size());
@@ -167,10 +172,10 @@ constexpr auto header_proxy_unextended_spans() {
 // ============================================================
 
 constexpr auto frame_nested_frame_length() {
-  using inner_frame = rbe::dsrl::frame<FrameLengthHeader, blob>;
+  using inner_frame = rbe::frames::dsrl::frame<FrameLengthHeader, blob>;
 
   auto const nested_buffer = buffer({0x01, 0x00, 0x02, 0x00, 0x07, 0x0A, 0x00});
-  auto const nested        = rbe::dsrl::frame<PlainHeader, inner_frame>::make(nested_buffer).value();
+  auto const nested        = rbe::frames::dsrl::frame<PlainHeader, inner_frame>::make(nested_buffer).value();
 
   RBE_CHECK(nested.payload().length() == 10);
   RBE_CHECK(nested.length() == 14);
@@ -184,7 +189,7 @@ constexpr auto frame_nested_frame_length() {
 
 constexpr auto frame_narrows_at_construction() {
   auto const larger     = buffer({0x07, 0x0A, 0x00}); // buffer_size bytes, the frame is 10
-  auto const with_frame = rbe::dsrl::frame<FrameLengthHeader, blob>::make(larger).value();
+  auto const with_frame = rbe::frames::dsrl::frame<FrameLengthHeader, blob>::make(larger).value();
 
   RBE_CHECK(with_frame.length() == 10);
   RBE_CHECK(with_frame.as_span().size() == 10);
@@ -194,7 +199,7 @@ constexpr auto frame_narrows_at_construction() {
 
 constexpr auto frame_with_empty_payload() {
   std::array<std::byte, 2> empty_payload_buffer {std::byte {0x00}, std::byte {0x00}};
-  auto const with_empty_payload = rbe::dsrl::frame<PayloadLengthHeader, ExplictlyEmpty> {empty_payload_buffer};
+  auto const with_empty_payload = rbe::frames::dsrl::frame<PayloadLengthHeader, ExplictlyEmpty> {empty_payload_buffer};
 
   RBE_CHECK(with_empty_payload.header().length() == 2);
   RBE_CHECK(with_empty_payload.payload().size() == 0);
@@ -205,7 +210,7 @@ constexpr auto frame_with_empty_payload() {
   std::array<std::byte, 4> empty_payload_buffer2 {
     std::byte {0x00}, std::byte {0x00}, std::byte {0xCC}, std::byte {0xCC}
   };
-  auto const with_empty_payload2 = rbe::dsrl::frame<PlainHeader, ExplictlyEmpty> {empty_payload_buffer2};
+  auto const with_empty_payload2 = rbe::frames::dsrl::frame<PlainHeader, ExplictlyEmpty> {empty_payload_buffer2};
 
   RBE_CHECK(with_empty_payload2.header().length() == 4);
   RBE_CHECK(with_empty_payload2.payload().size() == 0);
@@ -222,7 +227,7 @@ constexpr auto frame_payload_bigger_than_wireable() {
   // 3 bytes + 8 bytes of payload = 11 bytes, but the frame length is 16, so the payload is bigger than
   // the wiarble size. This is a valid scenario rbe must handle, since it's quite common fro a frame
   // to have been extended with new fields even though the code doesn't konw how to decode them.
-  using frame_type = rbe::dsrl::frame<FrameLengthHeader, Message>;
+  using frame_type = rbe::frames::dsrl::frame<FrameLengthHeader, Message>;
   auto const frame = frame_type::make(frame_buffer).value();
 
   RBE_CHECK(frame.length() == 16);
@@ -241,7 +246,7 @@ constexpr auto frame_payload_bigger_than_wireable() {
 
 constexpr auto frame_buffer_is_untrimmed() {
   auto const larger = buffer({0x07, 0x0A, 0x00}); // buffer_size bytes, the frame is 10
-  auto const f      = rbe::dsrl::frame<FrameLengthHeader, blob>::make(larger).value();
+  auto const f      = rbe::frames::dsrl::frame<FrameLengthHeader, blob>::make(larger).value();
 
   RBE_CHECK(f.buffer().size() == buffer_size);
   RBE_CHECK(f.buffer().data() == larger.data());
@@ -260,28 +265,32 @@ constexpr auto building_blocks_compose_into_a_frame() {
   auto const wire = buffer({0x00, 0x00, 0x00, 0x00, 0xCC, 0xCC, 0xCC, 0xCC}); // id 0 -> msg_1, 4 bytes
   using any_t     = dsrl::any_test;
 
-  auto const hdr = rbe::dsrl::header<MessageIdHeader>::make(wire).value(); // step 1
+  auto const hdr = rbe::frames::dsrl::header<MessageIdHeader>::make(wire).value(); // step 1
   RBE_CHECK(hdr.length() == 4);
 
-  auto const rest  = std::span<std::byte const> {wire}.subspan(hdr.length());
-  auto const bytes = rbe::dsrl::try_payload_extent<any_t>(hdr, rest).value(); // step 2: no length field, so the rest
+  auto const rest = std::span<std::byte const> {wire}.subspan(hdr.length());
+  auto const bytes =
+      rbe::frames::dsrl::try_payload_extent<any_t>(hdr, rest).value(); // step 2: no length field, so the rest
   RBE_CHECK(bytes.size() == rest.size());
-  RBE_CHECK(rbe::dsrl::payload_extent<any_t>(hdr, rest).size() == rest.size());
+  RBE_CHECK(rbe::frames::dsrl::payload_extent<any_t>(hdr, rest).size() == rest.size());
 
-  auto const payload = rbe::dsrl::try_construct_payload<any_t>(hdr, bytes).value(); // step 3: the any narrows to msg_1
+  auto const payload =
+      rbe::frames::dsrl::try_construct_payload<any_t>(hdr, bytes).value(); // step 3: the any narrows to msg_1
   RBE_CHECK(payload.is<msg_1>());
   RBE_CHECK(payload.size() == 4);
 
   // the same three steps are what frame::make does
-  auto const f = rbe::dsrl::frame<MessageIdHeader, any_t>::make(wire).value();
+  auto const f = rbe::frames::dsrl::frame<MessageIdHeader, any_t>::make(wire).value();
   RBE_CHECK(f.length() == 8);
   RBE_CHECK(f.payload().as_span().data() == payload.as_span().data());
 
   // a wirable payload comes back as a proxy, an opaque one as the span it was handed
-  static_assert(std::same_as<rbe::dsrl::payload_view_t<Message>, rbe::dsrl::proxy<Message>>);
-  static_assert(std::same_as<rbe::dsrl::payload_view_t<blob>, blob>);
-  RBE_CHECK(rbe::dsrl::try_construct_payload<blob>(hdr, rest).value().size() == rest.size());
-  RBE_CHECK(not rbe::dsrl::try_construct_payload<Message>(hdr, rest.first(3)).has_value()); // 8 bytes do not fit in 3
+  static_assert(std::same_as<rbe::frames::dsrl::payload_view_t<Message>, rbe::dsrl::proxy<Message>>);
+  static_assert(std::same_as<rbe::frames::dsrl::payload_view_t<blob>, blob>);
+  RBE_CHECK(rbe::frames::dsrl::try_construct_payload<blob>(hdr, rest).value().size() == rest.size());
+  RBE_CHECK(
+      not rbe::frames::dsrl::try_construct_payload<Message>(hdr, rest.first(3)).has_value()
+  ); // 8 bytes do not fit in 3
 }
 
 // ============================================================
@@ -291,10 +300,13 @@ constexpr auto building_blocks_compose_into_a_frame() {
 /// MessageIdHeader followed by a candidate, each record terminated by one or more '\n' bytes. The line
 /// extent comes from the terminator alone, never from the id, which is what lets a many step over a
 /// record whose id this build does not know instead of stopping there.
-class line_view : public rbe::dsrl::base_frame<MessageIdHeader, dsrl::any_test> {
-  using base = rbe::dsrl::base_frame<MessageIdHeader, dsrl::any_test>;
+class line_view : public rbe::frames::dsrl::base_frame<MessageIdHeader, dsrl::any_test> {
+  using base = rbe::frames::dsrl::base_frame<MessageIdHeader, dsrl::any_test>;
 
 public:
+  /// the '\n' scan, which the shape cannot see: self-delimiting, by no mechanism the hierarchy names
+  using delimiting_concept = rbe::frames::self_delimited_tag;
+
   static constexpr auto make(buffer_type const buf) -> std::optional<line_view> {
     auto const hdr = header_return_type::make(buf); // step 1
     if (not hdr.has_value()) {
@@ -306,7 +318,7 @@ public:
       return std::nullopt; // incomplete line: wait for more bytes
     }
     auto const line = rest.first(*extent);
-    return rbe::dsrl::try_construct_payload<payload_type>(*hdr, line) // step 3
+    return rbe::frames::dsrl::try_construct_payload<payload_type>(*hdr, line) // step 3
         .transform([&](payload_return_type const p) { return line_view {*hdr, p, hdr->length() + line.size()}; });
   }
 
@@ -340,10 +352,14 @@ private:
   size_type line_length_;
 };
 
-// the two primitives are all it took: it is a frame, and a self-delimiting one (any_id, inherited shape)
-static_assert(rbe::dsrl::is_frame<line_view>);
-static_assert(rbe::self_delimiting_frame<line_view>);
-static_assert(rbe::dispatch_delimited_frame<line_view>);
+// the two primitives are all it took: it is a frame, and the category it declares is the one it has --
+// the terminator scan, where by its shape it would have been implicitly delimited
+static_assert(rbe::frames::dsrl::is_frame<line_view>);
+static_assert(rbe::frames::self_delimited<line_view>);
+static_assert(not rbe::frames::implicitly_delimited<line_view>);
+// constant_length reports what the library can deduce, and takes a declared tag's resolution on trust:
+// the scan is make()'s and length() returns the stored line_length_, which is the contract it signs
+static_assert(rbe::frames::constant_length<line_view>);
 
 constexpr auto custom_frame_follows_its_own_length() {
   // id 0 (msg_1, 4 bytes) '\n' | id 9 (unknown) 2 bytes '\n' '\n' | id 2 (msg_3, 1 byte) '\n'
@@ -378,7 +394,7 @@ constexpr auto many_iterates_a_custom_frame_by_line() {
   constexpr auto lengths  = std::array<std::size_t, 3> {9, 8, 6};
   constexpr auto known_id = std::array<bool, 3> {true, false, true};
 
-  auto lines       = rbe::dsrl::many<line_view> {wire};
+  auto lines       = rbe::frames::dsrl::many<line_view> {wire};
   std::size_t seen = 0;
   for (auto const line: lines) {
     RBE_CHECK(seen < lengths.size());
@@ -395,7 +411,7 @@ constexpr auto many_iterates_a_custom_frame_by_line() {
 
 constexpr auto buffer_delimited_frame_length() {
   constexpr auto wire = std::array<std::byte, 92> {};
-  using many_frame    = rbe::frame<PlainHeader, rbe::many<msg_frame>>;
+  using many_frame    = rbe::frames::frame<PlainHeader, rbe::frames::many<msg_frame>>;
   auto const f        = rbe::deserialize<many_frame>(wire);
 
   RBE_CHECK(f.length() == 92);
@@ -403,6 +419,140 @@ constexpr auto buffer_delimited_frame_length() {
   RBE_CHECK(f.payload().as_span().size() == 88);
 }
 
+constexpr auto counted_static_run_delimits_the_frame() {
+  static constexpr auto wire = bytes(
+      // -- Frame header --- HeaderWithCount (4 bytes, big-endian)
+      0x00, 0x02, // count = 2 (big-endian)
+      0x00, 0x00, // flags = 0
+
+      // --- many payload ---
+
+      // First msg_frame: CommonHeader frame header (16 bytes, little-endian)
+      0x01, 0x00, // version = 1
+      0x00, 0x00, 0x1C, 0x00, // size = 28 (payload size)
+      0x01, 0x00, // type/id = 1
+      0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // timestamp = 100
+
+      // First msg_frame: MessageWithHeader payload
+      // Nested CommonHeader (16 bytes, little-endian)
+      0x02, 0x00, 0x00, 0x00, // version = 2
+      0x1C, 0x00, // size = 28
+      0x01, 0x00, // type/id = 1
+      0xC8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // timestamp = 200
+      // price, volume, orders (12 bytes, little-endian)
+      0xE8, 0x03, 0x00, 0x00, // price = 1000
+      0xF4, 0x01, 0x00, 0x00, // volume = 500
+      0x0A, 0x00, 0x00, 0x00, // orders = 10
+      pad, pad, pad, pad, //
+
+      // Second msg_frame: CommonHeader frame header (16 bytes, little-endian)
+      0x03, 0x00, 0x00, 0x00, // version = 3
+      0x1C, 0x00, // size = 28
+      0x01, 0x00, // type/id = 1
+      0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // timestamp = 300
+
+      // Second msg_frame: MessageWithHeader payload
+      // Nested CommonHeader (16 bytes, little-endian)
+      0x04, 0x00, 0x00, 0x00, // version = 4
+      0x1C, 0x00, // size = 28
+      0x01, 0x00, // type/id = 1
+      0x90, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // timestamp = 400
+      // price, volume, orders (12 bytes, little-endian)
+      0xD0, 0x07, 0x00, 0x00, // price = 2000
+      0xE8, 0x03, 0x00, 0x00, // volume = 1000
+      0x14, 0x00, 0x00, 0x00, // orders = 20
+      pad, pad, pad, pad //
+  );
+
+  // we are going to test here:
+  // - the count bounds the frame, so trailing bytes are not payload and payload_span() is the run
+  // - a stream of such frames is walked by length(), the frame being self-delimiting
+
+  auto const padding          = bytes(pad, pad, pad, pad, pad, pad, pad, pad);
+  auto const wire_with_padding = std::views::concat(wire, padding) | std::ranges::to<std::vector>();
+  auto const wire_two_and_pad  = std::views::concat(wire, wire, padding) | std::ranges::to<std::vector>();
+
+  using many_frame = rbe::frames::frame<HeaderWithCount, rbe::frames::many<msg_frame>>;
+  // the count and a constant element size settle the extent between them, with no element read:
+  // header + count * static_length<msg_frame>. A dynamic stride would not (fork 3c).
+  static_assert(rbe::frames::static_stride_delimited<many_frame>);
+  static_assert(rbe::frames::constant_length<many_frame>);
+
+  // --- the count bounds the frame: the padding is outside it ---
+  {
+    auto const f = rbe::deserialize<many_frame>(wire_with_padding);
+    RBE_CHECK(f.header().payload_count() == 2);
+    RBE_CHECK(f.length() == wire.size()); // the run, not the buffer it arrived in
+    RBE_CHECK(f.as_span().size() == wire.size());
+    RBE_CHECK(f.buffer().size() == wire.size() + padding.size()); // buffer() stays untrimmed
+    RBE_CHECK(f.payload_span().size() == 2 * 48);
+
+    auto payload = f.payload();
+    for (auto const msg: payload) {
+      RBE_CHECK(msg.length() == 48);
+    }
+    // step 2 handed the many the run and nothing else, so the padding is not its remainder any more
+    RBE_CHECK(payload.remainder().empty());
+  }
+
+  // --- a stream of them is walked by length(), which is what the count bought ---
+  {
+    auto rest = std::span<std::byte const> {wire_two_and_pad};
+    for (std::size_t i = 0; i < 2; ++i) {
+      auto const f = rbe::deserialize<many_frame>(rest);
+      RBE_CHECK(f.header().payload_count() == 2);
+      RBE_CHECK(std::ranges::distance(f.payload()) == 2);
+      RBE_CHECK(f.length() == wire.size());
+      rest = rest.subspan(f.length());
+    }
+    RBE_CHECK(rest.size() == padding.size());
+    RBE_CHECK(std::ranges::equal(rest, padding));
+  }
+}
+
+// --- Frame with a counted run of variable-size elements ---
+
+/// The count delimits the run, but only by measuring every element: the frame has no length() to call and
+/// rbe::frames::distance is the walk that answers for it.
+constexpr auto counted_dynamic_run_answers_through_distance() {
+  using counted_lines = frame<HeaderWithCount, rbe::frames::dsrl::many<line_view>>;
+
+  static_assert(rbe::frames::count_delimited<counted_lines>);
+  static_assert(not rbe::frames::static_stride_delimited<counted_lines>);
+  static_assert(not rbe::frames::constant_length<counted_lines>);
+  static_assert(not rbe::frames::detail::member_length<counted_lines>); // nothing to reach for by accident
+  // and the spans that derive from length() are gone with it, the view_interface way -- not asserted here
+  // because GCC hard-errors on a `requires { f.as_span(); }` probe of a constrained deducing-this member
+
+  constexpr auto wire = std::array<std::byte, 27> {
+    // HeaderWithCount, big-endian: count = 3, flags = 0
+    std::byte {0x00}, std::byte {0x03}, std::byte {0x00}, std::byte {0x00}, //
+    // three LF-terminated lines of 9, 8 and 6 bytes
+    std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {0x11}, std::byte {0x11},
+    std::byte {0x11}, std::byte {0x11}, std::byte {'\n'}, //
+    std::byte {0x09}, std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {'A'},  std::byte {'B'},
+    std::byte {'\n'}, std::byte {'\n'}, //
+    std::byte {0x02}, std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {'x'},  std::byte {'\n'},
+  };
+
+  auto const f = counted_lines {wire};
+  RBE_CHECK(f.header().payload_count() == 3);
+  // the header plus the three measured lines: 4 + 9 + 8 + 6
+  RBE_CHECK(rbe::frames::distance(f) == 27);
+
+  auto run         = f.payload();
+  std::size_t seen = 0;
+  for (auto const line: run) {
+    RBE_CHECK(line.length() == std::array<std::size_t, 3> {9, 8, 6}[seen]);
+    ++seen;
+  }
+  RBE_CHECK(seen == 3);
+
+  // flatten is not derived from length(): it walks header() and payload(), so it works here as anywhere
+  auto [count_header, lines] = f.flatten(); // non-const: a run is iterated as an lvalue
+  RBE_CHECK(count_header.payload_count() == 3);
+  RBE_CHECK(std::ranges::distance(lines) == 3);
+}
 
 // clang-format off
 TEST_SUITE("dsrl_frame - length and buffer accessors") {
@@ -422,6 +572,8 @@ TEST_SUITE("dsrl_frame - length and buffer accessors") {
   RBE_TEST_CASE("dsrl_frame - custom frame: a base_frame with its own length() drives as_span, payload_span and the payload", custom_frame_follows_its_own_length);
   RBE_TEST_CASE("dsrl_frame - custom frame: many iterates by the custom length and steps over an unknown id", many_iterates_a_custom_frame_by_line);
   RBE_TEST_CASE("dsrl_frame - many without length field: the frame length is the buffer size", buffer_delimited_frame_length);
+  RBE_TEST_CASE("dsrl_frame - many with a count: a constant element size makes the count delimit the frame", counted_static_run_delimits_the_frame);
+  RBE_TEST_CASE("dsrl_frame - many with a count: a variable element size leaves only frames::distance", counted_dynamic_run_answers_through_distance);
 }
 // clang-format on
 

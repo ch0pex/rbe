@@ -60,38 +60,40 @@ target_sources(
         rbe/dsrl/return_type.hpp
         rbe/dsrl/tags.hpp
 
-        # framing
-        rbe/framing/deserialize.hpp
-        rbe/framing/detail/base_tags.hpp
-        rbe/framing/detail/candidate_list.hpp
-        rbe/framing/detail/payload_extent.hpp
-        rbe/framing/detail/to_dsrl_type.hpp
-        rbe/framing/detail/to_srl_type.hpp
-        rbe/framing/detail/to_value_type.hpp
-        rbe/framing/dsrl/detail/any_dispatcher.hpp
-        rbe/framing/dsrl/detail/payload_size.hpp
-        rbe/framing/dsrl/any.hpp
-        rbe/framing/dsrl/any_unmatched.hpp
-        rbe/framing/dsrl/base_frame.hpp
-        rbe/framing/dsrl/flatten.hpp
-        rbe/framing/dsrl/frame.hpp
-        rbe/framing/dsrl/header.hpp
-        rbe/framing/dsrl/concepts.hpp
-        rbe/framing/dsrl/many.hpp
-        rbe/framing/dsrl/payload.hpp
-        rbe/framing/dsrl/views.hpp
-        rbe/framing/srl/any.hpp
-        rbe/framing/srl/frame.hpp
-        rbe/framing/srl/concepts.hpp
-        rbe/framing/srl/many.hpp
-        rbe/framing/any.hpp
-        rbe/framing/blob.hpp
-        rbe/framing/frame_concepts.hpp
-        rbe/framing/frame.hpp
-        rbe/framing/frame_delimiting_concepts.hpp
-        rbe/framing/frame_serder_concepts.hpp
-        rbe/framing/many.hpp
-        rbe/framing/value_type.hpp
+        # frames
+        rbe/frames/deserialize.hpp
+        rbe/frames/detail/base_tags.hpp
+        rbe/frames/detail/candidate_list.hpp
+        rbe/frames/detail/frame_delimiting.hpp
+        rbe/frames/detail/to_dsrl_type.hpp
+        rbe/frames/detail/to_srl_type.hpp
+        rbe/frames/detail/to_value_type.hpp
+        rbe/frames/dsrl/detail/any_dispatcher.hpp
+        rbe/frames/dsrl/detail/payload_size.hpp
+        rbe/frames/dsrl/any.hpp
+        rbe/frames/dsrl/any_unmatched.hpp
+        rbe/frames/dsrl/base_frame.hpp
+        rbe/frames/dsrl/flatten.hpp
+        rbe/frames/dsrl/frame.hpp
+        rbe/frames/dsrl/header.hpp
+        rbe/frames/dsrl/concepts.hpp
+        rbe/frames/dsrl/many.hpp
+        rbe/frames/dsrl/payload.hpp
+        rbe/frames/dsrl/views.hpp
+        rbe/frames/srl/any.hpp
+        rbe/frames/srl/frame.hpp
+        rbe/frames/srl/concepts.hpp
+        rbe/frames/srl/many.hpp
+        rbe/frames/any.hpp
+        rbe/frames/blob.hpp
+        rbe/frames/frame_concepts.hpp
+        rbe/frames/frame.hpp
+        rbe/frames/frame_delimiting_concepts.hpp
+        rbe/frames/frame_delimiting_tags.hpp
+        rbe/frames/frame_serder_concepts.hpp
+        rbe/frames/length.hpp
+        rbe/frames/many.hpp
+        rbe/frames/value_type.hpp
 
         # serialize
         rbe/srl/detail/serialize_impl.hpp
@@ -101,7 +103,7 @@ target_sources(
         rbe/annotations.hpp
         rbe/core.hpp
         rbe/srl.hpp
-        rbe/framing.hpp
+        rbe/frames.hpp
         rbe/rbe.hpp
         rbe/dsrl.hpp
 )
