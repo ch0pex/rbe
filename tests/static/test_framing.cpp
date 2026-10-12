@@ -136,7 +136,7 @@ static_assert(std::same_as<frame_delimiting_tag<CommonHeader, rbe::frames::blob>
 static_assert(
     std::same_as<frame_delimiting_tag<CommonHeader, rbe::frames::many<msg_frame>>, rbe::frames::buffer_delimited_tag>
 );
-static_assert(std::same_as<frame_delimiting_tag<CommonHeader, candidates>, rbe::frames::dispatch_delimited_tag>);
+static_assert(std::same_as<frame_delimiting_tag<CommonHeader, candidates>, rbe::frames::implicitly_delimited_tag>);
 // a length field takes precedence over the static size of the payload
 static_assert(
     std::same_as<frame_delimiting_tag<WithPayloadLength, MessageWithHeader>, rbe::frames::length_delimited_tag>
@@ -219,23 +219,24 @@ static_assert(not rbe::frames::implicitly_delimited<rbe::frames::frame<CommonHea
 static_assert(not rbe::frames::explicitly_delimited<rbe::frames::frame<CommonHeader, blob_frame>>);
 
 // ============================================================
-// rbe::frames::dispatch_delimited -- the any_id case
+// an any payload -- the id settles the length, with no leaf of its own
 // ============================================================
-static_assert(rbe::frames::dispatch_delimited<rbe::frames::frame<CommonHeader, candidates>>);
-static_assert(not rbe::frames::dispatch_delimited<rbe::frames::frame<CommonHeader, MessageWithHeader>>);
+static_assert(rbe::frames::implicitly_delimited<rbe::frames::frame<CommonHeader, candidates>>);
+static_assert(not rbe::frames::static_delimited<rbe::frames::frame<CommonHeader, candidates>>);
+static_assert(rbe::frames::constant_length<rbe::frames::frame<CommonHeader, candidates>>); // one id lookup
 // header_length only delimits the header, so the payload still resolves through the id
-static_assert(rbe::frames::dispatch_delimited<rbe::frames::frame<WithHeaderLength, candidates>>);
-// a length field is read straight off the wire: no dispatch, whatever the payload is
-static_assert(not rbe::frames::dispatch_delimited<rbe::frames::frame<WithFrameLength, rbe::frames::blob>>);
-static_assert(not rbe::frames::dispatch_delimited<rbe::frames::frame<WithPayloadLength, rbe::frames::blob>>);
-static_assert(not rbe::frames::dispatch_delimited<rbe::frames::frame<WithFrameLength, candidates>>);
-static_assert(not rbe::frames::dispatch_delimited<rbe::frames::frame<WithPayloadLength, candidates>>);
-// ... and the cost of a nested frame is the cost of the frame it nests
+static_assert(rbe::frames::implicitly_delimited<rbe::frames::frame<WithHeaderLength, candidates>>);
+// a length field is read straight off the wire: explicit, whatever the payload is
+static_assert(rbe::frames::length_delimited<rbe::frames::frame<WithFrameLength, rbe::frames::blob>>);
+static_assert(rbe::frames::length_delimited<rbe::frames::frame<WithPayloadLength, candidates>>);
+static_assert(not rbe::frames::implicitly_delimited<rbe::frames::frame<WithFrameLength, candidates>>);
+// ... and the category of a nested frame follows the frame it nests
 static_assert(
-    rbe::frames::dispatch_delimited<rbe::frames::frame<CommonHeader, rbe::frames::frame<CommonHeader, candidates>>>
+    rbe::frames::implicitly_delimited<rbe::frames::frame<CommonHeader, rbe::frames::frame<CommonHeader, candidates>>>
 );
-static_assert(not rbe::frames::dispatch_delimited<
-              rbe::frames::frame<WithFrameLength, rbe::frames::frame<CommonHeader, candidates>>>);
+static_assert(
+    rbe::frames::length_delimited<rbe::frames::frame<WithFrameLength, rbe::frames::frame<CommonHeader, candidates>>>
+);
 
 // ============================================================
 // the delimiting categories -- the mechanism leaves and the cost axis
@@ -289,14 +290,15 @@ static_assert(rbe::frames::static_delimited<msg_frame::dsrl_type>);
 static_assert(rbe::frames::static_delimited<nested::dsrl_type>);
 static_assert(rbe::frames::static_length<nested::dsrl_type> == rbe::frames::static_length<nested>);
 
-// --- dispatch_delimited: an id settles the length, in O(1), at runtime ---
-static_assert(rbe::frames::dispatch_delimited<any_frame>);
-static_assert(rbe::frames::dispatch_delimited<rbe::frames::frame<CommonHeader, any_frame>>);
-static_assert(not rbe::frames::dispatch_delimited<msg_frame>);
-static_assert(not rbe::frames::dispatch_delimited<rbe::frames::frame<WithPayloadLength, candidates>>); // the field wins
-// the two implicit leaves are mutually exclusive
-static_assert(not(rbe::frames::static_delimited<any_frame> and rbe::frames::dispatch_delimited<any_frame>));
-static_assert(not(rbe::frames::static_delimited<msg_frame> and rbe::frames::dispatch_delimited<msg_frame>));
+// --- an id resolves in O(1) at runtime, so the frame is implicit without being a constant ---
+static_assert(rbe::frames::implicitly_delimited<any_frame>);
+static_assert(rbe::frames::implicitly_delimited<rbe::frames::frame<CommonHeader, any_frame>>);
+static_assert(not rbe::frames::static_delimited<any_frame>);
+static_assert(rbe::frames::constant_length<any_frame>);
+// a frame that is implicit and static is the leaf; one that is implicit and not static is the node
+static_assert(rbe::frames::implicitly_delimited<msg_frame> and rbe::frames::static_delimited<msg_frame>);
+static_assert(rbe::frames::implicitly_delimited<extended_header_frame>);
+static_assert(not rbe::frames::static_delimited<extended_header_frame>);
 
 // --- the stride of a many, which is a property of its element and not of the run ---
 static_assert(std::same_as<rbe::frames::many_element_t<rbe::frames::many<msg_frame>>, msg_frame>);
@@ -323,7 +325,6 @@ static_assert(not rbe::frames::static_stride_delimited<count_frame>);
 
 // --- the tags themselves: refinement is derivation, so a concept is one derived_from ---
 static_assert(std::derived_from<rbe::frames::static_delimited_tag, rbe::frames::implicitly_delimited_tag>);
-static_assert(std::derived_from<rbe::frames::dispatch_delimited_tag, rbe::frames::implicitly_delimited_tag>);
 static_assert(std::derived_from<rbe::frames::length_delimited_tag, rbe::frames::explicitly_delimited_tag>);
 static_assert(std::derived_from<rbe::frames::static_stride_delimited_tag, rbe::frames::count_delimited_tag>);
 static_assert(std::derived_from<rbe::frames::implicitly_delimited_tag, rbe::frames::self_delimited_tag>);
@@ -335,7 +336,7 @@ static_assert(not std::derived_from<rbe::frames::custom_delimited_tag, rbe::fram
 // every frame carries its category as a member, at both levels
 static_assert(std::same_as<msg_frame::delimiting_concept, rbe::frames::static_delimited_tag>);
 static_assert(std::same_as<msg_frame::dsrl_type::delimiting_concept, rbe::frames::static_delimited_tag>);
-static_assert(std::same_as<any_frame::delimiting_concept, rbe::frames::dispatch_delimited_tag>);
+static_assert(std::same_as<any_frame::delimiting_concept, rbe::frames::implicitly_delimited_tag>);
 static_assert(std::same_as<blob_frame::delimiting_concept, rbe::frames::buffer_delimited_tag>);
 static_assert(std::same_as<nested::delimiting_concept, rbe::frames::static_delimited_tag>);
 static_assert(std::same_as<count_frame::delimiting_concept, rbe::frames::buffer_delimited_tag>); // until fork 3b

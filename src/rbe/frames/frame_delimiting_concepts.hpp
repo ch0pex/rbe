@@ -23,8 +23,7 @@
  *       |       `-- !static_stride_delimited O(n)
  *       `-- implicitly_delimited
  *           |-- static_delimited             O(1), a compile-time constant
- *           |-- dispatch_delimited           O(1), one id lookup
- *           `-- (an extended header)               O(1), no leaf of its own
+ *           `-- (an id, an extended header)  O(1), no leaf of its own
  * @endverbatim
  *
  */
@@ -166,26 +165,15 @@ concept implicitly_delimited = self_delimited<T> and detail::is_tag<T, implicitl
  *
  * A header annotated with `rbe::header_length` disqualifies the frame however static its payload is: the
  * header declares its own length on the wire and may be extended past `wire_size_of<header_type>()`, so
- * such a frame resolves in O(1) without being a compile-time constant. It is implicitly delimited and
- * `constant_length`, and it is neither of the two leaves -- which is why `constant_length` is not their
- * union.
+ * such a frame resolves in O(1) without being a compile-time constant. So does a frame whose payload is
+ * an `rbe::frames::any`: the id settles the length with one lookup, at runtime. Both are implicitly
+ * delimited and `constant_length` without being this leaf -- which is why `constant_length` is not the
+ * union of the O(1) categories.
  *
  * @tparam T The frame type to be evaluated.
  */
 template<typename T>
 concept static_delimited = implicitly_delimited<T> and detail::is_tag<T, static_delimited_tag>;
-
-/**
- * @brief An implicitly-delimited frame whose length is settled by the id that selects its payload.
- *
- * The payload is an `rbe::frames::any` (or a nested chain ending in one), so the length is the wire size of the
- * candidate the header's id selects: O(1), one lookup, but a runtime value and not a compile-time
- * constant, which is what separates it from `static_delimited`.
- *
- * @tparam T The frame type to be evaluated.
- */
-template<typename T>
-concept dispatch_delimited = implicitly_delimited<T> and detail::is_tag<T, dispatch_delimited_tag>;
 
 /**
  * @brief The length in bytes of a `static_delimited` frame.

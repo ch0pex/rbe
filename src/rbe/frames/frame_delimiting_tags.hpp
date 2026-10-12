@@ -15,7 +15,7 @@
  * The tags mirror that hierarchy of concepts by deriving from one another, so a category refines its
  * parent the way std::forward_iterator_tag refines std::input_iterator_tag: every concept over them is
  * one std::derived_from, and an interior node is a usable answer on its own -- a frame with an extended
- * header is implicitly delimited and neither of the two implicit leaves.
+ * header is implicitly delimited and not static_delimited, its only leaf.
  *
  * Which tag a frame carries follows the same rule the standard library follows for iterators: it is
  * deduced from what is structurally detectable, and declared where it is not. Every frame carries it as a
@@ -57,8 +57,7 @@ namespace rbe::frames {
  *       |       `-- !static_stride_delimited  O(n)
  *       `-- implicitly_delimited
  *           |-- static_delimited              O(1), a compile-time constant
- *           |-- dispatch_delimited            O(1), one id lookup
- *           `-- (an extended header)          O(1), no leaf of its own
+ *           `-- (an id, an extended header)   O(1), no leaf of its own
  * @endverbatim
  */
 struct buffer_delimited_tag : rbe::detail::delimiting_tag { };
@@ -70,7 +69,6 @@ struct count_delimited_tag : explicitly_delimited_tag { };
 struct static_stride_delimited_tag : count_delimited_tag { };
 struct implicitly_delimited_tag : self_delimited_tag { };
 struct static_delimited_tag : implicitly_delimited_tag { };
-struct dispatch_delimited_tag : implicitly_delimited_tag { };
 
 /**
  * @brief One of the delimiting categories above

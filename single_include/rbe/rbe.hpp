@@ -3713,7 +3713,7 @@ constexpr auto dispatch_matched(Overload overload_set, std::span<std::byte const
  * The tags mirror that hierarchy of concepts by deriving from one another, so a category refines its
  * parent the way std::forward_iterator_tag refines std::input_iterator_tag: every concept over them is
  * one std::derived_from, and an interior node is a usable answer on its own -- a frame with an extended
- * header is implicitly delimited and neither of the two implicit leaves.
+ * header is implicitly delimited and not static_delimited, its only leaf.
  *
  * Which tag a frame carries follows the same rule the standard library follows for iterators: it is
  * deduced from what is structurally detectable, and declared where it is not. Every frame carries it as a
@@ -3753,8 +3753,7 @@ namespace rbe::frames {
  *       |       `-- !static_stride_delimited  O(n)
  *       `-- implicitly_delimited
  *           |-- static_delimited              O(1), a compile-time constant
- *           |-- dispatch_delimited            O(1), one id lookup
- *           `-- (an extended header)          O(1), no leaf of its own
+ *           `-- (an id, an extended header)   O(1), no leaf of its own
  * @endverbatim
  */
 struct buffer_delimited_tag : rbe::detail::delimiting_tag { };
@@ -3766,7 +3765,6 @@ struct count_delimited_tag : explicitly_delimited_tag { };
 struct static_stride_delimited_tag : count_delimited_tag { };
 struct implicitly_delimited_tag : self_delimited_tag { };
 struct static_delimited_tag : implicitly_delimited_tag { };
-struct dispatch_delimited_tag : implicitly_delimited_tag { };
 
 /**
  * @brief One of the delimiting categories above
@@ -4469,8 +4467,7 @@ split_span(std::span<T, Extent>, std::size_t) -> split_span<T>;
  *       |       `-- !static_stride_delimited O(n)
  *       `-- implicitly_delimited
  *           |-- static_delimited             O(1), a compile-time constant
- *           |-- dispatch_delimited           O(1), one id lookup
- *           `-- (an extended header)               O(1), no leaf of its own
+ *           `-- (an id, an extended header)  O(1), no leaf of its own
  * @endverbatim
  *
  */
@@ -4545,7 +4542,7 @@ template<typename P>
  * A header annotated with rbe::header_length is the one case where a static payload does not make a
  * static frame: the header declares its own length on the wire and may be extended past
  * wire_size_of<header_type>(), so the frame resolves in O(1) without being a compile-time constant --
- * frames::implicitly_delimited_tag, the interior node, and neither of its two leaves.
+ * frames::implicitly_delimited_tag, the interior node, and not its static_delimited_tag leaf.
  */
 template<frames::header H, typename P>
 [[nodiscard]] consteval auto frame_delimiting() -> std::meta::info {
@@ -4582,9 +4579,6 @@ template<frames::header H, typename P>
     else if constexpr (std::derived_from<nested, frames::static_delimited_tag>) {
       return extended_header ? ^^frames::implicitly_delimited_tag : ^^frames::static_delimited_tag;
     }
-    else if constexpr (std::derived_from<nested, frames::dispatch_delimited_tag>) {
-      return ^^frames::dispatch_delimited_tag; // the id the inner frame dispatches on settles the outer length too
-    }
     else {
       // the inner frame reads a field, counts its elements, scans for a terminator or has an extended
       // header of its own: the outer frame has no field of its own, so it is implicit, and its cost is
@@ -4593,7 +4587,9 @@ template<frames::header H, typename P>
     }
   }
   else if constexpr (frames::is_any<P>) {
-    return ^^frames::dispatch_delimited_tag; // the id picks the candidate, and the candidate is its own length
+    // the id picks the candidate and the candidate is its own length: O(1), one lookup, but a runtime
+    // value, so the interior node and not the static leaf
+    return ^^frames::implicitly_delimited_tag;
   }
   else if constexpr (frames::is_many<P>) {
     return ^^frames::buffer_delimited_tag; // an unbounded run: with no count, it runs to the end of the buffer
@@ -4802,26 +4798,15 @@ concept implicitly_delimited = self_delimited<T> and detail::is_tag<T, implicitl
  *
  * A header annotated with `rbe::header_length` disqualifies the frame however static its payload is: the
  * header declares its own length on the wire and may be extended past `wire_size_of<header_type>()`, so
- * such a frame resolves in O(1) without being a compile-time constant. It is implicitly delimited and
- * `constant_length`, and it is neither of the two leaves -- which is why `constant_length` is not their
- * union.
+ * such a frame resolves in O(1) without being a compile-time constant. So does a frame whose payload is
+ * an `rbe::frames::any`: the id settles the length with one lookup, at runtime. Both are implicitly
+ * delimited and `constant_length` without being this leaf -- which is why `constant_length` is not the
+ * union of the O(1) categories.
  *
  * @tparam T The frame type to be evaluated.
  */
 template<typename T>
 concept static_delimited = implicitly_delimited<T> and detail::is_tag<T, static_delimited_tag>;
-
-/**
- * @brief An implicitly-delimited frame whose length is settled by the id that selects its payload.
- *
- * The payload is an `rbe::frames::any` (or a nested chain ending in one), so the length is the wire size of the
- * candidate the header's id selects: O(1), one lookup, but a runtime value and not a compile-time
- * constant, which is what separates it from `static_delimited`.
- *
- * @tparam T The frame type to be evaluated.
- */
-template<typename T>
-concept dispatch_delimited = implicitly_delimited<T> and detail::is_tag<T, dispatch_delimited_tag>;
 
 /**
  * @brief The length in bytes of a `static_delimited` frame.

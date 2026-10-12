@@ -38,7 +38,7 @@ static_assert(rbe::frames::self_delimited<cboe::pitch::message>);
 static_assert(rbe::frames::self_delimited<cboe::pitch::packet>);
 static_assert(rbe::frames::self_delimited<lse::message>);
 static_assert(rbe::frames::self_delimited<cboe::top::message>); // the any alternatives imply their length
-static_assert(rbe::frames::dispatch_delimited<cboe::top::message>);
+static_assert(rbe::frames::implicitly_delimited<cboe::top::message>); // the id settles it, in O(1)
 // A custom frame built on base_frame is a frame like any other: it composes with many and classifies.
 static_assert(rbe::frames::dsrl::is_frame<cboe::top::line_view>);
 static_assert(rbe::frames::frame_serder<cboe::top::line>);
@@ -46,10 +46,10 @@ static_assert(rbe::frames::self_delimited<cboe::top::line>);
 static_assert(rbe::frames::serder_payload<cboe::top::lines>);
 static_assert(rbe::frames::self_delimited<lse::packet>);
 static_assert(rbe::frames::self_delimited<nasdaq::message>); // the any alternatives imply their length
-static_assert(rbe::frames::dispatch_delimited<nasdaq::message>);
+static_assert(rbe::frames::implicitly_delimited<nasdaq::message>); // the id settles it, in O(1)
 static_assert(rbe::frames::self_delimited<nasdaq::packet>);
 static_assert(rbe::frames::self_delimited<opra::message>); // the any alternatives imply their length
-static_assert(rbe::frames::dispatch_delimited<opra::message>);
+static_assert(rbe::frames::implicitly_delimited<opra::message>); // the id settles it, in O(1)
 
 // --- Usage ---
 

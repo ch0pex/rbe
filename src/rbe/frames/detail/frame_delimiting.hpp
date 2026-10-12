@@ -76,7 +76,7 @@ template<typename P>
  * A header annotated with rbe::header_length is the one case where a static payload does not make a
  * static frame: the header declares its own length on the wire and may be extended past
  * wire_size_of<header_type>(), so the frame resolves in O(1) without being a compile-time constant --
- * frames::implicitly_delimited_tag, the interior node, and neither of its two leaves.
+ * frames::implicitly_delimited_tag, the interior node, and not its static_delimited_tag leaf.
  */
 template<frames::header H, typename P>
 [[nodiscard]] consteval auto frame_delimiting() -> std::meta::info {
@@ -113,9 +113,6 @@ template<frames::header H, typename P>
     else if constexpr (std::derived_from<nested, frames::static_delimited_tag>) {
       return extended_header ? ^^frames::implicitly_delimited_tag : ^^frames::static_delimited_tag;
     }
-    else if constexpr (std::derived_from<nested, frames::dispatch_delimited_tag>) {
-      return ^^frames::dispatch_delimited_tag; // the id the inner frame dispatches on settles the outer length too
-    }
     else {
       // the inner frame reads a field, counts its elements, scans for a terminator or has an extended
       // header of its own: the outer frame has no field of its own, so it is implicit, and its cost is
@@ -124,7 +121,9 @@ template<frames::header H, typename P>
     }
   }
   else if constexpr (frames::is_any<P>) {
-    return ^^frames::dispatch_delimited_tag; // the id picks the candidate, and the candidate is its own length
+    // the id picks the candidate and the candidate is its own length: O(1), one lookup, but a runtime
+    // value, so the interior node and not the static leaf
+    return ^^frames::implicitly_delimited_tag;
   }
   else if constexpr (frames::is_many<P>) {
     return ^^frames::buffer_delimited_tag; // an unbounded run: with no count, it runs to the end of the buffer

@@ -353,10 +353,10 @@ private:
 };
 
 // the two primitives are all it took: it is a frame, and the category it declares is the one it has --
-// the terminator scan, not the dispatch_delimited its shape (an any payload) would have claimed
+// the terminator scan, which is O(n): by its shape it would have been implicit and O(1)
 static_assert(rbe::frames::dsrl::is_frame<line_view>);
 static_assert(rbe::frames::self_delimited<line_view>);
-static_assert(not rbe::frames::dispatch_delimited<line_view>);
+static_assert(not rbe::frames::implicitly_delimited<line_view>);
 static_assert(not rbe::frames::constant_length<line_view>); // a scan is O(n)
 
 constexpr auto custom_frame_follows_its_own_length() {

@@ -961,7 +961,7 @@ using messages = rbe::frames::any<
     ExtendedTwoSidedUpdate, ExtendedTrade, ExpandedTrade, LongTrade, ShortTrade, TradingStatus>;
 
 /// One TOP message without its line terminator: `Header` followed by the message selected by
-/// `msg_type`, delimited by the id (`rbe::frames::dispatch_delimited`). It is the message as a value, not
+/// `msg_type`, delimited by the id it carries. It is the message as a value, not
 /// as it sits on the wire: on the wire every message is followed by an LF that no candidate accounts
 /// for, so a `many<message>` would land on that LF -- `line` is the frame for a TOP stream.
 using message = rbe::frames::frame<Header, messages>;
