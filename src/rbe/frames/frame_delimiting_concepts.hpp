@@ -13,7 +13,6 @@
  *
  * @verbatim
  *   Frame
- *   |-- custom_delimited                     Any complexity
  *   |-- buffer_delimited                     O(1)
  *   `-- self_delimited
  *       |-- explicitly_delimited
@@ -66,21 +65,6 @@ using delimiting_concept_t = typename T::delimiting_concept;
 
 
 /**
- * @brief A frame whose length is resolved by user-provided logic.
- *
- * Escape hatch for delimiting schemes that none of the other categories model. Its complexity is
- * whatever the custom resolver costs, so it sits outside the O(1) / O(n) classification.
- *
- * @note Never deduced: a frame is custom-delimited only by declaring `delimiting_concept`. A frame that
- * does find its own end should declare the category it belongs to instead -- a terminator scan is
- * `self_delimited_tag` -- and keep this for the schemes that fit nowhere.
- *
- * @tparam T The frame type to be evaluated.
- */
-template<typename T>
-concept custom_delimited = is_frame<T> and detail::is_tag<T, custom_delimited_tag>;
-
-/**
  * @brief A frame that can find its own end without knowing the buffer size.
  *
  * The length is resolved from a header wire field, a `payload_count`, the static size of the payload
@@ -88,10 +72,15 @@ concept custom_delimited = is_frame<T> and detail::is_tag<T, custom_delimited_ta
  * Such a frame may be read from a larger buffer, trailing bytes being either padding or the following
  * frames, which is what lets a sequence of frames share a single buffer.
  *
+ * It is also the escape hatch: a frame that resolves its own length in code -- a terminator scan, a
+ * length buried in the payload -- declares `self_delimited_tag`, the bare root, which says that the
+ * frame finds its own end and nothing about what that costs (so it is not `constant_length`). See
+ * `cboe::top::line_view`.
+ *
  * @tparam T The frame type to be evaluated.
  */
 template<typename T>
-concept self_delimited = is_frame<T> and detail::is_tag<T, self_delimited_tag> and not custom_delimited<T>;
+concept self_delimited = is_frame<T> and detail::is_tag<T, self_delimited_tag>;
 
 /**
  * @brief A frame whose payload extends to the end of the buffer it is read from.
@@ -103,7 +92,7 @@ concept self_delimited = is_frame<T> and detail::is_tag<T, self_delimited_tag> a
  * @tparam T The frame type to be evaluated.
  */
 template<typename T>
-concept buffer_delimited = is_frame<T> and detail::is_tag<T, buffer_delimited_tag> and not custom_delimited<T>;
+concept buffer_delimited = is_frame<T> and detail::is_tag<T, buffer_delimited_tag>;
 
 /**
  * @brief A self-delimiting frame whose length is resolved by reading a header wire field.

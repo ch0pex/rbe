@@ -331,7 +331,6 @@ static_assert(std::derived_from<rbe::frames::implicitly_delimited_tag, rbe::fram
 static_assert(std::derived_from<rbe::frames::explicitly_delimited_tag, rbe::frames::self_delimited_tag>);
 // the buffer and a custom resolver are not the frame finding its own end
 static_assert(not std::derived_from<rbe::frames::buffer_delimited_tag, rbe::frames::self_delimited_tag>);
-static_assert(not std::derived_from<rbe::frames::custom_delimited_tag, rbe::frames::self_delimited_tag>);
 
 // every frame carries its category as a member, at both levels
 static_assert(std::same_as<msg_frame::delimiting_concept, rbe::frames::static_delimited_tag>);
@@ -374,18 +373,6 @@ static_assert(std::same_as<
 static_assert(rbe::frames::self_delimited<wrapped_line>);
 static_assert(rbe::frames::implicitly_delimited<wrapped_line>);
 static_assert(not rbe::frames::constant_length<wrapped_line>); // the cost of the chain, not of the outer frame
-
-// a custom resolver states nothing about its cost either, and is not self-delimiting by itself
-struct opaque_frame : rbe::frames::dsrl::base_frame<PlainHeader, rbe::frames::blob::dsrl_type> {
-  using delimiting_concept = rbe::frames::custom_delimited_tag;
-};
-static_assert(rbe::frames::custom_delimited<opaque_frame>);
-static_assert(not rbe::frames::self_delimited<opaque_frame>);
-static_assert(not rbe::frames::buffer_delimited<opaque_frame>);
-static_assert(not rbe::frames::constant_length<opaque_frame>);
-static_assert(
-    rbe::frames::custom_delimited<rbe::frames::dsrl::frame<CommonHeader, opaque_frame>>
-); // propagated outwards
 
 
 // ============================================================

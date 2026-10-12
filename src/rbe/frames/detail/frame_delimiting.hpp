@@ -107,9 +107,6 @@ template<frames::header H, typename P>
     if constexpr (std::same_as<nested, frames::buffer_delimited_tag>) {
       return ^^frames::buffer_delimited_tag;
     }
-    else if constexpr (std::same_as<nested, frames::custom_delimited_tag>) {
-      return ^^frames::custom_delimited_tag;
-    }
     else if constexpr (std::derived_from<nested, frames::static_delimited_tag>) {
       return extended_header ? ^^frames::implicitly_delimited_tag : ^^frames::static_delimited_tag;
     }
@@ -188,7 +185,7 @@ template<frames::is_frame T>
 [[nodiscard]] consteval auto is_constant_length() -> bool {
   using tag = typename T::delimiting_concept;
 
-  if constexpr (std::same_as<tag, frames::custom_delimited_tag> or std::same_as<tag, frames::self_delimited_tag>) {
+  if constexpr (std::same_as<tag, frames::self_delimited_tag>) {
     return false;
   }
   else if constexpr (

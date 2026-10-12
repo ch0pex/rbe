@@ -47,11 +47,10 @@ namespace rbe::frames {
 /*
  * @verbatim
  *   Frame
- *   |-- custom_delimited                      Any complexity
  *   |-- buffer_delimited                      O(1)
  *   `-- self_delimited
  *       |-- explicitly_delimited
- *       |   |-- length_delimited        O(1)
+ *       |   |-- length_delimited              O(1)
  *       |   `-- count_delimited
  *       |       |-- static_stride_delimited   O(1)
  *       |       `-- !static_stride_delimited  O(n)
@@ -61,7 +60,6 @@ namespace rbe::frames {
  * @endverbatim
  */
 struct buffer_delimited_tag : rbe::detail::delimiting_tag { };
-struct custom_delimited_tag : rbe::detail::delimiting_tag { };
 struct self_delimited_tag : rbe::detail::delimiting_tag { };
 struct explicitly_delimited_tag : self_delimited_tag { };
 struct length_delimited_tag : explicitly_delimited_tag { };
@@ -73,8 +71,10 @@ struct static_delimited_tag : implicitly_delimited_tag { };
 /**
  * @brief One of the delimiting categories above
  *
- * The three roots are the exhaustive answer to "who knows where this frame ends": the frame itself
- * (self_delimited_tag and its refinements), the buffer, or code the frame supplies.
+ * The two roots are the exhaustive answer to "who knows where this frame ends": the frame itself
+ * (self_delimited_tag and its refinements) or the buffer it was handed. A frame that resolves its own
+ * length in code is not a third answer -- it is the first one, and it says so by declaring
+ * self_delimited_tag, the bare root, which claims nothing about what the resolution costs.
  */
 template<typename T>
 concept delimiting_tag = std::derived_from<T, rbe::detail::delimiting_tag>;
