@@ -8,11 +8,11 @@
 
 ## Overview
 
-RBE (Reflection-Based Encoding) is a modern, header-only C++26 library that bridges the gap between plain C++ structs and raw binary protocols. By leveraging C++26 static reflection, RBE allows you to declaratively define byte order, packing, and message framing directly via struct attributes.
+RBE (Reflection-Based Encoding) is a modern, header-only C++26 library that bridges the gap between plain C++ structs and raw binary protocols. By leveraging C++26 static reflection, RBE allows you to declaratively define byte order, packing, and message framing directly via annotations.
 
 ### Define the wire format using annotations
 
-The library automatically generates highly optimized serialization and deserialization routines at compile time. Whether you are reading from a network socket, a memory-mapped file, or a ring buffer, your struct remains the strict single source of truth, eliminating boilerplate and guaranteeing zero runtime overhead.
+The library automatically generates highly optimized serialization and deserialization code utilities at compile time. Whether you are reading from a network socket, a memory-mapped file, or a ring buffer, your struct remains the strict single source of truth, eliminating boilerplate and guaranteeing zero runtime overhead compared to hand-written code.
 
 ```cpp
 #include <rbe/annotations.hpp>
@@ -95,19 +95,19 @@ RBE provides a flexible and recursive message framing system. By defining a fram
 - Header: any `wirable` type
 - Payload: one of
   - a `wirable` type
-  - another `rbe::frame`
-  - `rbe::any<T...>`: one of several messages, picked by the header's `=rbe::id` field
-  - `rbe::many<T>`: a run of messages, each one walked using its own length field
+  - another `rbe::frames::frame`
+  - `rbe::frames::any<T...>`: one of several messages, picked by the header's `=rbe::id` field
+  - `rbe::frames::many<T>`: a run of messages, each one walked using its own length field
 
 ```cpp
 #include <rbe/frames.hpp>
 
-using packet = rbe::frame<
-    PacketHeader,                                 // packet header
-    rbe::many<                                    // ...followed by a run of
-        rbe::frame<
-            MessageHeader,                        // message header
-            rbe::any<AddOrder, ReduceSize, Tick>  // one of these
+using packet = rbe::frames::frame<
+    PacketHeader,                                         // packet header
+    rbe::frames::many<                                    // ...followed by a run of messages
+        rbe::frames::frame<
+            MessageHeader,                                // message header
+            rbe::frames::any<AddOrder, ReduceSize, Tick>  // one of these
         >
     >
 >;
@@ -121,12 +121,12 @@ for (auto [hdr, payload] : packet_view.payload()) {
     [](AddOrder add_order) { /* ... */ },,
     [](ReduceSize reduce_size) { /* ... */ },
     [](rbe::proxy<Tick> tick) { /* ... */}, 
-    [](msg_type id) { /* unknown message type, handle error */ }
+    [](rbe::unknown auto id) { /* unknown message type, handle error */ }
   );
 }
 
 // Write it as one value, value_type is automatically generated from the frame's template parameters ...
-rbe::serialize<packet>(buffer, packet::value_type { 
+rbe::serialize(buffer, packet::value_type { 
     .header  = packet_header,
     .payload = {{msg_header0, add_order}, {msg_header1, reduce_size}},
 });
@@ -143,7 +143,7 @@ packet::srl_type {buffer}
 
 - **Declarative**
   - Describe your binary format with standard C++ structs
-  - Describe your frames with `rbe::frame`, `rbe::any` and `rbe::many`
+  - Describe your frames with `rbe::frames::frame`, `rbe::frames::any` and `rbe::frames::many`
   - Use C++26 annotations to specify endianness, packing, field order, framing and more
 - **Safety**
   - Annotations correctness is verified at compile time
