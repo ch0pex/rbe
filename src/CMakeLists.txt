@@ -4,7 +4,7 @@ project(rbe VERSION 0.0.1 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-add_library(rbe INTERFACE rbe/dsrl/proxy.hpp)
+add_library(rbe INTERFACE)
 
 target_sources(
         rbe
