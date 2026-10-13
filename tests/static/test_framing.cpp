@@ -23,6 +23,8 @@
 
 namespace {
 
+// clang-format off
+
 // ============================================================
 // frame header
 // ============================================================
@@ -55,17 +57,10 @@ static_assert(not rbe::frames::is_frame<std::uint32_t>);
 // ============================================================
 static_assert(rbe::frames::serder_payload<MessageWithHeader>); // wirable
 static_assert(rbe::frames::serder_payload<rbe::frames::any<MessageWithHeader, MessageWithHeaderPack>>); // any
-static_assert(
-    rbe::frames::serder_payload<rbe::frames::many<rbe::frames::frame<CommonHeader, MessageWithHeader>>>
-); // many
+static_assert(rbe::frames::serder_payload<rbe::frames::many<rbe::frames::frame<CommonHeader, MessageWithHeader>>>); // many
 static_assert(rbe::frames::serder_payload<rbe::frames::blob>); // blob
-static_assert(
-    rbe::frames::serder_payload<
-        rbe::frames::frame<CommonHeader, rbe::frames::many<rbe::frames::frame<CommonHeader, MessageWithHeader>>>>
-);
-static_assert(rbe::frames::serder_payload<rbe::frames::frame<
-                  CommonHeader, rbe::frames::many<rbe::frames::frame<
-                                    CommonHeader, rbe::frames::any<MessageWithHeader, MessageWithHeaderPack>>>>>);
+static_assert(rbe::frames::serder_payload<rbe::frames::frame<CommonHeader, rbe::frames::many<rbe::frames::frame<CommonHeader, MessageWithHeader>>>>);
+static_assert(rbe::frames::serder_payload<rbe::frames::frame<CommonHeader, rbe::frames::many<rbe::frames::frame<CommonHeader, rbe::frames::any<MessageWithHeader, MessageWithHeaderPack>>>>>);
 // neither wirable nor serder_traits
 static_assert(not rbe::frames::serder_payload<Empty>);
 static_assert(not rbe::frames::serder_payload<AggregateWithPtr>);
@@ -124,42 +119,27 @@ using rbe::frames::delimiting_concept_t;
 using rbe::frames::frame_delimiting_tag;
 
 // what the shape of a frame says, before any frame declares anything
-static_assert(
-    std::same_as<frame_delimiting_tag<WithPayloadLength, rbe::frames::blob>, rbe::frames::length_delimited_tag>
-);
-static_assert(
-    std::same_as<frame_delimiting_tag<WithFrameLength, rbe::frames::blob>, rbe::frames::length_delimited_tag>
-);
+static_assert(std::same_as<frame_delimiting_tag<WithPayloadLength, rbe::frames::blob>, rbe::frames::length_delimited_tag>);
+static_assert(std::same_as<frame_delimiting_tag<WithFrameLength, rbe::frames::blob>, rbe::frames::length_delimited_tag>);
 static_assert(std::same_as<frame_delimiting_tag<CommonHeader, msg_frame>, rbe::frames::static_delimited_tag>);
 static_assert(std::same_as<frame_delimiting_tag<CommonHeader, MessageWithHeader>, rbe::frames::static_delimited_tag>);
 static_assert(std::same_as<frame_delimiting_tag<CommonHeader, rbe::frames::blob>, rbe::frames::buffer_delimited_tag>);
-static_assert(
-    std::same_as<frame_delimiting_tag<CommonHeader, rbe::frames::many<msg_frame>>, rbe::frames::buffer_delimited_tag>
-);
+static_assert(std::same_as<frame_delimiting_tag<CommonHeader, rbe::frames::many<msg_frame>>, rbe::frames::buffer_delimited_tag>);
 static_assert(std::same_as<frame_delimiting_tag<CommonHeader, candidates>, rbe::frames::implicitly_delimited_tag>);
 // a length field takes precedence over the static size of the payload
-static_assert(
-    std::same_as<frame_delimiting_tag<WithPayloadLength, MessageWithHeader>, rbe::frames::length_delimited_tag>
-);
+static_assert(std::same_as<frame_delimiting_tag<WithPayloadLength, MessageWithHeader>, rbe::frames::length_delimited_tag>);
 // an extended header is O(1) and not a constant: the interior node, neither of the two implicit leaves
-static_assert(
-    std::same_as<frame_delimiting_tag<WithHeaderLength, MessageWithHeader>, rbe::frames::implicitly_delimited_tag>
-);
+static_assert(std::same_as<frame_delimiting_tag<WithHeaderLength, MessageWithHeader>, rbe::frames::implicitly_delimited_tag>);
 // a count settles the extent when the element has a constant size: count * stride, no element read
-static_assert(
-    std::same_as<
-        frame_delimiting_tag<HeaderWithCount, rbe::frames::many<msg_frame>>, rbe::frames::static_stride_delimited_tag>
-);
+static_assert(std::same_as<frame_delimiting_tag<HeaderWithCount, rbe::frames::many<msg_frame>>, rbe::frames::static_stride_delimited_tag>);
 // and when it has not, the count still delimits the run -- by measuring every element, so the frame is
 // count-delimited without being constant: what it must not be is bounded by a buffer it does not own
-static_assert(
-    std::same_as<frame_delimiting_tag<HeaderWithCount, rbe::frames::many<any_frame>>, rbe::frames::count_delimited_tag>
-);
+static_assert(std::same_as<frame_delimiting_tag<HeaderWithCount, rbe::frames::many<any_frame>>, rbe::frames::count_delimited_tag>);
 
 // lowering never changes the category, so dsrl::frame::length() agrees with the rbe:: classification
 template<typename Header, typename Payload>
-inline constexpr bool same_tag_when_lowered =
-    std::same_as<frame_delimiting_tag<Header, Payload>, frame_delimiting_tag<Header, rbe::frames::detail::to_dsrl_t<Payload>>>;
+inline constexpr bool same_tag_when_lowered = std::same_as<
+    frame_delimiting_tag<Header, Payload>, frame_delimiting_tag<Header, rbe::frames::detail::to_dsrl_t<Payload>>>;
 
 static_assert(same_tag_when_lowered<WithFrameLength, rbe::frames::blob>);
 static_assert(same_tag_when_lowered<CommonHeader, msg_frame>);
@@ -237,12 +217,8 @@ static_assert(rbe::frames::length_delimited<rbe::frames::frame<WithFrameLength, 
 static_assert(rbe::frames::length_delimited<rbe::frames::frame<WithPayloadLength, candidates>>);
 static_assert(not rbe::frames::implicitly_delimited<rbe::frames::frame<WithFrameLength, candidates>>);
 // ... and the category of a nested frame follows the frame it nests
-static_assert(
-    rbe::frames::implicitly_delimited<rbe::frames::frame<CommonHeader, rbe::frames::frame<CommonHeader, candidates>>>
-);
-static_assert(
-    rbe::frames::length_delimited<rbe::frames::frame<WithFrameLength, rbe::frames::frame<CommonHeader, candidates>>>
-);
+static_assert(rbe::frames::implicitly_delimited<rbe::frames::frame<CommonHeader, rbe::frames::frame<CommonHeader, candidates>>>);
+static_assert(rbe::frames::length_delimited<rbe::frames::frame<WithFrameLength, rbe::frames::frame<CommonHeader, candidates>>>);
 
 // ============================================================
 // the delimiting categories -- the mechanism leaves and the cost axis
@@ -263,15 +239,11 @@ static_assert(rbe::frames::implicitly_delimited<msg_frame>);
 
 // --- static_delimited: the whole frame is a compile-time constant ---
 static_assert(rbe::frames::static_delimited<msg_frame>);
-static_assert(
-    rbe::frames::static_length<msg_frame> == rbe::wire_size_of<CommonHeader>() + rbe::wire_size_of<MessageWithHeader>()
-);
+static_assert(rbe::frames::static_length<msg_frame> == rbe::wire_size_of<CommonHeader>() + rbe::wire_size_of<MessageWithHeader>());
 
 // a nested chain is a constant only if every level of it is, which is what the recursion is for
 static_assert(rbe::frames::static_delimited<nested>);
-static_assert(
-    rbe::frames::static_length<nested> == rbe::wire_size_of<NestedPackParent>() + rbe::frames::static_length<msg_frame>
-);
+static_assert(rbe::frames::static_length<nested> == rbe::wire_size_of<NestedPackParent>() + rbe::frames::static_length<msg_frame>);
 static_assert(rbe::frames::static_delimited<rbe::frames::frame<CommonHeader, nested>>);
 static_assert(not rbe::frames::static_delimited<rbe::frames::frame<CommonHeader, blob_frame>>);
 static_assert(not rbe::frames::static_delimited<rbe::frames::frame<CommonHeader, extended_header_frame>>);
@@ -312,9 +284,7 @@ static_assert(std::same_as<rbe::frames::many_element_t<rbe::frames::many<msg_fra
 static_assert(rbe::frames::static_stride<rbe::frames::many<msg_frame>>);
 static_assert(rbe::frames::static_stride<rbe::frames::many<nested>>);
 static_assert(rbe::frames::static_stride<rbe::frames::dsrl::many<msg_frame::dsrl_type>>);
-static_assert(
-    rbe::frames::dynamic_stride<rbe::frames::many<rbe::frames::frame<WithFrameLength, rbe::frames::blob>>>
-); // a field per element
+static_assert(rbe::frames::dynamic_stride<rbe::frames::many<rbe::frames::frame<WithFrameLength, rbe::frames::blob>>>); // a field per element
 static_assert(rbe::frames::dynamic_stride<rbe::frames::many<any_frame>>); // an id lookup per element
 
 // --- the cost axis holds for every frame the library can form today ---
@@ -359,16 +329,11 @@ static_assert(std::same_as<blob_frame::delimiting_concept, rbe::frames::buffer_d
 static_assert(std::same_as<nested::delimiting_concept, rbe::frames::static_delimited_tag>);
 static_assert(std::same_as<count_frame::delimiting_concept, rbe::frames::static_stride_delimited_tag>);
 static_assert(std::same_as<extended_header_frame::delimiting_concept, rbe::frames::implicitly_delimited_tag>);
-static_assert(
-    std::same_as<
-        rbe::frames::frame<WithFrameLength, rbe::frames::blob>::delimiting_concept, rbe::frames::length_delimited_tag>
-);
+static_assert(std::same_as<rbe::frames::frame<WithFrameLength, rbe::frames::blob>::delimiting_concept, rbe::frames::length_delimited_tag>);
 
 // and the member is what the trait reports, deduction and declaration going through the same door
 static_assert(std::same_as<rbe::frames::delimiting_concept_t<msg_frame>, msg_frame::delimiting_concept>);
-static_assert(std::same_as<
-              rbe::frames::delimiting_concept_t<msg_frame>,
-              rbe::frames::frame_delimiting_tag<CommonHeader, MessageWithHeader>>);
+static_assert(std::same_as<rbe::frames::delimiting_concept_t<msg_frame>, rbe::frames::frame_delimiting_tag<CommonHeader, MessageWithHeader>>);
 
 // --- a frame that resolves its own length: the declaration wins over the deduction ---
 // a '\n' terminated line. Its shape says buffer-delimited -- a blob runs to the end of the buffer -- and
@@ -388,9 +353,7 @@ static_assert(not rbe::frames::constant_length<terminated_line>);
 // a declaration made inside a chain of frames reaches the outermost frame, which is what a walk over the
 // shapes alone cannot do: by shape, a frame over a blob-payload frame is buffer-delimited
 using wrapped_line = rbe::frames::dsrl::frame<CommonHeader, terminated_line>;
-static_assert(std::same_as<
-              frame_delimiting_tag<CommonHeader, rbe::frames::dsrl::frame<PlainHeader, rbe::frames::blob::dsrl_type>>,
-              rbe::frames::buffer_delimited_tag>);
+static_assert(std::same_as<frame_delimiting_tag<CommonHeader, rbe::frames::dsrl::frame<PlainHeader, rbe::frames::blob::dsrl_type>>, rbe::frames::buffer_delimited_tag>);
 static_assert(rbe::frames::self_delimited<wrapped_line>);
 static_assert(rbe::frames::implicitly_delimited<wrapped_line>);
 // the cost is the chain's and not the outer frame's, which is why the condition recurses: the inner frame
@@ -420,44 +383,23 @@ static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<MessageWithHeader>, Me
 static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<std::uint32_t>, std::uint32_t>);
 
 // vocabulary types lower to their rbe::frames::dsrl counterpart
-static_assert(
-    std::same_as<rbe::frames::detail::to_dsrl_t<candidates>, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>
-);
-static_assert(std::same_as<
-              rbe::frames::detail::to_dsrl_t<rbe::frames::many<msg_frame>>,
-              rbe::frames::dsrl::many<rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>>);
+static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<candidates>, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>);
+static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<rbe::frames::many<msg_frame>>, rbe::frames::dsrl::many<rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>>);
 static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<rbe::frames::blob>, std::span<std::byte const>>);
-static_assert(
-    std::same_as<rbe::frames::detail::to_dsrl_t<msg_frame>, rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>
-);
+static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<msg_frame>, rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>);
 // lowering is idempotent: an already lowered type has no dsrl_type of its own
-static_assert(
-    std::same_as<rbe::frames::detail::to_dsrl_t<rbe::frames::detail::to_dsrl_t<msg_frame>>, rbe::frames::detail::to_dsrl_t<msg_frame>>
-);
-static_assert(std::same_as<
-              rbe::frames::detail::to_dsrl_t<rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>,
-              rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>);
+static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<rbe::frames::detail::to_dsrl_t<msg_frame>>, rbe::frames::detail::to_dsrl_t<msg_frame>>);
+static_assert(std::same_as<rbe::frames::detail::to_dsrl_t<rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>);
 
 // the header is never lowered, only the payload is
 static_assert(std::same_as<msg_frame::dsrl_type, rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>);
-static_assert(
-    std::same_as<
-        any_frame::dsrl_type,
-        rbe::frames::dsrl::frame<CommonHeader, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>>
-);
+static_assert(std::same_as<any_frame::dsrl_type, rbe::frames::dsrl::frame<CommonHeader, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>>);
 static_assert(std::same_as<blob_frame::dsrl_type, rbe::frames::dsrl::frame<CommonHeader, std::span<std::byte const>>>);
 
 // lowering recurses through nesting: frame -> dsrl::frame, many<frame> -> dsrl::many<dsrl::frame>
-static_assert(std::same_as<
-              nested::dsrl_type,
-              rbe::frames::dsrl::frame<NestedPackParent, rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>>);
-static_assert(
-    std::same_as<
-        packet::dsrl_type,
-        rbe::frames::dsrl::frame<
-            NestedPackParent, rbe::frames::dsrl::many<rbe::frames::dsrl::frame<
-                                  CommonHeader, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>>>>
-); // the lowered frame keeps the header, and carries the lowered payload
+static_assert(std::same_as<nested::dsrl_type, rbe::frames::dsrl::frame<NestedPackParent, rbe::frames::dsrl::frame<CommonHeader, MessageWithHeader>>>);
+static_assert(std::same_as<packet::dsrl_type, rbe::frames::dsrl::frame<NestedPackParent, rbe::frames::dsrl::many<rbe::frames::dsrl::frame<CommonHeader, rbe::frames::dsrl::any<MessageWithHeader, MessageWithHeaderPack>>>>>);
+// the lowered frame keeps the header, and carries the lowered payload
 static_assert(std::same_as<packet::dsrl_type::header_type, NestedPackParent>);
 static_assert(std::same_as<packet::dsrl_type::payload_type, rbe::frames::detail::to_dsrl_t<packet::payload_type>>);
 static_assert(std::same_as<packet::dsrl_type::buffer_type, std::span<std::byte const>>);

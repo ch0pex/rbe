@@ -468,7 +468,7 @@ constexpr auto counted_static_run_delimits_the_frame() {
   // - the count bounds the frame, so trailing bytes are not payload and payload_span() is the run
   // - a stream of such frames is walked by length(), the frame being self-delimiting
 
-  auto const padding          = bytes(pad, pad, pad, pad, pad, pad, pad, pad);
+  auto const padding           = bytes(pad, pad, pad, pad, pad, pad, pad, pad);
   auto const wire_with_padding = std::views::concat(wire, padding) | std::ranges::to<std::vector>();
   auto const wire_two_and_pad  = std::views::concat(wire, wire, padding) | std::ranges::to<std::vector>();
 
@@ -524,8 +524,9 @@ constexpr auto counted_dynamic_run_answers_through_distance() {
   // and the spans that derive from length() are gone with it, the view_interface way -- not asserted here
   // because GCC hard-errors on a `requires { f.as_span(); }` probe of a constrained deducing-this member
 
+  // clang-format off
   constexpr auto wire = std::array<std::byte, 27> {
-    // HeaderWithCount, big-endian: count = 3, flags = 0
+    // HeaderWithCount, big-endian: count = 3, flags = 0 
     std::byte {0x00}, std::byte {0x03}, std::byte {0x00}, std::byte {0x00}, //
     // three LF-terminated lines of 9, 8 and 6 bytes
     std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {0x11}, std::byte {0x11},
@@ -533,7 +534,7 @@ constexpr auto counted_dynamic_run_answers_through_distance() {
     std::byte {0x09}, std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {'A'},  std::byte {'B'},
     std::byte {'\n'}, std::byte {'\n'}, //
     std::byte {0x02}, std::byte {0x00}, std::byte {0x00}, std::byte {0x00}, std::byte {'x'},  std::byte {'\n'},
-  };
+  }; // clang-format on
 
   auto const f = counted_lines {wire};
   RBE_CHECK(f.header().payload_count() == 3);

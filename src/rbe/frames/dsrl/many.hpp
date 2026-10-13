@@ -16,8 +16,8 @@
 #include <rbe/core/detail/split_span.hpp>
 #include <rbe/frames/detail/base_tags.hpp>
 #include <rbe/frames/dsrl/concepts.hpp>
-#include <rbe/frames/length.hpp>
 #include <rbe/frames/frame_delimiting_concepts.hpp>
+#include <rbe/frames/length.hpp>
 
 // --- STD ---
 #include <iterator>

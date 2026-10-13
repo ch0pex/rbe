@@ -260,8 +260,8 @@ TEST_CASE_TEMPLATE(
 }
 
 TEST_CASE_TEMPLATE(
-    "endian - store writes correct big-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
-    std::int32_t, std::uint64_t, std::int64_t
+    "endian - store writes correct big-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
+    std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
   std::array<B, sizeof(T)> buf {};
@@ -273,16 +273,16 @@ TEST_CASE_TEMPLATE(
 // --- load ---
 
 TEST_CASE_TEMPLATE(
-    "endian - load reads correct value from little-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
-    std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
+    "endian - load reads correct value from little-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t,
+    std::int16_t, std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
   REQUIRE(endian::load<T, order::little>(tr::le_bytes.data()) == tr::value);
 }
 
 TEST_CASE_TEMPLATE(
-    "endian - load reads correct value from big-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
-    std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
+    "endian - load reads correct value from big-endian bytes", T, std::uint8_t, std::int8_t, std::uint16_t,
+    std::int16_t, std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
   REQUIRE(endian::load<T, order::big>(tr::be_bytes.data()) == tr::value);
@@ -292,8 +292,8 @@ TEST_CASE_TEMPLATE(
 // --- round-trip ---
 
 TEST_CASE_TEMPLATE(
-    "endian - load(store(v)) round-trips value", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t, std::uint32_t,
-    std::int32_t, std::uint64_t, std::int64_t
+    "endian - load(store(v)) round-trips value", T, std::uint8_t, std::int8_t, std::uint16_t, std::int16_t,
+    std::uint32_t, std::int32_t, std::uint64_t, std::int64_t
 ) {
   using tr = traits<T>;
   std::array<B, sizeof(T)> buf {};

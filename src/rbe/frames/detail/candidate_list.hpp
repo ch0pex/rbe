@@ -108,7 +108,8 @@ consteval auto diagnose_compatible_candidates(std::span<std::meta::info const> t
 }
 
 template<typename... T>
-concept compatible_candidates = rbe::detail::no_throw(diagnose_compatible_candidates<rbe::id_type_of<T...[0]>>, std::array {^^T...});
+concept compatible_candidates =
+    rbe::detail::no_throw(diagnose_compatible_candidates<rbe::id_type_of<T...[0]>>, std::array {^^T...});
 
 template<typename T, typename List>
 concept belongs_to = [] {

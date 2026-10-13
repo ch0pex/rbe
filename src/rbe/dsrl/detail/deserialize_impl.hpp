@@ -127,8 +127,8 @@ constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {
     using member_type = [:type_of(member):];
     value.[:member:]  = deserialize<member_type, merge_context(local, member)>(
-                         input.subspan<layout.offset.bytes, layout.size>()
-                     );
+                          input.subspan<layout.offset.bytes, layout.size>()
+                      );
   }
   return value;
 }

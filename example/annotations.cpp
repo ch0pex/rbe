@@ -74,7 +74,8 @@ struct Leaf {
 };
 
 struct[[= rbe::pack]] MiddleNode {
-  Leaf leaf; // Implicit little-endian byte order, derived pack (leaf don't have any explicit requirement related to aligment)
+  Leaf leaf; // Implicit little-endian byte order, derived pack (leaf don't have any explicit requirement related to
+             // aligment)
   std::uint32_t valor2; // Implicit native endianness
 };
 

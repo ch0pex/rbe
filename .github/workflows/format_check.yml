@@ -1,0 +1,53 @@
+name: Format check
+
+# Every C/C++ source must match the clang-format version pinned in .pre-commit-config.yaml. This fails when one does
+# not: run `scripts/format.sh` and commit the result.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.hpp"
+      - "**.cpp"
+      - "**.h"
+      - ".clang-format"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/format_check.yml"
+  pull_request:
+    paths:
+      - "**.hpp"
+      - "**.cpp"
+      - "**.h"
+      - ".clang-format"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/format_check.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clang-format:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run clang-format
+        shell: bash
+        run: |
+          if ! pre-commit run clang-format --all-files --show-diff-on-failure --color=always; then
+            echo "::error::Some files are not formatted. Run 'scripts/format.sh' and commit the result."
+            exit 1
+          fi

@@ -17,8 +17,8 @@
 #include <rbe/annotations/detail/utils.hpp>
 #include <rbe/annotations/empty.hpp>
 #include <rbe/core/detail/context.hpp>
-#include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/detail/memory_layout.hpp>
+#include <rbe/core/detail/static_string.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/dsrl/detail/deserialize_impl.hpp>
 #include <rbe/dsrl/detail/deserialize_member.hpp>
@@ -110,7 +110,9 @@ public:
 
   [[nodiscard]] constexpr auto operator*() const -> value_type { return value(); }
 
-  [[nodiscard]] static constexpr auto fixed_size() -> size_type { return rbe::detail::wire_size_of<value_type, local>(); }
+  [[nodiscard]] static constexpr auto fixed_size() -> size_type {
+    return rbe::detail::wire_size_of<value_type, local>();
+  }
 
   // NOTE: for now size and fixed_size are the same since variable size types are not supported yet
   [[nodiscard]] constexpr auto size() const -> size_type { return fixed_size(); }

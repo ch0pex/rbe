@@ -169,7 +169,7 @@ void london_packet() {
   for (auto const [header, payload]: messages | rbe::views::with_ids(message_type_t::order_delete)) {
     payload.match(
         [](proxy<OrderDelete> const del) { std::println("  order {} deleted", del.field<"order_id">()); },
-        [](rbe::unmatched auto const) {}
+        [](rbe::unmatched auto const) { }
     );
   }
 }

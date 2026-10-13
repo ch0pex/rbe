@@ -271,7 +271,7 @@ static_assert(not rbe::detail::specialization_of(^^TestStruct, ^^std::vector)); 
 static_assert(rbe::detail::bases_of(^^EmptyStruct).empty());
 static_assert(rbe::detail::bases_of(^^TestStruct).empty());
 static_assert(rbe::detail::bases_of(^^Derived).size() == 1);
-static_assert(type_of(rbe::detail::bases_of(^^Derived)[0]) == ^^Base);
+static_assert(type_of(rbe::detail::bases_of (^^Derived)[0]) == ^^Base);
 
 // ============================================================
 // static_member_functions_of

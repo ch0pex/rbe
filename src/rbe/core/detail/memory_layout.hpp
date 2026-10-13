@@ -70,9 +70,7 @@ consteval auto wire_size_of(std::meta::info const info, context const ctx) -> st
  * Context-free overload: no ambient annotation is inherited from anywhere -- the behavior every
  * existing caller already relies on, unchanged.
  */
-consteval auto wire_size_of(std::meta::info const info) -> std::size_t {
-  return wire_size_of(info, context {});
-}
+consteval auto wire_size_of(std::meta::info const info) -> std::size_t { return wire_size_of(info, context {}); }
 
 consteval auto get_struct_layout(std::meta::info const info) -> struct_layout {
   auto const members = nsdm(info);

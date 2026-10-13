@@ -77,8 +77,10 @@ constexpr void test_case(Test const& test_case) {
     test_inplace(test_case.wire, test_case.structure);
   }
 
-  if constexpr (not rbe::custom_wirable<typename Test::structure_type> and
-                not rbe::wirable_primitive<typename Test::structure_type>) {
+  if constexpr (
+      not rbe::custom_wirable<typename Test::structure_type> and
+      not rbe::wirable_primitive<typename Test::structure_type>
+  ) {
     test_lazy(test_case.wire, test_case.structure);
   }
 }

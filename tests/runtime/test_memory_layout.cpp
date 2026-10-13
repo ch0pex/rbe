@@ -11,8 +11,8 @@
 // --- Includes ---
 #include "common_structs.hpp"
 
-#include <rbe/core/fmt.hpp>
 #include <rbe/core/detail/memory_layout.hpp>
+#include <rbe/core/fmt.hpp>
 #include <rbe/core/trivially_wirable_concepts.hpp>
 
 // --- External dependencies ---
@@ -543,7 +543,7 @@ TEST_CASE("memory_layout - MessageWithEnum layout") {
 }
 
 TEST_CASE("memory_layout - MessageWithArray nested struct layout") {
-  static constexpr auto layout                        = rbe::detail::get_struct_layout(^^MessageWithArray);
+  static constexpr auto layout                                = rbe::detail::get_struct_layout(^^MessageWithArray);
   static constexpr rbe::detail::struct_layout layout_expected = {
     .size    = sizeof(MessageWithArray),
     .members = rbe::static_array {
@@ -565,8 +565,8 @@ TEST_CASE("memory_layout - MessageWithArray nested struct layout") {
 }
 
 TEST_CASE("memory_layout - MessageWithArrayBe big-endian array layout") {
-  static constexpr auto wire_layout                   = rbe::detail::get_wire_layout(^^MessageWithArrayBe);
-  static constexpr auto layout                        = rbe::detail::get_struct_layout(^^MessageWithArrayBe);
+  static constexpr auto wire_layout                           = rbe::detail::get_wire_layout(^^MessageWithArrayBe);
+  static constexpr auto layout                                = rbe::detail::get_struct_layout(^^MessageWithArrayBe);
   static constexpr rbe::detail::struct_layout layout_expected = {
     .size    = sizeof(MessageWithArrayBe),
     .members = rbe::static_array {
@@ -610,6 +610,7 @@ TEST_CASE("memory_layout - MessageWithArrayBe big-endian array layout") {
 TEST_SUITE_END();
 
 
+// clang-format off
 static_assert(rbe::detail::get_wire_layout<CommonHeaderPackBe>() != rbe::detail::get_struct_layout<CommonHeaderPackBe>());
 static_assert(rbe::detail::get_wire_layout<MessageWithHeaderPackBe>() != rbe::detail::get_struct_layout<MessageWithHeaderPackBe>());
 
@@ -622,6 +623,7 @@ static_assert(rbe::detail::get_wire_layout<MessageWithHeaderMemberBe>() == rbe::
 
 static_assert(rbe::trivially_wirable<MessageWithArray>);
 static_assert(rbe::trivially_wirable<MessageWithCArray>);
+// clang-format on
 
 
 // TODO: Doubles
@@ -671,8 +673,9 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 // }
 
 // TEST_CASE("Test NoAggregateCustomSerder layout") {
-//   static constexpr rbe::detail::struct_layout layout          = rbe::detail::get_wire_layout<NoAggregateCustomSerder>();
-//   static constexpr rbe::detail::struct_layout layout_expected = {
+//   static constexpr rbe::detail::struct_layout layout          =
+//   rbe::detail::get_wire_layout<NoAggregateCustomSerder>(); static constexpr rbe::detail::struct_layout
+//   layout_expected = {
 //     .size = sizeof(NoAggregateCustomSerder), .members = rbe::static_array {}
 //   };
 //

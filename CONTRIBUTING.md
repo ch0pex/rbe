@@ -9,9 +9,7 @@ source, run its test suite, and find your way around the repository.
 |---|---|
 | CMake | 3.31 |
 | Conan | 2.x |
-| Ninja | any recent (or another CMake generator) |
 | Compiler | GCC 16+ |
-| ccache *(optional)* | any |
 
 > **Compiler support:** RBE relies on C++26 static reflection, which today is only implemented by GCC ≥ 16. The Conan recipe's `validate()` rejects Clang and MSVC outright until they support it; there's no partial/experimental path yet.
 
@@ -66,14 +64,19 @@ copied as is. Never edit it by hand: after touching anything under `src/rbe`, re
 `python3 scripts/amalgamate.py` (or the `amalgamate` CMake target) and commit the result. The
 "Amalgamate check" workflow fails the PR when it is out of date.
 
-To not have to remember it, install the optional pre-commit hook once with `pip install pre-commit && pre-commit install`.
-It regenerates the file and stages it whenever a commit touches `src/rbe`, so the regenerated file goes into that
-same commit.
+!!! tip
+    Install the pre-commit hooks once with `pip install pre-commit && pre-commit install` and they run before every
+    commit: they regenerate `single_include/rbe/rbe.hpp` and stage it whenever a commit touches `src/rbe`, so the
+    regenerated file goes into that same commit, and they format the files the commit touches (see
+    [Code style](#code-style)). To run them on the whole repository without committing, use
+    `pre-commit run --all-files`.
 
 ## Code style
 
-`.clang-format` and `.clang-tidy` at the repo root are the source of truth; run clang-format over the
-files you touch. Where a construct is unreadable when formatted (long `static_assert` type
+`.clang-format` and `.clang-tidy` at the repo root are the source of truth. clang-format is pinned to a single version
+in `.pre-commit-config.yaml`, because different versions format differently: the pre-commit hook formats the files a
+commit touches, `scripts/format.sh` formats the whole repository, and the "Format check" workflow fails the PR when a
+file is not formatted. All three use that pinned version, not the clang-format installed locally. Where a construct is unreadable when formatted (long `static_assert` type
 expressions, aligned annotation tables), wrap the block in `// clang-format off` / `// clang-format on`,
 as the existing tests do.
 
@@ -101,7 +104,7 @@ rbe/
 │   ├── core/           # reflection, layout and wirable concepts
 │   ├── dsrl/           # deserialization (eager/lazy/in-place)
 │   ├── srl/            # serialization
-│   └── framing/        # frame, any, many, blob
+│   └── frames/         # framing composition serde
 ├── tests/              # static assertions + doctest suite
 ├── example/            # standalone usage examples (real market protocols)
 ├── docs/               # reference and design documentation
