@@ -17,26 +17,32 @@ namespace example {
 
 template<rbe::wirable T>
 auto signature(std::span<std::byte> buffer, T const& value) {
+  // clang-format off
   // --8<-- [start:signature]
   std::size_t bytes_written = rbe::serialize(buffer, value);
   // --8<-- [end:signature]
+  // clang-format on
   return bytes_written;
 }
 
+// clang-format off
 // --8<-- [start:example_type]
-struct[[= rbe::derive<rbe::pack, rbe::little>]] Order {
+struct [[=rbe::derive<rbe::pack, rbe::little>]] Order {
   std::uint32_t order_id;
   std::uint32_t price;
 };
 // --8<-- [end:example_type]
+// clang-format on
 
 auto run() -> std::size_t {
+  // clang-format off
   // --8<-- [start:example_call]
   Order order {.order_id = 12345, .price = 15050};
 
   std::vector<std::byte> buffer(rbe::wire_size_of<Order>());
   std::size_t n = rbe::serialize(buffer, order);
   // --8<-- [end:example_call]
+  // clang-format on
   return n;
 }
 

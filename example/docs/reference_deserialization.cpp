@@ -17,11 +17,13 @@ namespace example {
 
 template<rbe::trivially_wirable T>
 void signatures(std::span<std::byte const> buffer) {
+  // clang-format off
   // --8<-- [start:signatures]
-  T output                 = rbe::deserialize<T>(buffer, rbe::dsrl::eager);
-  rbe::dsrl::proxy<T> view = rbe::deserialize<T>(buffer, rbe::dsrl::lazy);
-  T const& ref             = rbe::deserialize<T>(buffer, rbe::dsrl::in_place);
+  T                output = rbe::deserialize<T>(buffer, rbe::dsrl::eager);
+  rbe::dsrl::proxy<T> view   = rbe::deserialize<T>(buffer, rbe::dsrl::lazy);
+  T const&          ref    = rbe::deserialize<T>(buffer, rbe::dsrl::in_place);
   // --8<-- [end:signatures]
+  // clang-format on
   (void)output, (void)view, (void)ref;
 }
 
@@ -32,23 +34,29 @@ struct[[= rbe::pack_le]] Order {
 
 void strategies(std::span<std::byte const> buffer) {
   {
+    // clang-format off
     // --8<-- [start:eager]
     auto order = rbe::deserialize<Order>(buffer, rbe::dsrl::eager);
     // --8<-- [end:eager]
+    // clang-format on
     (void)order;
   }
   {
+    // clang-format off
     // --8<-- [start:lazy]
     auto view   = rbe::deserialize<Order>(buffer, rbe::dsrl::lazy);
-    auto price  = view.field<"price">(); // decoded now, by field name (compile-time checked)
-    auto second = view.field<1>(); // decoded now, by declaration index
+    auto price  = view.field<"price">();      // decoded now, by field name (compile-time checked)
+    auto second = view.field<1>();            // decoded now, by declaration index
     // --8<-- [end:lazy]
+    // clang-format on
     (void)price, (void)second;
   }
   {
+    // clang-format off
     // --8<-- [start:in_place]
     Order const& order = rbe::deserialize<Order>(buffer, rbe::dsrl::in_place);
     // --8<-- [end:in_place]
+    // clang-format on
     (void)order;
   }
 }

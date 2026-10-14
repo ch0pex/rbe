@@ -1,17 +1,32 @@
 # Optional but recommended: `pip install pre-commit && pre-commit install`
 repos:
-  # clang-format is pinned so every machine and CI format identically: bump `rev` deliberately and reformat everything
-  # with `scripts/format.sh` in the same commit
-  - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v22.1.8
+  # clang-format is pinned so every machine and CI format identically: bump the version deliberately and reformat
+  # everything with `scripts/format.sh` in the same commit
+  - repo: local
     hooks:
+      # format only: what CI and scripts/format.sh run (`--hook-stage manual`), failing when a file changes
       - id: clang-format
+        name: clang-format
+        entry: clang-format -i
+        language: python
+        additional_dependencies: [clang-format==22.1.8]
         types_or: [c++, c]
         # generated from src/rbe by the single-header hook below
         exclude: ^single_include/
+        stages: [manual]
 
-  - repo: local
-    hooks:
+      # on commit: format the staged files and stage the result, so the commit goes through already formatted
+      - id: clang-format-stage
+        name: clang-format (format and stage)
+        entry: bash -c 'clang-format -i "$@" && git add "$@"' --
+        language: python
+        additional_dependencies: [clang-format==22.1.8]
+        types_or: [c++, c]
+        exclude: ^single_include/
+        stages: [pre-commit]
+        # git add takes the index lock, so the batches cannot run in parallel
+        require_serial: true
+
       # single_include/rbe/rbe.hpp is generated from src/rbe: regenerate it and stage it, so the commit includes it
       - id: single-header
         name: regenerate the single header

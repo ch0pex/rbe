@@ -14,7 +14,7 @@ if ! command -v pre-commit >/dev/null 2>&1; then
 fi
 
 # pre-commit exits non-zero when the hook modifies files; here that is the expected outcome, not a failure
-if pre-commit run clang-format --all-files; then
+if pre-commit run clang-format --hook-stage manual --all-files; then
   echo "All files were already formatted."
 else
   status=$?
