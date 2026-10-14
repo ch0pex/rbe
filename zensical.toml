@@ -11,13 +11,13 @@
 # The site_name is shown in the page header and the browser window title
 #
 # Read more: https://zensical.org/docs/setup/basics/#site_name
-site_name = "Documentation"
+site_name = "RBE"
 
 # The site_description is included in the HTML head and should contain a
 # meaningful description of the site content for use by search engines.
 #
 # Read more: https://zensical.org/docs/setup/basics/#site_description
-site_description = "A new project generated from the default template project."
+site_description = "Reflection-Based Encoding: declarative binary serialization for C++26"
 
 # The site_author attribute. This is used in the HTML head element.
 #
@@ -28,6 +28,10 @@ site_author = "<your name here>"
 # documentation you should set this.
 # Read more: https://zensical.org/docs/setup/basics/#site_url
 #site_url = "https://www.example.com/"
+
+# Repository link shown next to the search bar
+repo_url = "https://github.com/ch0pex/rbe"
+repo_name = "ch0pex/rbe"
 
 # The copyright notice appears in the page footer and can contain an HTML
 # fragment.
@@ -46,18 +50,57 @@ Copyright &copy; 2026 The authors
 # Read more: https://zensical.org/docs/setup/navigation/
 nav = [
   { "Home" = "index.md" },
-  { "User's Guide" = [
-      { "Design Overview" = "explanation/design-overview.md" },
-      { "Type Concepts" = "explanation/concepts.md" },
-      { "Requirements" = "explanation/requirements.md" },
+  { "Getting Started" = [
+      { "Quick Start" = "getting-started/quick-start.md" },
+      { "Installation" = "getting-started/installation.md" },
+      { "Contributing" = "getting-started/contributing.md" },
   ] },
-  { "How-To Guides" = [{ "Index" = "how-to/index.md" }] },
-  { "Tutorials" = [{ "Getting Started" = "tutorials/getting-started.md" }] },
+  { "User's Guide" = [
+      { "Annotations" = "guide/annotations.md" },
+      { "Serde" = [
+          { "Wirable Types" = "guide/serde/wirable-types.md" },
+          { "Memory Layout" = "guide/serde/memory-layout.md" },
+          { "Serialize and Deserialize" = "guide/serde/serialize-deserialize.md" },
+          { "Deserialization Modes" = "guide/serde/deserialization-modes.md" },
+          { "Contracts and Safety" = "guide/serde/contracts.md" },
+          { "Customization" = "guide/serde/customization.md" },
+          { "How It Works" = "guide/serde/how-it-works.md" },
+      ] },
+      { "Frames" = [
+          "guide/frames/index.md",
+          { "Delimiting" = "guide/frames/delimiting.md" },
+          { "Composition" = "guide/frames/composition.md" },
+          { "Associated Types" = "guide/frames/associated-types.md" },
+      ] },
+  ] },
+  { "Examples" = [
+      { "Annotations" = "examples/annotations.md" },
+      { "Deserialization Modes" = "examples/deserialization.md" },
+      { "Market Data" = "examples/market-data.md" },
+  ] },
   { "Reference" = [
       { "Annotations" = "reference/annotations.md" },
       { "Serialization" = "reference/serialization.md" },
       { "Deserialization" = "reference/deserialization.md" },
+      { "Frames" = "reference/frames.md" },
+      { "Core" = "reference/core.md" },
+      { "Header Map" = "reference/headers.md" },
       { "Feature Matrix" = "reference/features.md" },
+      { "Glossary" = "reference/glossary.md" },
+  ] },
+  { "Design Notes" = [
+      { "Design Overview" = "explanation/design-overview.md" },
+      { "Type Concepts" = "explanation/concepts.md" },
+      { "Requirements" = "explanation/requirements.md" },
+      { "Annotation System v2" = "explanation/annotation-system-v2.md" },
+      { "Variable Size" = "explanation/variable-size.md" },
+      { "Variable-Size Layout" = "explanation/variable-size-layout.md" },
+      { "Framing" = "explanation/framing.md" },
+      { "Framing Requirements" = "explanation/framing-requirements.md" },
+      { "Framing Design Notes" = "explanation/framing-design-notes.md" },
+      { "Frame Delimiting" = "explanation/frame-delimiting.md" },
+      { "Frame Delimiting Decisions" = "explanation/frame-delimiting-decisions.md" },
+      { "Frame Storage" = "explanation/frame-storage.md" },
   ] },
 ]
 
@@ -69,7 +112,7 @@ nav = [
 #
 # Read more: https://zensical.org/docs/customization/#additional-css
 #
-#extra_css = ["stylesheets/extra.css"]
+extra_css = ["stylesheets/extra.css"]
 
 # With the `extra_javascript` option you can add your own JavaScript to your
 # project to customize the behavior according to your needs.
@@ -354,6 +397,10 @@ pygments_lang_class = true
 [project.markdown_extensions.pymdownx.magiclink]
 [project.markdown_extensions.pymdownx.mark]
 [project.markdown_extensions.pymdownx.smartsymbols]
+[project.markdown_extensions.pymdownx.snippets]
+base_path = ["."]
+check_paths = true
+dedent_subsections = true
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
   { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }

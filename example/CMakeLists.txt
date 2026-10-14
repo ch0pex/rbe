@@ -11,3 +11,9 @@ add_example(annotations annotations.cpp)
 # add_example(custom custom.cpp)
 # add_example(round_trip round_trip.cpp)
 
+
+# Snippets included by the documentation (docs/), kept here so every documented example compiles
+add_example(docs_home docs/home.cpp)
+add_example(docs_reference_annotations docs/reference_annotations.cpp)
+add_example(docs_reference_serialization docs/reference_serialization.cpp)
+add_example(docs_reference_deserialization docs/reference_deserialization.cpp)

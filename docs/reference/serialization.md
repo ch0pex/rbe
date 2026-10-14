@@ -5,21 +5,15 @@ Header: `rbe/srl/serialize.hpp`
 Serialization is a single, eager, free function:
 
 ```cpp
-std::size_t bytes_written = rbe::serialize(buffer, value);
+--8<-- "example/docs/reference_serialization.cpp:signature"
 ```
 
 `buffer` is a `std::span<std::byte>` (or anything convertible to one, e.g. `std::vector<std::byte>`, `std::array<std::byte, N>`) sized to hold at least [`rbe::wire_size_of<T>()`](../explanation/concepts.md) bytes. `value` is any [wirable](../explanation/concepts.md#wirable) object. The call writes the wire representation into `buffer` starting at offset 0 and returns the number of bytes written.
 
 ```cpp
-struct [[=rbe::derive<rbe::pack, rbe::little>]] Order {
-  std::uint32_t order_id;
-  std::uint32_t price;
-};
+--8<-- "example/docs/reference_serialization.cpp:example_type"
 
-Order order {.order_id = 12345, .price = 15050};
-
-std::vector<std::byte> buffer(rbe::wire_size_of<Order>());
-std::size_t n = rbe::serialize(buffer, order);
+--8<-- "example/docs/reference_serialization.cpp:example_call"
 ```
 
 ## Dispatch

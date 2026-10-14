@@ -3,10 +3,7 @@
 RBE annotations are C++26 structured annotations (`[[=expr]]`) attached to a struct or to one of its non-static data members. They carry no runtime representation — they are read back through reflection at compile time to derive layout and behavior.
 
 ```cpp
-struct [[=rbe::pack, =rbe::big]] Header {
-  [[=rbe::little]] std::uint16_t length;
-  std::uint8_t     type;
-};
+--8<-- "example/docs/reference_annotations.cpp:basic"
 ```
 
 ## Dimensions
@@ -58,8 +55,7 @@ Header: `rbe/annotations/id.hpp`
 | `=rbe::id(value)` | struct | Declares the id the annotated message type is dispatched under. The value's type must be equality comparable, and is preserved as-is (`rbe::id(msg_type_t::heartbeat)` carries a `msg_type_t`, not an `int`). |
 
 ```cpp
-struct hdr { [[=rbe::id]] msg_type_t type; [[=rbe::frame_length]] std::uint16_t len; };
-struct [[=rbe::id(msg_type_t::heartbeat)]] Heartbeat { hdr h; std::uint32_t timestamp; };
+--8<-- "example/docs/reference_annotations.cpp:id"
 ```
 
 The two are the halves of message identity — where the id lives on the wire, and which id a type answers to — so they share one dimension: they may not appear in the same annotation range, and neither may repeat across the whole (possibly nested) type. Nested messages keep their own `id(value)`, as in the example above.
@@ -94,10 +90,7 @@ Header: `rbe/annotations/derive.hpp`
 `rbe::derive<Args...>` groups several annotations into a single value, so they can be applied together with one `=` clause or reused as a named preset:
 
 ```cpp
-struct [[=rbe::derive<rbe::pack, rbe::little>]] Order { /* ... */ };
-
-inline constexpr auto packed_be = rbe::derive<rbe::pack, rbe::big>;
-struct [[=packed_be]] Msg { /* ... */ };
+--8<-- "example/docs/reference_annotations.cpp:derive"
 ```
 
 RBE ships three built-in presets:
@@ -117,35 +110,11 @@ annotation means, `rbe::detail::annotation_kind<Tag>` is the object you spell, a
 annotation. Named annotations are aliases of such a call.
 
 ```cpp
-// 1. (optional) the dimension, if the annotation conflicts with others. The dimension and the tag
-//    are plumbing -- keep them out of whatever namespace your users see, as RBE keeps its own in
-//    `rbe::detail`.
-struct unit_dim {
-  static constexpr auto kind = rbe::detail::dimension_kind::exclusive;
-};
-
-// 2. the tag: everything the annotation knows about itself, in one place
-struct unit_tag {
-  using dimension  = unit_dim;      // optional -- omit for an annotation that conflicts with nothing
-  using value_type = time_unit;     // optional -- omit for a pure marker like rbe::fmt
-
-  // optional: the annotation's own correctness rule, checked by `rbe::well_annotated`
-  static consteval auto check(rbe::detail::annotation_info const, std::meta::info const entity) -> bool {
-    return is_integral_type(rbe::detail::normalize_type(entity));
-  }
-};
-
-// 3. the factory object, plus one alias per value you want to name
-inline constexpr rbe::detail::annotation_kind<unit_tag> unit {};
-
-inline constexpr auto millis = unit(time_unit::milliseconds);
-inline constexpr auto micros = unit(time_unit::microseconds);
+--8<-- "example/docs/reference_annotations.cpp:new_annotation"
 ```
 
 ```cpp
-struct Tick {
-  [[=millis]] std::uint32_t timestamp;          // or [[=unit(time_unit::milliseconds)]]
-};
+--8<-- "example/docs/reference_annotations.cpp:new_annotation_use"
 ```
 
 That is the whole recipe — there is no registry to edit and no trait to specialize. Two optional members

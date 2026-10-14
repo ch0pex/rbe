@@ -1,22 +1,38 @@
-
 # Reflection-Based Encoding (RBE)
 
-A header-only C++ library for declarative binary serialization and deserialization via reflection-based annotations. Define your wire protocol once as plain C++ structs; RBE handles the rest.
+A header-only C++ library for declarative binary serialization and deserialization via reflection-based annotations. Describe a binary layout once as plain C++ structs; RBE handles the rest.
 
-## Documentation
+!!! warning "Experimental"
+    RBE is at an early, experimental stage. The API is unstable and may change without notice.
+    Check the [feature matrix](reference/features.md) for what is implemented today.
 
-<div class="grid cards" markdown>
+## Define the wire format using annotations
 
-- **Tutorials** — Learn RBE by building a working protocol from scratch.  
-  [Getting started →](tutorials/getting-started.md)
+```cpp
+--8<-- "example/docs/home.cpp:types"
+```
 
-- **How-to guides** — Step-by-step instructions for specific tasks.  
-  [Browse guides →](how-to/index.md)
+## Serialize and deserialize
 
-- **Reference** — Complete description of annotations, types, and API.  
-  [Annotations →](reference/annotations.md) · [Serialization →](reference/serialization.md) · [Deserialization →](reference/deserialization.md) · [Feature matrix →](reference/features.md)
+`rbe::serialize` and `rbe::deserialize` do the work. Deserialization takes an explicit strategy:
+eager, lazy or in-place.
 
-- **Explanation** — Design rationale and architecture decisions.  
-  [Design overview →](explanation/design-overview.md) · [Type concepts →](explanation/concepts.md) · [Requirements →](explanation/requirements.md)
+```cpp
+--8<-- "example/docs/home.cpp:serde"
+```
 
-</div>
+## Framing
+
+A frame is a header followed by a payload, and a payload can be a frame itself, so a whole layout is one type.
+
+```cpp
+--8<-- "example/docs/home.cpp:frame_type"
+
+--8<-- "example/docs/home.cpp:frame_read"
+```
+
+!!! note "Stub"
+    Still to add to this page:
+
+    - Requirements box: a compiler with C++26 reflection and annotations; link to [Installation](getting-started/installation.md)
+    - Where to go next: [Quick start](getting-started/quick-start.md), [User's Guide](guide/annotations.md), [Examples](examples/annotations.md), [Reference](reference/annotations.md)

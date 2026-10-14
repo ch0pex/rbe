@@ -1,0 +1,5 @@
+/* Column separators in tables; the theme only draws row separators */
+.md-typeset table:not([class]) th + th,
+.md-typeset table:not([class]) td + td {
+  border-left: 0.05rem solid var(--md-typeset-table-color);
+}
