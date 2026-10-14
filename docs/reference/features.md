@@ -8,6 +8,22 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | 🚧 | Partially / in progress |
 | ❌ | Not implemented |
 
+## Wirable types
+
+| Feature | Implemented | Notes |
+|---|---|---|
+| Integral types | ✅ | Including `bool` and character types |
+| Enumerations | ✅ | Including `std::byte` |
+| Arrays | ✅ | `std::array` and bounded C arrays |
+| Nested structs | ✅ | |
+| Fixed-size strings | ✅ | As `char` arrays, e.g. `char[8]` padded with spaces |
+| Floating point | ❌ | `float`, `double` |
+| Bit-fields | ❌ | Accepted by `wirable`, but RBE's behavior with them is currently undefined |
+| Base classes | ❌ | |
+| Contiguous ranges | ❌ | `std::vector`, `std::inplace_vector`. By default the count travels right before the range |
+| Strings | ❌ | `std::string`, `std::string_view`: contiguous ranges of `char`, always length-prefixed. Null-terminated strings are not planned |
+| Optional values | ❌ | `std::optional`, needs a presence encoding on the wire |
+
 ## Annotations
 
 | Feature | Implemented | Notes |
@@ -27,22 +43,6 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Explicit counts | ❌ | `=rbe::count`. Explicit count for dynamic sized ranges |
 | Explicit strides | ❌ | `=rbe::stride`. Explicit stride for dynamic sized ranges |
 | Range dimension | ❌ | `=rbe::dimension<count_type, stride_type>`: the wire types of a range's count and stride |
-
-## Wirable types
-
-| Feature | Implemented | Notes |
-|---|---|---|
-| Integral types | ✅ | Including `bool` and character types |
-| Enumerations | ✅ | Including `std::byte` |
-| Arrays | ✅ | `std::array` and bounded C arrays |
-| Nested structs | ✅ | |
-| Fixed-size strings | ✅ | As `char` arrays, e.g. `char[8]` padded with spaces |
-| Floating point | ❌ | `float`, `double` |
-| Bit-fields | ❌ | Accepted by `wirable`, but RBE's behavior with them is currently undefined |
-| Base classes | ❌ | |
-| Contiguous ranges | ❌ | `std::vector`, `std::inplace_vector`. By default the count travels right before the range |
-| Strings | ❌ | `std::string`, `std::string_view`: contiguous ranges of `char`, always length-prefixed. Null-terminated strings are not planned |
-| Optional values | ❌ | `std::optional`, needs a presence encoding on the wire |
 
 ## Serialization
 
@@ -106,7 +106,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Feature | Implemented | Notes |
 |---|---|---|
 | Value serialization | ❌ | `serialize` of a `value_type` |
-| Serialization type | ❌ | `Frame::srl_type`: write header and payload straight into the buffer |
+| Serialization type | ❌ | `frame::srl_type`: write header and payload straight into the buffer |
 
 ## General
 
@@ -119,3 +119,14 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Conan package | ✅ | |
 | CMake target | ✅ | `rbe::rbe` |
 | No external dependencies | ✅ | |
+
+## Requirements
+
+| Requirement | Version | Notes |
+|---|---|---|
+| C++ standard | C++26 | Static reflection and annotations |
+| GCC | ≥ 16 | Built with `-freflection`. CI uses GCC 16.1; Ubuntu's 16.0.1 snapshot miscompiles reflection code |
+| Clang | ❌ | No released version supports static reflection |
+| MSVC | ❌ | No released version supports static reflection |
+| CMake | ≥ 3.31 | |
+| Conan | ≥ 2.0.15 | |
