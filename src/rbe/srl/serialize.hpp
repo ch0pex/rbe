@@ -14,6 +14,7 @@
 #pragma once
 
 // --- Includes ---
+#include <rbe/core/memory_layout.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 #include <rbe/srl/detail/serialize_impl.hpp>
 
