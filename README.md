@@ -1,12 +1,15 @@
 # RBE: Reflection-Based Encoding
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark-tight.png">
+  <img align="right" alt="RBE logo" src="docs/assets/logo-light-tight.png" height="195">
+</picture>
+
 [![CI](https://github.com/ch0pex/rbe/actions/workflows/ci.yml/badge.svg)](https://github.com/ch0pex/rbe/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/ch0pex/rbe/branch/main/graph/badge.svg)](https://codecov.io/gh/ch0pex/rbe)
 [![C++](https://img.shields.io/badge/C%2B%2B-26-blue.svg)](https://en.cppreference.com/w/cpp/26)
 [![GCC](https://img.shields.io/badge/GCC-16%2B-blue.svg)](https://gcc.gnu.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-## Overview
 
 RBE (Reflection-Based Encoding) is a modern, header-only C++26 library that bridges the gap between plain C++ structs and raw binary protocols. By leveraging C++26 static reflection, RBE allows you to declaratively define byte order, packing, and message framing directly via annotations.
 
@@ -171,3 +174,9 @@ Full documentation lives at **[ch0pex.github.io/rbe](https://ch0pex.github.io/rb
 
 Building RBE from source, running the test suite and the repository layout are covered in
 [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Logo
+
+> [!NOTE]
+> The RBE logo was generated with AI. It is a placeholder: if time and budget allow, a proper logo will be
+> commissioned from an artist.

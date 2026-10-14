@@ -3,3 +3,15 @@
 .md-typeset table:not([class]) td + td {
   border-left: 0.05rem solid var(--md-typeset-table-color);
 }
+
+/* The header logo has a variant for the dark scheme */
+[data-md-color-scheme="slate"] .md-logo img {
+  content: url("../assets/logo-neon-dark.png");
+}
+
+/* Bigger header logo; the header is 2.4rem tall */
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 2rem;
+  width: auto;
+}
