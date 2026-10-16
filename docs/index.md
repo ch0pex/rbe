@@ -5,7 +5,8 @@ A header-only C++ library for declarative binary serialization and deserializati
 The library source code is available on [GitHub](https://github.com/ch0pex/rbe) and is distributed under the [MIT License](https://github.com/ch0pex/rbe/blob/main/LICENSE).
 
 !!! warning "Experimental"
-    RBE is at an early, experimental stage. The API is unstable and may change without notice.
+    RBE is at an early, experimental stage. Until version 1.0.0 the API is unstable and breaking changes
+    may land in any minor release (`0.1 → 0.2`). Patch releases (`0.1.0 → 0.1.1`) stay backwards compatible.
     Check the [feature matrix](reference/features.md) for what is implemented today.
 
 === "Serialize"

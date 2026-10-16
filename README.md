@@ -13,6 +13,10 @@
 
 RBE (Reflection-Based Encoding) is a modern, header-only C++26 library that bridges the gap between plain C++ structs and raw binary protocols. By leveraging C++26 static reflection, RBE allows you to declaratively define byte order, packing, and message framing directly via annotations.
 
+> [!WARNING]
+> RBE is in early development (`0.x`). Until version 1.0.0 the API is unstable and breaking changes may land
+> in any minor release (`0.1 → 0.2`). Patch releases (`0.1.0 → 0.1.1`) stay backwards compatible.
+
 ### Define the wire format using annotations
 
 The library automatically generates highly optimized serialization and deserialization code utilities at compile time. Whether you are reading from a network socket, a memory-mapped file, or a ring buffer, your struct remains the strict single source of truth, eliminating boilerplate and guaranteeing zero runtime overhead compared to hand-written code.
