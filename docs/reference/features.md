@@ -42,7 +42,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Bit ranges | ❌ | `=rbe::bits(msb, lsb)`. Conflict checks only, not used by the layout |
 | Explicit counts | ❌ | `=rbe::count`. Explicit count for dynamic sized ranges |
 | Explicit strides | ❌ | `=rbe::stride`. Explicit stride for dynamic sized ranges |
-| Range dimension | ❌ | `=rbe::dimension<count_type, stride_type>`: the wire types of a range's count and stride |
+| Range dimension | ❌ | `=rbe::dimension<rbe::stride16_t, rbe::count16_t>`: the wire types of a range's inline count and stride, in tag order |
 
 ## Serialization
 

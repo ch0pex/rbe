@@ -110,9 +110,9 @@ If a change alters an annotation, a concept or the framing vocabulary, update th
 ### Design proposals
 
 An open design question gets a document under `docs/explanation/`, following the shape of
-[variable-size.md](docs/explanation/variable-size.md): `### Summary`, `### Motivation`, `### Design` (one `####`
-subsection per fork, each with its options, pros/cons and a recommendation), `### Alternatives Considered`,
-`### Open Questions`, `### Decision Log`. Enumerate every fork; do not present only the option you prefer. Once a
+[variable-size.md](docs/explanation/variable-size.md): `## Summary`, `## Motivation`, `## Design` (one `###`
+subsection per fork, each with its options, pros/cons and a recommendation), `## Alternatives Considered`,
+`## Open Questions`, `## Decision Log`. Enumerate every fork; do not present only the option you prefer. Once a
 decision settles, record it in the relevant design notes file.
 
 ## Git and GitHub

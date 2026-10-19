@@ -1,10 +1,10 @@
 # RBE Feature Proposals: Template & Worked Example
 
-### Summary
+## Summary
 
 Add support for variable-size types to rbe (types whose size isn't known at compile time), starting with repeating groups (runtime-sized ranges) and strings.
 
-### Motivation
+## Motivation
 
 So far, every type in rbe has been fixed-size. This is limiting: real wire protocols frequently include runtime-sized arrays. Variable-size types are distinct from rbe's existing extended headers/payloads, where `sizeof(T)` is known at compile time and only the wire *length* comes from a header field. This *dynamic length* is not used during serialization of the type itself but only to know where the serialization of payload or next frame begins.
 
@@ -15,9 +15,24 @@ A type counts as variable-size if:
   - one of its member variables is a range whose size isn't known at compile time, or
   - one of its member variables is a variable-size class type
 
-### Design
+## Design
 
-#### Repeating groups
+### Range requirements
+
+Ranges must be sized and contiguous. The two directions differ:
+
+- **Serialize**: any sized contiguous range, owning or not (`std::vector`, `std::array`, `std::span`, ...)
+- **Deserialize**: only owning ones (`std::vector`, `std::inplace_vector`, `std::array`, ...), since a view has no
+  storage to fill.
+
+A view pipeline that is not contiguous (`filter`, `transform`, ...) is materialized first with
+`std::ranges::to<std::vector>()`. The prefix depends on whether the size is known at compile time
+(`static_sized_range`):
+
+- **Static-sized** (`std::array`, C arrays): no prefix and no count tag.
+- **Otherwise**: at least the count as prefix; the stride stays opt-in.
+
+### Repeating groups
 
 A repeating group is a range of elements repeated `count` times with a `stride` between consecutive elements. `count` is always read from a field serialized earlier on the wire; `stride` defaults to the element size but can be overridden.
 
@@ -89,33 +104,39 @@ struct Hola2 {
 
 A remote stride, like the inline one below, only applies to fixed-size elements.
 
-#### Prefix wire types: `=rbe::dimension`
+### Inline prefix: `=rbe::dimension`
 
-The inline prefix is the default path, so its wire types have to be expressible without declaring a field:
-otherwise every prefix would be a `std::size_t`, which matches almost no real format. `=rbe::dimension` names
-them:
+The inline prefix's wire types are named by `=rbe::dimension`, a list of tags. Without it every prefix is a
+`std::uint64_t` count; most formats fix a narrower one (SBE uses `uint16`):
 
 ```cpp
-struct Hola2 { 
+struct Hola2 {
+  int n;
   char padding[20];  // some other data
-  [[=rbe::dimension<std::uint16_t>]] std::vector<int> vec1;                // prefix: count
-  [[=rbe::dimension<std::uint16_t, std::uint8_t>]] std::vector<int> vec2;  // prefix: count, stride
+  [[=rbe::dimension<rbe::count16_t>]] std::vector<int> vec1;                      // prefix: count
+  [[=rbe::dimension<rbe::stride16_t, rbe::count16_t>]] std::vector<int> vec2;     // prefix: stride, count
+  [[=rbe::count("n"), =rbe::dimension<rbe::stride8_t>]] std::vector<int> vec3;    // remote count, prefix: stride
 };
-
 ```
 
-`dimension` and the remote `count`/`stride` cover different cases rather than overlapping: `dimension` types the
-library-managed inline prefix, `count`/`stride` point at fields the user owns. Expressing the inline case with
-`count` (declaring the field right before the range) is possible, but brings back the redundancy the Decision Log
-dropped, since nothing keeps that field in sync with the range's size.
+- **Tags**: `rbe::count_t<T>` and `rbe::stride_t<T>` give the wire type of each prefix field, with aliases
+  `count8_t` .. `count64_t` and `stride8_t` .. `stride64_t` for the unsigned integer types.
+- **Order**: the order of the tags is the order on the wire, so a stride-first prefix such as SBE's
+  `groupSizeEncoding` is expressible.
+- **Default**: a range without a count, remote or inline, has an inline count of type `std::uint64_t`. It is a
+  wire type only: in memory sizes stay `std::size_t`. `std::size_t` itself is not the default because its width
+  depends on the platform (4 bytes on i686, 32-bit ARM, x32), so the same value would give different bytes;
+  `std::uint64_t` holds any `size()` and gives the same bytes everywhere.
+- **At most one** count and one stride per range, counting both `dimension` and the remote `count`/`stride`; a
+  second one is a compile-time error.
 
-Serialization writes `size()` as the `count_type`; a size that does not fit is an error, checked in hardened mode
-(REQ-042..046).
+`dimension` types the library-managed inline prefix, `count("field")` / `stride("field")` point at fields the user
+owns. Expressing the inline case with a remote `count` (declaring the field right before the range) is possible,
+but brings back the redundancy the Decision Log dropped.
 
-#### Stride
+### Stride
 
-The stride is **opt-in**: `dimension<count_type>` puts only the count on the wire, and
-`dimension<count_type, stride_type>` adds a stride. It is not on by default because a wire stride only carries
+The stride is **opt-in**: without a stride tag only the count goes on the wire. It is not on by default because a wire stride only carries
 information in one case:
 
 | Element                    | Wire stride                          |
@@ -128,7 +149,26 @@ With a stride, serialization writes `wire_size_of<T>()`, and deserialization req
 `stride >= wire_size_of<T>()` (checked in hardened mode) and skips the `stride - wire_size_of<T>()` trailing bytes
 of each element.
 
-#### Deserialization modes of a type that contains ranges
+### Ranges as top-level types
+
+A contiguous range goes through the same `serialize` / `deserialize` entry points as any wirable. The range
+overloads take an optional `rbe::dimension<...>` as a template parameter, the same value used in the annotation;
+without it the prefix is a `std::uint64_t` count:
+
+```cpp
+auto bytes  = rbe::serialize(orders);                                  // count: std::uint64_t
+auto sized  = rbe::serialize<rbe::dimension<rbe::count16_t>>(orders);
+auto result = rbe::deserialize<std::vector<order>, rbe::dimension<rbe::stride16_t, rbe::count16_t>>(
+    buffer, rbe::dsrl::eager);
+```
+
+The prefix is part of the format, known at compile time like an annotation, so it is a template parameter and not
+a function argument (probed with GCC 16.2).
+
+Inside a `frame`, `many` or `any`, a
+range with a custom prefix is wrapped in a one-member struct.
+
+### Deserialization modes of a type that contains ranges
 
 The lazy proxy (`rbe::dsrl::proxy<T>`) resolves a field by its offset. Today every offset is a compile-time
 constant. A range makes the offsets of the fields after it runtime values, and how expensive they are depends on
@@ -155,80 +195,46 @@ framing notes §8). With A, asking for lazy on such a type is a compile-time err
 under C, so moving to C later breaks nothing. B is rejected because it hides an O(n) behind an accessor that reads
 as O(1).
 
-#### Ranges as top-level types
-
-Whether a range can be serialized and deserialized by itself, without an enclosing struct:
-
-```cpp
-auto bytes = rbe::serialize(std::vector<order> {...});
-auto vec   = rbe::deserialize<std::vector<order>>(buffer, rbe::dsrl::eager);
-```
-
-| Option                            | Pro                          | Con                          |
-|-----------------------------------|------------------------------|------------------------------|
-| **A. Members only**               | no new API                   | wrapper struct needed        |
-| **B. Same entry points**          | consistent with wirables     | no place for `dimension`     |
-| **C. `rbe::range<T, dimension>`** | dimension lives in the type  | second spelling, public type |
-
-B has nowhere to put the annotation, so the prefix type would be fixed (`std::size_t`) or need a new channel.
-
-**Decided: A.** RBE adds nothing for top-level ranges. C does not need the library: a user who wants a reusable
-sized range writes the one-member wrapper, and it costs nothing on the wire since the struct is exactly its range:
-
-```cpp
-template<typename T, typename CountType = std::uint16_t>
-struct sized_range {
-  [[=rbe::dimension<CountType>]] std::vector<T> items;
-};
-
-auto bytes = rbe::serialize(sized_range<order> {...});
-```
-
-An annotation that depends on a template parameter is supported (probed with GCC 16.2). This is reversible: B or a
-library-provided C can be added later without changing what A accepts.
-
-#### Range requirements
-
-To be usable as a repeating group, a C++ range currently must be:
-
-- a sized, contiguous range (`std::vector`, `std::inplace_vector`, ...);
-- dynamic (the original draft also listed `std::list`, which isn't contiguous, see Open Questions).
-
-#### Non-owning ranges
-
-Non-owning ranges can be used without restriction during serialization. One deserialization mode is where non-owning ranges make sense. This is flagged in Open Questions below, since the lazy interface (`rbe::dsrl::proxy<T>`, which resolves fields on demand via `field<"Name">()`) is the one that would naturally return views rather than owning containers, which doesn't match the "eager" wording in the original draft.
-
-Possible future addition: a range type that behaves as a view when constructed from an lvalue and as owning when constructed from an rvalue or initializer list.
-
-### Alternatives Considered
+## Alternatives Considered
 
 - **Explicit `count`/`stride` annotations** (`[[=rbe::count("field")]]`, `[[=rbe::stride(...)]]`) on every repeating group. More flexible (the count field can live anywhere in the struct), but error-prone, since nothing keeps the annotation in sync with the actual range size.
 - **User- vs. library-managed count/stride.** User-managed is more flexible but riskier; library-managed is safer but less flexible, and raises the still-open question of what happens if the user also sets them manually.
 - **A stride on the wire by default.** Rejected: for a fixed layout it repeats a compile-time constant in every
   range, and for variable-size elements it has no meaning.
-- **`count` as the only sizing annotation** (no `dimension`). It can express the inline case, but only by declaring
-  a field the user has to keep in sync with the range's size.
+- **Positional `=rbe::dimension<count_type, stride_type>`**. Rejected: its fixed parameter order cannot express a
+  stride-first prefix (SBE's `groupSizeEncoding`). Tags keep the order free.
+- **`count` / `stride` typed by value** (`[[=rbe::stride(std::uint16_t{}), =rbe::count(std::uint16_t{})]]`), reusing
+  the remote annotations, with the wire order taken from the annotation order. Rejected: longer, the value is
+  ignored (`count(std::uint16_t{7})` compiles), and the prefix is split over loose annotations instead of one unit.
+- **Owning ranges only, in both directions.** Symmetric, but serializing a `std::span` would force a copy into a
+  container first. Rejected: non-owning contiguous ranges are accepted for serialization only.
+- **Any `sized_range` for serialization** (`transform` pipelines included), written element by element without the
+  intermediate `std::ranges::to<std::vector>()` copy. Deferred: contiguous ranges only for now, to keep it simple.
+- **Hybrid view/owning range type** (view on lvalue construction, owning on rvalue). Rejected: it needs a runtime
+  discriminator in every range.
 - **Pointers to mark a count field's location.** Considered for pointing at a count located elsewhere in the struct; rejected because pointers can't be used during deserialization.
 
-### Open Questions
+## Open Questions
 
-1. Should non-contiguous or associative containers (`std::list`, `std::map`, `std::set`, `std::unordered_map`, `std::unordered_set`, ...) be allowed as repeating groups, or should the library stick to sized contiguous ranges only?
+1. Non-contiguous and associative containers (`std::list`, `std::forward_list`, `std::map`, `std::unordered_map`, ...) are deferred. Adding them needs `std::pair` as a wirable, a policy for duplicate keys on the wire, and a note that `unordered_*` iteration order makes the bytes non-deterministic.
 2. If manual count/stride annotations ever coexist with library-managed sizing, does the library override the annotation or raise an error on mismatch?
-3. Confirm which deserialization mode actually requires non-owning ranges. The draft says "eager," but the lazy/proxy interface looks like the better fit (see Non-owning ranges above).
-4. How should a user point to a count field that isn't located immediately before its elements, as some existing wire protocols do? Candidate: bring back an explicit `count` annotation for this case only, since pointers are ruled out (see Alternatives Considered).
-5. Is a hybrid view/owning range type (view on lvalue construction, owning on rvalue/initializer-list construction) worth adding later?
-6. Extensibility for variable-size elements. A stride cannot provide it; the tool would be a per-element length prefix. Deferred until a format needs it.
-7. When a remote `stride` field and `dimension<count_type, stride_type>` are both present on one range, is that an error?
-8. Lazy for types with variable-size-element ranges: A or C (see *Deserialization modes of a type that contains ranges*).
-9. A frame whose payload is a range, where the header already carries the count (`rbe::payload_count`), would make the inline prefix redundant.
+3. How should a user point to a count field that isn't located immediately before its elements, as some existing wire protocols do? Candidate: bring back an explicit `count` annotation for this case only, since pointers are ruled out (see Alternatives Considered).
+4. Extensibility for variable-size elements. A stride cannot provide it; the tool would be a per-element length prefix. Deferred until a format needs it.
+5. Lazy for types with variable-size-element ranges: A or C (see *Deserialization modes of a type that contains ranges*).
+6. A frame whose payload is a range, where the header already carries the count (`rbe::payload_count`), would make the inline prefix redundant.
+7. The count-versus-buffer check on deserialization (see *Inline prefix*): always on, or hardened only
+   (REQ-042..046)? It is a trust-boundary check costing one comparison for fixed-size elements.
 
-### Decision Log
+## Decision Log
 
 - Support variable-size types in rbe, starting with repeating groups and strings.
 - First design: explicit `[[=rbe::count(...)]]` / `[[=rbe::stride(...)]]` annotations on a raw-pointer field.
 - Iterated toward a `std::vector`-backed field read through a lazy view, then toward dedicated `rbe::dynamic_group` / `rbe::static_group` types returning a `std::span`.
 - **Team decision:** drop the required `count` annotation for the general case. A range's own size gets serialized as a prefix for dynamic ranges, and not at all for static ones.
 - Resolved how to distinguish static vs. dynamic ranges at compile time using the technique from P3928R0 (library-internal, no dependency on standard library support).
-- `=rbe::dimension<count_type, stride_type>` types the inline prefix and is the default path. The remote `count`/`stride` annotations stay as the opt-in for fields located elsewhere, deferred until Open Question 2 is settled.
+- `=rbe::dimension<tags...>` types the inline prefix: `count_t<T>` / `stride_t<T>` tags (aliases `count16_t`, `stride8_t`, ...), wire order = tag order. The remote `count("field")` / `stride("field")` stay as the opt-in for fields located elsewhere, deferred until Open Question 2 is settled.
+- The default inline count is `std::uint64_t` on the wire (not `std::size_t`, whose width depends on the platform); sizes in memory stay `std::size_t`. Deserialization checks the count against the remaining buffer before allocating.
 - The stride is opt-in and limited to fixed-size elements; on a variable-size element it is a compile-time error.
-- Ranges are members only: no top-level `serialize(range)` / `deserialize<R>`. A reusable sized range is a user-written one-member wrapper struct.
+- Only contiguous ranges for now. A `static_sized_range` has no prefix; any other range has at least the count.
+- Contiguous ranges are top-level wirables through the usual `serialize` / `deserialize<R>`, with the default prefix. Custom prefix types are passed as an optional `rbe::dimension<...>` template parameter to the range overloads of `serialize` / `deserialize`; inside frames, a user-written one-member struct carries them. Without them the prefix is a `std::uint64_t` count, as for a member range without annotations. No `rbe::sized_range`; an annotated alias cannot carry the prefix types.
+- Serialization accepts any sized contiguous range, owning or not (`std::span` included); deserialization only owning ones. Non-contiguous view pipelines are materialized with `std::ranges::to<std::vector>()` first.
