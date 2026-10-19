@@ -60,9 +60,9 @@ in the `CMakeLists.txt` of their test directory.
 ## Single header
 
 `single_include/rbe/rbe.hpp` is the whole library in one file, generated from `src/rbe` and committed so it can be
-copied as is. Never edit it by hand: after touching anything under `src/rbe`, regenerate it with
-`python3 scripts/amalgamate.py` (or the `amalgamate` CMake target) and commit the result. The
-"Amalgamate check" workflow fails the PR when it is out of date.
+copied as is. Never edit it by hand: the pre-commit hooks (see the tip below) regenerate it on every
+commit that touches `src/rbe`. Without the hooks, run `python3 scripts/amalgamate.py` (or the `amalgamate`
+CMake target) before committing. The "Amalgamate check" workflow fails the PR when it is out of date.
 
 !!! tip
     Install the pre-commit hooks once with `pip install pre-commit && pre-commit install` and they run before every

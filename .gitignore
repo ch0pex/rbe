@@ -72,3 +72,6 @@ conan/test_package/CMakeUserPresets.json
 # Cmake
 CMakeUserPresets.json
 #
+
+# Claude Code personal notes
+CLAUDE.local.md
