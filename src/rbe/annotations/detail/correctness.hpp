@@ -74,11 +74,16 @@ consteval auto verify_no_local_duplications(std::meta::info info) -> bool {
 
 // --- Verify annotations scope ---
 
-consteval auto verify_type_only_scope(std::meta::info const type, std::meta::info const dim) {
-  // if annotation is not in the type then deep and type_only sizes will be different
-  auto deep      = deep_annotations(type) | std::views::filter(by_dimension(dim)) | std::ranges::to<std::vector>();
-  auto type_only = annotation_range(type) | std::views::filter(by_dimension(dim)) | std::ranges::to<std::vector>();
-  return std::ranges::size(deep) == std::ranges::size(type_only);
+/**
+ * @brief Verifies that no member declaration, at any depth, carries an annotation of `dim`.
+ *
+ * `type_only` is a rule about where an annotation is written, not how often it appears, so the range
+ * inspected is what is spelled on the members themselves and not what their types carry. Nested types
+ * are free to carry their own, which is what lets a `[[=rbe::fmt]]` type hold members of other
+ * `[[=rbe::fmt]]` types.
+ */
+consteval auto verify_type_only_scope(std::meta::info const type, std::meta::info const dim) -> bool {
+  return std::ranges::none_of(deep_member_annotations(type), by_dimension(dim));
 }
 
 // --- Generic dispatch: discover which dimensions are actually used, verify each per its kind ---

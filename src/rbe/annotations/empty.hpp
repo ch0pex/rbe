@@ -23,7 +23,8 @@ namespace rbe {
 namespace detail {
 
 struct empty_dim {
-  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::unique | dimension_kind::type_only;
+  // not `unique`: a type holding two members of one empty type is not annotated twice
+  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::type_only;
 };
 
 struct empty_tag {
@@ -35,8 +36,9 @@ struct empty_tag {
 /**
  * @brief Marks a type as empty, which means it has no member variables and no base classes.
  *
- * This annotation is used to indicate that a type is empty, which can be useful for optimization
- * purposes. It is an exclusive annotation, meaning that it cannot be combined with other annotations
+ * An empty struct is not wirable on its own, it has nothing to write; the annotation makes it a valid
+ * zero-byte payload and `any` candidate. It is written on the type, never on a member, and combines
+ * freely with annotations of other dimensions (`id`, `pack`, ...).
  *
  */
 inline constexpr detail::annotation_kind<detail::empty_tag> empty {};

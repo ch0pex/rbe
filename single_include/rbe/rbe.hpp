@@ -136,6 +136,14 @@ inline constexpr auto default_context = std::meta::access_context::unchecked();
  * reflection of the type it names, so every type identity check in the library would silently fail for
  * a type spelled through an alias (e.g. `std::remove_cvref_t<decltype(x)>`).
  */
+/**
+ * @brief The type RBE reasons about for `info`: the entity's type if it is a member, cv-ref stripped and
+ * dealiased.
+ *
+ * Dealiasing is what makes annotations on a `using` alias invisible: `rbe::deserialize<Alias>(...)`
+ * deduces the aliased type, the alias is already gone when RBE looks at `T`, and with it anything written
+ * on the alias declaration. Annotations are read from the class and from its members only.
+ */
 consteval auto normalize_type(std::meta::info const info) -> std::meta::info {
   return dealias(not is_type(info) ? remove_cvref(type_of(info)) : remove_cvref(info));
 };
@@ -293,7 +301,7 @@ namespace rbe::detail {
 enum class dimension_kind : std::uint8_t {
   exclusive = 1 << 0, ///< at most one annotation of the dimension may appear within a single annotation range
   unique    = 1 << 1, ///< each annotation of the dimension may independently appear at most once across the whole type
-  type_only = 1 << 2, ///< annotation can only be applied to types
+  type_only = 1 << 2, ///< may only be written on a type, never on a member; nested types may carry their own
 };
 
 consteval auto operator|(dimension_kind const lhs, dimension_kind const rhs) -> dimension_kind {
@@ -769,6 +777,34 @@ consteval auto deep_annotations(std::meta::info const info) -> std::vector<annot
 }
 
 /**
+ * @brief The annotations written on the members of `info`'s type, at any depth.
+ *
+ * Difering from `deep_annotations`, this does *not* include the tyepe and member
+ * types annotations, only the annotations written on the members themselves.
+ * It is very helpful for checking if an struct scoped annotation is written
+ * on a member, which is forbidden for some dimensions (e.g. `type_only`).
+ *
+ *
+ * @param info reflection of the type (or member) whose members to inspect recursively
+ * @return a vector with the annotations spelled on every nested member declaration
+ */
+consteval auto deep_member_annotations(std::meta::info const info) -> std::vector<annotation_info> {
+  std::vector<annotation_info> result;
+
+  auto const type = normalize_type(info);
+  if (not is_class_type(type)) {
+    return result;
+  }
+
+  std::ranges::for_each(nsdm(type), [&](std::meta::info const member) {
+    result.append_range(own_annotations(member));
+    result.append_range(deep_member_annotations(member));
+  });
+
+  return result;
+}
+
+/**
  * @param annotations The range of annotations to search within.
  * @param needle The annotation, or `derive<...>` list of annotations, to find.
  *
@@ -902,11 +938,16 @@ consteval auto verify_no_local_duplications(std::meta::info info) -> bool {
 
 // --- Verify annotations scope ---
 
-consteval auto verify_type_only_scope(std::meta::info const type, std::meta::info const dim) {
-  // if annotation is not in the type then deep and type_only sizes will be different
-  auto deep      = deep_annotations(type) | std::views::filter(by_dimension(dim)) | std::ranges::to<std::vector>();
-  auto type_only = annotation_range(type) | std::views::filter(by_dimension(dim)) | std::ranges::to<std::vector>();
-  return std::ranges::size(deep) == std::ranges::size(type_only);
+/**
+ * @brief Verifies that no member declaration, at any depth, carries an annotation of `dim`.
+ *
+ * `type_only` is a rule about where an annotation is written, not how often it appears, so the range
+ * inspected is what is spelled on the members themselves and not what their types carry. Nested types
+ * are free to carry their own, which is what lets a `[[=rbe::fmt]]` type hold members of other
+ * `[[=rbe::fmt]]` types.
+ */
+consteval auto verify_type_only_scope(std::meta::info const type, std::meta::info const dim) -> bool {
+  return std::ranges::none_of(deep_member_annotations(type), by_dimension(dim));
 }
 
 // --- Generic dispatch: discover which dimensions are actually used, verify each per its kind ---
@@ -1435,7 +1476,9 @@ namespace rbe {
 namespace detail {
 
 struct fmt_dim {
-  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::unique | dimension_kind::type_only;
+  // not `unique`: the formatter is per type, and a formatted type routinely holds members of other
+  // formatted types, each carrying its own `fmt`
+  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::type_only;
 };
 
 struct fmt_tag {
@@ -1448,8 +1491,14 @@ struct fmt_tag {
  * @brief Opts the annotated type into RBE's universal formatter.
  *
  * The type becomes printable through `std::format` and `operator<<` (`rbe/core/fmt.hpp`), which
- * walks every member recursively, base classes and bit-fields included. It belongs to no dimension,
- * so it combines freely with any other annotation.
+ * walks every member recursively, base classes and bit-fields included. It has a dimension of its own,
+ * so it combines freely with any wire annotation.
+ *
+ * Why `type_only`: the formatter is `std::formatter<T>`, a specialization selected by the type alone.
+ * When `std::format("{}", obj.member)` is compiled the member is gone, only its type is looked up, so
+ * an annotation written on the member has nothing to reach and would promise a behavior that cannot
+ * happen. Hence it is written on the type, once, never on a member, and a nested member type that
+ * should print carries its own `fmt`.
  */
 inline constexpr detail::annotation_kind<detail::fmt_tag> fmt {};
 
@@ -1502,7 +1551,8 @@ namespace rbe {
 namespace detail {
 
 struct empty_dim {
-  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::unique | dimension_kind::type_only;
+  // not `unique`: a type holding two members of one empty type is not annotated twice
+  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::type_only;
 };
 
 struct empty_tag {
@@ -1514,8 +1564,9 @@ struct empty_tag {
 /**
  * @brief Marks a type as empty, which means it has no member variables and no base classes.
  *
- * This annotation is used to indicate that a type is empty, which can be useful for optimization
- * purposes. It is an exclusive annotation, meaning that it cannot be combined with other annotations
+ * An empty struct is not wirable on its own, it has nothing to write; the annotation makes it a valid
+ * zero-byte payload and `any` candidate. It is written on the type, never on a member, and combines
+ * freely with annotations of other dimensions (`id`, `pack`, ...).
  *
  */
 inline constexpr detail::annotation_kind<detail::empty_tag> empty {};

@@ -26,6 +26,7 @@
 #include <rbe/annotations/id.hpp>
 #include <rbe/annotations/length.hpp>
 #include <rbe/core/detail/throw_check.hpp>
+#include <rbe/core/memory_layout.hpp>
 
 // --- STD ---
 #include <array>
@@ -147,6 +148,14 @@ static_assert(not rbe::well_annotated<ConflictingAnnotations>);
 static_assert(not rbe::well_annotated<DuplicatedAnnotations>);
 static_assert(not rbe::well_annotated<BadParent>);
 static_assert(not rbe::well_annotated<EmptyInMemberIsWrong>);
+static_assert(not rbe::well_annotated<FmtInMemberIsWrong>); // type_only: fmt is written on types, never on members
+static_assert(rbe::well_annotated<Outer>); // ...but a fmt type may hold members of other fmt types
+static_assert(rbe::well_annotated<Deep>); // at any depth
+
+// --- aliases are transparent ---
+
+static_assert(rbe::wire_size_of<PackedAlias>() == rbe::wire_size_of<PlainForAlias>()); // the pack on the alias is not seen
+static_assert(not rbe::contains_annotation<PackedAlias, rbe::pack>);
 
 // --- Length annotation correctness ---
 

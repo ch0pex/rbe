@@ -80,6 +80,34 @@ consteval auto deep_annotations(std::meta::info const info) -> std::vector<annot
 }
 
 /**
+ * @brief The annotations written on the members of `info`'s type, at any depth.
+ *
+ * Difering from `deep_annotations`, this does *not* include the tyepe and member
+ * types annotations, only the annotations written on the members themselves.
+ * It is very helpful for checking if an struct scoped annotation is written
+ * on a member, which is forbidden for some dimensions (e.g. `type_only`).
+ *
+ *
+ * @param info reflection of the type (or member) whose members to inspect recursively
+ * @return a vector with the annotations spelled on every nested member declaration
+ */
+consteval auto deep_member_annotations(std::meta::info const info) -> std::vector<annotation_info> {
+  std::vector<annotation_info> result;
+
+  auto const type = normalize_type(info);
+  if (not is_class_type(type)) {
+    return result;
+  }
+
+  std::ranges::for_each(nsdm(type), [&](std::meta::info const member) {
+    result.append_range(own_annotations(member));
+    result.append_range(deep_member_annotations(member));
+  });
+
+  return result;
+}
+
+/**
  * @param annotations The range of annotations to search within.
  * @param needle The annotation, or `derive<...>` list of annotations, to find.
  *

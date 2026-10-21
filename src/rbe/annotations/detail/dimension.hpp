@@ -31,7 +31,7 @@ namespace rbe::detail {
 enum class dimension_kind : std::uint8_t {
   exclusive = 1 << 0, ///< at most one annotation of the dimension may appear within a single annotation range
   unique    = 1 << 1, ///< each annotation of the dimension may independently appear at most once across the whole type
-  type_only = 1 << 2, ///< annotation can only be applied to types
+  type_only = 1 << 2, ///< may only be written on a type, never on a member; nested types may carry their own
 };
 
 consteval auto operator|(dimension_kind const lhs, dimension_kind const rhs) -> dimension_kind {

@@ -32,6 +32,14 @@ inline constexpr auto default_context = std::meta::access_context::unchecked();
  * reflection of the type it names, so every type identity check in the library would silently fail for
  * a type spelled through an alias (e.g. `std::remove_cvref_t<decltype(x)>`).
  */
+/**
+ * @brief The type RBE reasons about for `info`: the entity's type if it is a member, cv-ref stripped and
+ * dealiased.
+ *
+ * Dealiasing is what makes annotations on a `using` alias invisible: `rbe::deserialize<Alias>(...)`
+ * deduces the aliased type, the alias is already gone when RBE looks at `T`, and with it anything written
+ * on the alias declaration. Annotations are read from the class and from its members only.
+ */
 consteval auto normalize_type(std::meta::info const info) -> std::meta::info {
   return dealias(not is_type(info) ? remove_cvref(type_of(info)) : remove_cvref(info));
 };

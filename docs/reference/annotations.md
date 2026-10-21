@@ -24,13 +24,19 @@ possibly nested, type.
 | Id | `id`, `id(value)` | at most one | at most once |
 | Length | `self_length` / `header_length`, `frame_length`, `payload_length`, `payload_count`, `length(k)` | at most one | each kind at most once |
 | Count | `count("field")` | at most one | |
-| Empty | `empty` | at most one | once, and only on the type itself |
-| Format | `fmt` | at most one | once, and only on the type itself |
+| Empty | `empty` | at most one | only written on a type, never on a member |
+| Format | `fmt` | at most one | only written on a type, never on a member; nested types carry their own |
 
 Struct-level annotations are inherited by every member. A member's own annotations, or its type's for a
 nested struct, take precedence and replace the inherited ones one dimension at a time. See
 [Annotate a type](../examples/howto/annotations.md) for the rules in action and the
 [design notes](../explanation/annotation-system-v2.md) for how the system is built.
+
+!!! warning "Annotations on aliases are ignored"
+    RBE reads annotations from a class and from its members, nothing else. An annotation written on a
+    `using` alias is invisible: `rbe::deserialize<Alias>(...)` deduces the aliased type, and the alias,
+    with whatever was written on it, is gone before RBE looks. Annotate the struct, or wrap the type in
+    a struct of its own.
 
 ---
 
@@ -167,11 +173,16 @@ Header: `rbe/annotations/format.hpp`
 
 | Annotation | Scope | Description |
 |---|---|---|
-| `=rbe::fmt` | struct | Opts the type into RBE's `std::format` / `std::ostream` formatter ([Core](core.md#formatting)), which prints every member recursively. Its own dimension, once per type and on the type only, so it combines with any wire annotation. It has no effect on the wire. |
+| `=rbe::fmt` | struct | Opts the type into RBE's `std::format` / `std::ostream` formatter ([Core](core.md#formatting)), which prints every member recursively. Its own dimension, written on the type and never on a member, so it combines with any wire annotation; a nested member type carries its own `fmt`. It has no effect on the wire. |
 
 ```cpp
 --8<-- "example/docs/reference_annotations.cpp:fmt"
 ```
+
+Why on the type only: the formatter is a `std::formatter<T>` specialization, selected by the type alone.
+When `std::format("{}", obj.member)` is compiled the member is gone, only its type is looked up, so an
+annotation on the member would have nothing to reach. A nested type that should print carries its own
+`=rbe::fmt`.
 
 ## Presets: `derive`
 
@@ -196,7 +207,7 @@ Header: `rbe/annotations/annotation_concepts.hpp`
 
 | Symbol | Kind | Meaning |
 |---|---|---|
-| `rbe::well_annotated<T>` | concept | Every rule above holds for `T` and, recursively, for its members: no annotation twice in one range, one per dimension per range, the whole-type rules of Id, Length, Empty and Format, and each annotation's own check (an integral field for `bits`, an earlier count field for `count`, ...). |
+| `rbe::well_annotated<T>` | concept | Every rule above holds for `T` and, recursively, for its members: no annotation twice in one range, one per dimension per range, the whole-type rules of Id and Length, the type-only rule of Empty and Format, and each annotation's own check (an integral field for `bits`, an earlier count field for `count`, ...). |
 | `rbe::contains_annotation<T, A>` | concept | `A` appears somewhere in `T`, on the type, on a member or inside a nested member type. `A` may be a `derive<...>` list, in which case every element must appear. |
 
 ```cpp

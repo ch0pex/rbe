@@ -23,6 +23,17 @@ struct EmptyInMemberIsWrong {
   [[= rbe::empty]] int number;
 };
 
+struct FmtInMemberIsWrong {
+  [[= rbe::fmt]] int number;
+};
+
+// Annotations on an alias are invisible: the alias is dealiased before RBE looks at the type
+struct PlainForAlias {
+  std::uint8_t a;
+  std::uint32_t b;
+};
+using PackedAlias[[= rbe::pack]] = PlainForAlias;
+
 struct[[= rbe::fmt]] B {
   int m0 = 0;
 };
