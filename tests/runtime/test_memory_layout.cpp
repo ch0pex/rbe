@@ -544,7 +544,7 @@ TEST_CASE("memory_layout - MessageWithEnum layout") {
 }
 
 TEST_CASE("memory_layout - MessageWithArray nested struct layout") {
-  static constexpr auto layout                              = rbe::detail::get_struct_layout(^^MessageWithArray);
+  static constexpr auto layout                              = rbe::detail::get_host_layout(^^MessageWithArray);
   static constexpr rbe::detail::type_layout layout_expected = {
     .size    = sizeof(MessageWithArray),
     .members = rbe::static_array {
@@ -567,7 +567,7 @@ TEST_CASE("memory_layout - MessageWithArray nested struct layout") {
 
 TEST_CASE("memory_layout - MessageWithArrayBe big-endian array layout") {
   static constexpr auto wire_layout                         = rbe::detail::get_wire_layout(^^MessageWithArrayBe);
-  static constexpr auto layout                              = rbe::detail::get_struct_layout(^^MessageWithArrayBe);
+  static constexpr auto layout                              = rbe::detail::get_host_layout(^^MessageWithArrayBe);
   static constexpr rbe::detail::type_layout layout_expected = {
     .size    = sizeof(MessageWithArrayBe),
     .members = rbe::static_array {
@@ -612,15 +612,15 @@ TEST_SUITE_END();
 
 
 // clang-format off
-static_assert(rbe::detail::get_wire_layout<CommonHeaderPackBe>() != rbe::detail::get_struct_layout<CommonHeaderPackBe>());
-static_assert(rbe::detail::get_wire_layout<MessageWithHeaderPackBe>() != rbe::detail::get_struct_layout<MessageWithHeaderPackBe>());
+static_assert(rbe::detail::get_wire_layout<CommonHeaderPackBe>() != rbe::detail::get_host_layout<CommonHeaderPackBe>());
+static_assert(rbe::detail::get_wire_layout<MessageWithHeaderPackBe>() != rbe::detail::get_host_layout<MessageWithHeaderPackBe>());
 
 // NOTE: this cases are confusing and should be well defined
 // TODO: define the proper behaviour of the library regarding this cases
 // The first case for example layouts are different however this structure should be still trivially wirable
 // because it only differs in padding bits
-static_assert(rbe::detail::get_wire_layout<MessageWithHeaderPack>() != rbe::detail::get_struct_layout<MessageWithHeaderPack>());
-static_assert(rbe::detail::get_wire_layout<MessageWithHeaderMemberBe>() == rbe::detail::get_struct_layout<MessageWithHeaderMemberBe>());
+static_assert(rbe::detail::get_wire_layout<MessageWithHeaderPack>() != rbe::detail::get_host_layout<MessageWithHeaderPack>());
+static_assert(rbe::detail::get_wire_layout<MessageWithHeaderMemberBe>() == rbe::detail::get_host_layout<MessageWithHeaderMemberBe>());
 
 static_assert(rbe::trivially_wirable<MessageWithArray>);
 static_assert(rbe::trivially_wirable<MessageWithCArray>);

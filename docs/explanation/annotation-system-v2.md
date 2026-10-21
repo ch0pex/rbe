@@ -441,7 +441,7 @@ constexpr auto deserialize(std::span<std::byte const> const in, dsrl::lazy_t) ->
 }
 
 // ── in_place: context still decides WHETHER T qualifies, but never touches the actual read ──
-// trivially_wirable<T> already requires get_struct_layout<T>() == get_wire_layout<T>() -- computing
+// trivially_wirable<T> already requires get_host_layout<T>() == get_wire_layout<T>() -- computing
 // the wire-layout side of that comparison needs the correctly resolved context (an unannotated T
 // embedded somewhere that implies non-native endianness must NOT be trivially_wirable, even though
 // T's own bytes match its own struct layout in isolation). Once a type has passed that check, the

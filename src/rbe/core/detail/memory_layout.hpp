@@ -72,7 +72,7 @@ consteval auto wire_size_of(std::meta::info const info, context const ctx) -> st
  */
 consteval auto wire_size_of(std::meta::info const info) -> std::size_t { return wire_size_of(info, context {}); }
 
-consteval auto get_struct_layout(std::meta::info const info) -> type_layout {
+consteval auto get_host_layout(std::meta::info const info) -> type_layout {
   auto const members = nsdm(info);
 
   std::vector<member_layout> member_layouts;
@@ -196,8 +196,8 @@ consteval auto wire_size_of() -> std::size_t {
 }
 
 template<wirable_class T>
-consteval auto get_struct_layout() -> type_layout {
-  static constexpr auto layout = get_struct_layout(^^T);
+consteval auto get_host_layout() -> type_layout {
+  static constexpr auto layout = get_host_layout(^^T);
   return layout;
 }
 

@@ -2372,7 +2372,7 @@ consteval auto wire_size_of(std::meta::info const info, context const ctx) -> st
  */
 consteval auto wire_size_of(std::meta::info const info) -> std::size_t { return wire_size_of(info, context {}); }
 
-consteval auto get_struct_layout(std::meta::info const info) -> type_layout {
+consteval auto get_host_layout(std::meta::info const info) -> type_layout {
   auto const members = nsdm(info);
 
   std::vector<member_layout> member_layouts;
@@ -2496,8 +2496,8 @@ consteval auto wire_size_of() -> std::size_t {
 }
 
 template<wirable_class T>
-consteval auto get_struct_layout() -> type_layout {
-  static constexpr auto layout = get_struct_layout(^^T);
+consteval auto get_host_layout() -> type_layout {
+  static constexpr auto layout = get_host_layout(^^T);
   return layout;
 }
 
@@ -2570,7 +2570,7 @@ consteval auto is_trivially_wirable_type() -> bool {
   if constexpr (wirable_class<T>) {
     return is_trivially_copyable_type(info) //
            and is_standard_layout_type(info) //
-           and get_struct_layout<T>() == get_wire_layout<T>(); //
+           and get_host_layout<T>() == get_wire_layout<T>(); //
   }
   return is_integral_type(info) or is_enum_type(info);
 }
@@ -2582,7 +2582,7 @@ consteval auto is_trivially_wirable(std::meta::info const info) -> bool {
          ( //
              is_class_type(info) //
              and not is_empty_type(info) //
-             and detail::get_struct_layout(info) == detail::get_wire_layout(info) //
+             and detail::get_host_layout(info) == detail::get_wire_layout(info) //
              and is_trivially_copyable_type(info) //
              and is_standard_layout_type(info) //
              and std::ranges::all_of(detail::nsdm(info), is_trivially_wirable, std::meta::type_of) //
