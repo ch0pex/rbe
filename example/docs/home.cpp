@@ -93,7 +93,7 @@ auto run(std::span<std::byte const> flash) -> bool {
   auto magic   = header.field<"magic">();            // big-endian to host order, on access
   auto version = header.field<"version">().value();  // a nested struct, decoded as a whole
 
-  // wide contract: std::nullopt instead of undefined behavior if the partition is too small
+  // wider contract: std::nullopt instead of undefined behavior if the partition is too small
   auto checked = rbe::try_deserialize<FirmwareHeader>(flash, rbe::dsrl::lazy);
   // --8<-- [end:deserialize]
   // clang-format on

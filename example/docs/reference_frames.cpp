@@ -82,7 +82,7 @@ auto deserialize_frame(std::span<std::byte const> const bytes) -> bool {
   // clang-format off
   // --8<-- [start:deserialize]
   record::dsrl_type                view    = rbe::deserialize<record>(bytes);       // narrow: bytes hold the frame
-  std::optional<record::dsrl_type> checked = rbe::try_deserialize<record>(bytes);   // wide: nullopt if they do not
+  std::optional<record::dsrl_type> checked = rbe::try_deserialize<record>(bytes);   // wider: nullopt if they do not
   // --8<-- [end:deserialize]
   // clang-format on
   return view.length() == bytes.size() and checked.has_value();

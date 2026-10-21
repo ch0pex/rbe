@@ -49,7 +49,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Feature | Implemented | Notes |
 |---|---|---|
 | `serialize` | ✅ | Narrow contract serialization |
-| `try_serialize` | ✅ | Wide contract serialization |
+| `try_serialize` | ✅ | Wider contract: checks the buffer size |
 | Custom types `rbe::custom<T>` | 🚧 | Dispatched and tested. The wire slot is `sizeof(T)`, the specialization cannot state its own size yet |
 | Variable-size types | ❌ | Planned short-term|
 
@@ -58,7 +58,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Feature | Implemented | Notes |
 |---|---|---|
 | `deserialize` | ✅ | Narrow contract deserialization |
-| `try_deserialize` | ✅ | Wide contract: size check for every strategy, alignment check for the in-place ones |
+| `try_deserialize` | ✅ | Wider contract: size check for every strategy, alignment check for the in-place ones |
 | Lazy deserialization | ✅ | `dsrl::proxy<T>`: fields by name, index, nested path or annotation, checked at compile time |
 | Eager deserialization | ✅ | Decodes into `T` |
 | In-place deserialization | ✅ | `T const&` (`in_place`) and `T&` (`in_place_mut`) |
@@ -115,7 +115,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 
 | Feature | Implemented | Notes |
 |---|---|---|
-| Wide contracts | ✅ | `try_*` next to the narrow ones |
+| Wider contracts | ✅ | `try_*` next to every narrow function: the checkable preconditions are checked |
 | No exceptions | 🚧 | `-fno-exceptions`. No runtime throws, but not tested |
 | Header-only | ✅ | |
 | Single header | ✅ | `single_include/rbe/rbe.hpp` |

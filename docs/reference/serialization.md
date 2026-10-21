@@ -2,7 +2,7 @@
 
 Header: `rbe/srl.hpp` (`rbe/srl/serialize.hpp`)
 
-Serialization is eager and has two forms, one per contract:
+Serialization is eager and has two forms, one narrower than the other:
 
 ```cpp
 --8<-- "example/docs/reference_serialization.cpp:signature"
@@ -11,7 +11,7 @@ Serialization is eager and has two forms, one per contract:
 | Function | Returns | Contract |
 |---|---|---|
 | `rbe::serialize(buffer, value)` | `std::size_t`, the bytes written | **Narrow.** `buffer` must hold at least `rbe::wire_size_of<T>()` bytes; otherwise the behavior is undefined. |
-| `rbe::try_serialize(buffer, value)` | `std::optional<std::size_t>` | **Wide.** Checks the size first and returns `std::nullopt`, writing nothing, when the buffer is too small. |
+| `rbe::try_serialize(buffer, value)` | `std::optional<std::size_t>` | **Wider.** Checks the size first and returns `std::nullopt`, writing nothing, when the buffer is too small. Still assumes the span points to live memory. |
 
 `buffer` is a `std::span<std::byte>`; `std::vector<std::byte>`, `std::array<std::byte, N>` and byte arrays
 convert to it. `value` is any [wirable](core.md#type-concepts) object. The bytes are written from offset 0
@@ -26,6 +26,18 @@ and the count returned is always `rbe::wire_size_of<T>()`, trailing padding incl
 ```cpp
 --8<-- "example/docs/reference_serialization.cpp:try_serialize"
 ```
+
+!!! info "Narrow and wider contracts"
+    A function has a **narrow contract** when some of the inputs it accepts have undefined behavior: a
+    partial function, in the mathematical sense. `rbe::serialize` is one: a buffer that is too short
+    compiles and runs, and the write past its end is undefined.
+
+    The `try_` forms have a **wider** contract, not a wide one. They check the precondition that can be
+    checked, the buffer's size, and report `std::nullopt` instead of
+    faulting. What cannot be checked stays assumed: that the span points to live memory, and that the
+    bytes are what the type says. The subset of inputs without undefined behavior is larger; it is not
+    everything.
+
 
 ## Dispatch
 

@@ -50,7 +50,7 @@ Header: `rbe/frames/deserialize.hpp`
 | Function | Returns | Contract |
 |---|---|---|
 | `rbe::deserialize<F>(buffer)` | `F::dsrl_type` | Narrow: the buffer holds the whole frame. |
-| `rbe::try_deserialize<F>(buffer)` | `std::optional<F::dsrl_type>` | Wide: `nullopt` if the header does not fit, or the payload the header announces does not. |
+| `rbe::try_deserialize<F>(buffer)` | `std::optional<F::dsrl_type>` | Wider: `nullopt` if the header does not fit, or the payload the header announces does not. The memory is still assumed live. |
 
 There is **no strategy argument**: a frame is read through its view, and each part of the view is lazy. The
 view borrows the buffer, which must outlive it. There is no eager whole-frame decode; see

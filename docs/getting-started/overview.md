@@ -43,7 +43,7 @@ read depends on how much of it you need.
 | `rbe::dsrl::in_place` | `T const&` | the wire layout is the in-memory layout: the buffer is reinterpreted, nothing is decoded |
 
 The functions assume the buffer is large enough. `rbe::try_serialize` and `rbe::try_deserialize` check it
-and return `std::nullopt` instead.
+and return `std::nullopt` instead: a wider contract, though a pointer-based one can never be fully wide.
 
 ## Frames
 

@@ -69,7 +69,7 @@ void serde() {
   // Serialize to raw buffer: returns the number of bytes written
   auto size = rbe::serialize(buffer, AddOrder{});
 
-  // Wide contract: std::nullopt instead of undefined behavior when the buffer is too small
+  // Wider contract: std::nullopt instead of undefined behavior when the buffer is too small
   auto checked = rbe::try_serialize(std::span{buffer}.first(4), AddOrder{});
 
   // Eager: decode every field up front, get the struct back

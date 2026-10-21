@@ -20,7 +20,7 @@ the one that differs.
 
 What the derived class must provide:
 
-- `static make(buffer) -> std::optional<view>`: the wide constructor, which the library calls to walk a run
+- `static make(buffer) -> std::optional<view>`: the checking constructor, which the library calls to walk a run
   and to implement `rbe::try_deserialize`.
 - `using delimiting_concept = ...`: which [delimiting category](../../reference/frames.md#delimiting) the
   frame is in. The library cannot deduce it for an extent it does not compute: `self_delimited_tag` says

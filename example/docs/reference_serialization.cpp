@@ -22,7 +22,7 @@ auto signature(std::span<std::byte> buffer, T const& value) {
   // clang-format off
   // --8<-- [start:signature]
   std::size_t                bytes_written = rbe::serialize(buffer, value);       // narrow contract
-  std::optional<std::size_t> checked       = rbe::try_serialize(buffer, value);   // wide contract
+  std::optional<std::size_t> checked       = rbe::try_serialize(buffer, value);   // wider contract
   // --8<-- [end:signature]
   // clang-format on
   return bytes_written == checked;

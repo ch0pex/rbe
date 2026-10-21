@@ -12,7 +12,7 @@ The words the documentation uses with a precise meaning.
 | **Wire layout, struct layout** | Where each member sits and how wide it is on the wire, after annotations; and in memory, as the compiler lays it out. Equal for a trivially wirable type. |
 | **Size, length** | *Size* is what the code knows: `rbe::wire_size_of<T>()`, `sizeof`. *Length* is what the wire says: a `frame_length` field, a header's `length()`. They agree unless the protocol has moved on. |
 | **Serde** | Serialization and deserialization, taken together. `rbe/srl` and `rbe/dsrl` are the two halves. |
-| **Narrow contract, wide contract** | A function that assumes its preconditions (`serialize`, `deserialize`) and one that checks them and reports (`try_serialize`, `try_deserialize`). |
+| **Narrow contract, wider contract** | A function has a narrow contract when some inputs it accepts have undefined behavior (`serialize`, `deserialize` with a short buffer). The `try_` forms have a wider one: they check the preconditions that can be checked, size and alignment, and report instead; what depends on a pointer being valid stays assumed. |
 | **Strategy** | How a value is read: eager (decode everything), lazy (a view, decode on access), in place (reinterpret the bytes). The tag passed to `rbe::deserialize`. |
 | **Proxy, view** | An object that borrows a buffer and decodes parts of it on demand. `rbe::dsrl::proxy<T>` for a struct, the `dsrl::` types for frames. |
 | **Frame** | A header followed by a payload. The unit frames compose: `rbe::frames::frame<Header, Payload>`. |

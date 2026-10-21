@@ -94,7 +94,7 @@ void strategies(std::span<std::byte const> buffer) {
   }
 }
 
-auto wide(std::span<std::byte const> buffer) -> bool {
+auto wider(std::span<std::byte const> buffer) -> bool {
   // clang-format off
   // --8<-- [start:try_deserialize]
   auto view = rbe::try_deserialize<Order>(buffer, rbe::dsrl::lazy);          // checks buffer.size() >= wire_size_of<Order>()
@@ -179,5 +179,5 @@ auto main() -> int {
   );
   example::strategies(bytes);
   example::tags(rbe::dsrl::lazy);
-  return example::wide(bytes) and example::proxy_api(bytes) ? 0 : 1;
+  return example::wider(bytes) and example::proxy_api(bytes) ? 0 : 1;
 }

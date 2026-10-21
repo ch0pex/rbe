@@ -12,7 +12,7 @@ need. `rbe::deserialize<T>` takes the strategy as a tag, and there is no default
 
 `buffer` is a `std::span<std::byte const>`, or a `std::span<std::byte>` for `in_place_mut`. Every form has
 a narrow contract: the buffer must hold the whole value (and be aligned, for the in-place strategies), or
-the behavior is undefined. [`try_deserialize`](#wide-contract) checks instead.
+the behavior is undefined. [`try_deserialize`](#wider-contract) checks what it can instead.
 
 ## Strategies
 
@@ -54,9 +54,20 @@ The bytes are reinterpreted as `T` with `std::start_lifetime_as`: no copy, no co
 type must be trivially wirable. The buffer must be aligned for `T`. `in_place_mut` does the same over a
 mutable span and returns `T&`, so writes go to the buffer.
 
-## Wide contract
+## Wider contract
 
-`rbe::try_deserialize<T>(buffer, strategy)` checks the preconditions and returns
+!!! info "Narrow and wider contracts"
+    A function has a **narrow contract** when some of the inputs it accepts have undefined behavior: a
+    partial function, in the mathematical sense. `rbe::deserialize` is one: a buffer that is too short
+    compiles and runs, and the result is undefined.
+
+    The `try_` forms have a **wider** contract, not a wide one. They check the precondition that can be
+    checked, the buffer's size (and its alignment, in place), and report `std::nullopt` instead of
+    faulting. What cannot be checked stays assumed: that the span points to live memory, and that the
+    bytes are what the type says. The subset of inputs without undefined behavior is larger; it is not
+    everything.
+
+`rbe::try_deserialize<T>(buffer, strategy)` checks the checkable preconditions and returns
 `std::optional<rbe::dsrl::return_type<S, T>>`:
 
 ```cpp
@@ -75,8 +86,8 @@ mutable span and returns `T&`, so writes go to the buffer.
 `in_place_mut` takes a `std::span<std::byte>` and returns `std::optional<T&>`; the other three take a
 read-only span.
 
-What it does not check: that the memory is live for as long as a view or reference is used, and that the
-bytes are a `T` at all. Those remain the caller's.
+What it does not check, and cannot: that the memory is live for as long as a view or reference is used,
+and that the bytes are a `T` at all. Those remain the caller's, so the contract is still narrow, only wider.
 
 ## Proxy
 
