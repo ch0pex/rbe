@@ -39,9 +39,10 @@ struct member_layout {
   constexpr bool operator==(member_layout const&) const = default;
 };
 
-//  TODO: add support for bit fields
+//  TODO: rename to type_layout
 struct struct_layout {
   std::size_t size {};
+  endian::order endianness {std::endian::little};
   static_array<member_layout> members {};
 
   constexpr bool operator==(struct_layout const& /**/) const = default;
@@ -113,8 +114,9 @@ consteval auto get_wire_layout_padded(std::meta::info const info, context const 
   }
 
   return {
-    .size    = wire_size_of(info, ctx),
-    .members = {std::from_range, member_layouts},
+    .size       = wire_size_of(info, ctx),
+    .endianness = local.endianness,
+    .members    = {std::from_range, member_layouts},
   };
 }
 
@@ -141,8 +143,9 @@ consteval auto get_wire_layout_packed(std::meta::info const info, context const 
   }
 
   return {
-    .size    = static_cast<std::size_t>(current_offset.bytes),
-    .members = {std::from_range, member_layouts},
+    .size       = static_cast<std::size_t>(current_offset.bytes),
+    .endianness = local.endianness,
+    .members    = {std::from_range, member_layouts},
   };
 }
 

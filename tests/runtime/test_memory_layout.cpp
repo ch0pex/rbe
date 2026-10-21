@@ -32,7 +32,7 @@ TEST_CASE("memory_layout - B layout") {
     .size    = sizeof(B),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(B, m0), .bits = 0},
+        .offset = std::meta::offset_of(^^B::m0),
         .size   = sizeof(int),
       },
     }
@@ -47,7 +47,7 @@ TEST_CASE("memory_layout - X layout") {
     .size    = sizeof(X),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(X, m1), .bits = 0},
+        .offset = std::meta::offset_of(^^X::m1),
         .size   = sizeof(int),
       },
     }
@@ -62,7 +62,7 @@ TEST_CASE("memory_layout - Y layout") {
     .size    = sizeof(Y),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Y, m2), .bits = 0},
+        .offset = std::meta::offset_of(^^Y::m2),
         .size   = sizeof(int),
       },
     }
@@ -77,11 +77,11 @@ TEST_CASE("memory_layout - Inner layout") {
     .size    = sizeof(Inner),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Inner, x), .bits = 0},
+        .offset = std::meta::offset_of(^^Inner::x),
         .size   = sizeof(int),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Inner, y), .bits = 0},
+        .offset = std::meta::offset_of(^^Inner::y),
         .size   = sizeof(int),
       },
     }
@@ -96,11 +96,11 @@ TEST_CASE("memory_layout - Outer layout") {
     .size    = sizeof(Outer),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Outer, inner), .bits = 0},
+        .offset = std::meta::offset_of(^^Outer::inner),
         .size   = sizeof(Inner),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Outer, z), .bits = 0},
+        .offset = std::meta::offset_of(^^Outer::z),
         .size   = sizeof(int),
       },
     }
@@ -115,11 +115,11 @@ TEST_CASE("memory_layout - Deep layout") {
     .size    = sizeof(Deep),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Deep, outer), .bits = 0},
+        .offset = std::meta::offset_of(^^Deep::outer),
         .size   = sizeof(Outer),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Deep, w), .bits = 0},
+        .offset = std::meta::offset_of(^^Deep::w),
         .size   = sizeof(int),
       },
     }
@@ -134,15 +134,15 @@ TEST_CASE("memory_layout - Base layout") {
     .size    = sizeof(Base),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Base, m0), .bits = 0},
+        .offset = std::meta::offset_of(^^Base::m0),
         .size   = sizeof(int),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Base, m1), .bits = 0},
+        .offset = std::meta::offset_of(^^Base::m1),
         .size   = sizeof(int),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(Base, m2), .bits = 0},
+        .offset = std::meta::offset_of(^^Base::m2),
         .size   = sizeof(int),
       },
     }
@@ -157,7 +157,7 @@ TEST_CASE("memory_layout - UnnamedMember layout") {
     .size    = sizeof(UnnamedMember),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(UnnamedMember, _), .bits = 0},
+        .offset = std::meta::offset_of(^^UnnamedMember::_),
         .size   = sizeof(int),
       },
     }
@@ -265,23 +265,23 @@ TEST_CASE("memory_layout - ReduceSize layout (no pack, has padding)") {
     .size    = sizeof(ReduceSize),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(ReduceSize, length), .bits = 0},
+        .offset = std::meta::offset_of(^^ReduceSize::length),
         .size   = sizeof(std::uint8_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(ReduceSize, message_type), .bits = 0},
+        .offset = std::meta::offset_of(^^ReduceSize::message_type),
         .size   = sizeof(std::uint8_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(ReduceSize, time_offset), .bits = 0},
+        .offset = std::meta::offset_of(^^ReduceSize::time_offset),
         .size   = sizeof(std::uint32_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(ReduceSize, order_id), .bits = 0},
+        .offset = std::meta::offset_of(^^ReduceSize::order_id),
         .size   = sizeof(std::uint64_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(ReduceSize, cancelled_shares), .bits = 0},
+        .offset = std::meta::offset_of(^^ReduceSize::cancelled_shares),
         .size   = sizeof(std::uint32_t),
       },
     }
@@ -296,11 +296,11 @@ TEST_CASE("memory_layout - NoPack layout") {
     .size    = sizeof(NoPack),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(NoPack, a), .bits = 0},
+        .offset = std::meta::offset_of(^^NoPack::a),
         .size   = sizeof(std::uint8_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(NoPack, b), .bits = 0},
+        .offset = std::meta::offset_of(^^NoPack::b),
         .size   = sizeof(std::uint32_t),
       },
     }
@@ -334,17 +334,17 @@ TEST_CASE("memory_layout - MixedEndian layout") {
     .size    = sizeof(MixedEndian),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(MixedEndian, a), .bits = 0},
+        .offset     = std::meta::offset_of(^^MixedEndian::a),
         .size       = sizeof(std::uint32_t),
         .endianness = rbe::endian::order::little,
       },
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(MixedEndian, b), .bits = 0},
+        .offset     = std::meta::offset_of(^^MixedEndian::b),
         .size       = sizeof(std::uint32_t),
         .endianness = rbe::endian::order::big,
       },
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(MixedEndian, c), .bits = 0},
+        .offset     = std::meta::offset_of(^^MixedEndian::c),
         .size       = sizeof(std::uint32_t),
         .endianness = rbe::endian::order::native,
       },
@@ -386,15 +386,15 @@ TEST_CASE("memory_layout - NonPaddedStruct2 layout") {
     .size    = sizeof(NonPaddedStruct2),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(NonPaddedStruct2, a), .bits = 0},
+        .offset = std::meta::offset_of(^^NonPaddedStruct2::a),
         .size   = sizeof(int),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(NonPaddedStruct2, b), .bits = 0},
+        .offset = std::meta::offset_of(^^NonPaddedStruct2::b),
         .size   = sizeof(int),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(NonPaddedStruct2, c), .bits = 0},
+        .offset = std::meta::offset_of(^^NonPaddedStruct2::c),
         .size   = sizeof(char),
       },
     }
@@ -409,19 +409,19 @@ TEST_CASE("memory_layout - CommonHeader layout") {
     .size    = sizeof(CommonHeader),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(CommonHeader, version), .bits = 0},
+        .offset = std::meta::offset_of(^^CommonHeader::version),
         .size   = sizeof(std::uint32_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(CommonHeader, size), .bits = 0},
+        .offset = std::meta::offset_of(^^CommonHeader::size),
         .size   = sizeof(std::uint16_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(CommonHeader, type), .bits = 0},
+        .offset = std::meta::offset_of(^^CommonHeader::type),
         .size   = sizeof(std::uint16_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(CommonHeader, timestamp), .bits = 0},
+        .offset = std::meta::offset_of(^^CommonHeader::timestamp),
         .size   = sizeof(std::uint64_t),
       },
     }
@@ -436,19 +436,19 @@ TEST_CASE("memory_layout - MessageWithHeader layout") {
     .size    = sizeof(MessageWithHeader),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithHeader, header), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithHeader::header),
         .size   = sizeof(CommonHeader),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithHeader, price), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithHeader::price),
         .size   = sizeof(std::uint32_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithHeader, volume), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithHeader::volume),
         .size   = sizeof(std::uint32_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithHeader, orders), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithHeader::orders),
         .size   = sizeof(std::uint32_t),
       },
     }
@@ -460,25 +460,26 @@ TEST_CASE("memory_layout - MessageWithHeader layout") {
 TEST_CASE("memory_layout - CommonHeaderPackBe layout") {
   static constexpr rbe::detail::struct_layout layout          = rbe::detail::get_wire_layout<CommonHeaderPackBe>();
   static constexpr rbe::detail::struct_layout layout_expected = {
-    .size    = sizeof(CommonHeaderPackBe),
-    .members = rbe::static_array {
+    .size       = sizeof(CommonHeaderPackBe),
+    .endianness = rbe::endian::order::big,
+    .members    = rbe::static_array {
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(CommonHeaderPackBe, version), .bits = 0},
+        .offset     = std::meta::offset_of(^^CommonHeaderPackBe::version),
         .size       = sizeof(std::uint32_t),
         .endianness = rbe::endian::order::big,
       },
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(CommonHeaderPackBe, size), .bits = 0},
+        .offset     = std::meta::offset_of(^^CommonHeaderPackBe::size),
         .size       = sizeof(std::uint16_t),
         .endianness = rbe::endian::order::big,
       },
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(CommonHeaderPackBe, type), .bits = 0},
+        .offset     = std::meta::offset_of(^^CommonHeaderPackBe::type),
         .size       = sizeof(std::uint16_t),
         .endianness = rbe::endian::order::big,
       },
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(CommonHeaderPackBe, timestamp), .bits = 0},
+        .offset     = std::meta::offset_of(^^CommonHeaderPackBe::timestamp),
         .size       = sizeof(std::uint64_t),
         .endianness = rbe::endian::order::big,
       },
@@ -494,22 +495,22 @@ TEST_CASE("memory_layout - MessageWithHeaderPackBe layout") {
     .size    = sizeof(MessageWithHeaderPackBe),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(MessageWithHeaderPackBe, header), .bits = 0},
+        .offset     = std::meta::offset_of(^^MessageWithHeaderPackBe::header),
         .size       = sizeof(CommonHeaderPackBe),
         .endianness = rbe::endian::order::big,
       },
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(MessageWithHeaderPackBe, price), .bits = 0},
+        .offset     = std::meta::offset_of(^^MessageWithHeaderPackBe::price),
         .size       = sizeof(std::uint32_t),
         .endianness = rbe::endian::order::native,
       },
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(MessageWithHeaderPackBe, volume), .bits = 0},
+        .offset     = std::meta::offset_of(^^MessageWithHeaderPackBe::volume),
         .size       = sizeof(std::uint32_t),
         .endianness = rbe::endian::order::native,
       },
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(MessageWithHeaderPackBe, orders), .bits = 0},
+        .offset     = std::meta::offset_of(^^MessageWithHeaderPackBe::orders),
         .size       = sizeof(std::uint32_t),
         .endianness = rbe::endian::order::native,
       },
@@ -525,15 +526,15 @@ TEST_CASE("memory_layout - MessageWithEnum layout") {
     .size    = sizeof(MessageWithEnum),
     .members = rbe::static_array {
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithEnum, flags), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithEnum::flags),
         .size   = sizeof(test_flags),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithEnum, number), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithEnum::number),
         .size   = sizeof(std::uint32_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithEnum, number2), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithEnum::number2),
         .size   = sizeof(std::uint32_t),
       },
     }
@@ -552,11 +553,11 @@ TEST_CASE("memory_layout - MessageWithArray nested struct layout") {
         .size   = sizeof(CommonHeader),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithArray, traderID), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithArray::traderID),
         .size   = sizeof(std::uint16_t),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithArray, senderID), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithArray::senderID),
         .size   = sizeof(MessageWithArray::senderID),
       },
     },
@@ -575,11 +576,11 @@ TEST_CASE("memory_layout - MessageWithArrayBe big-endian array layout") {
         .size   = sizeof(CommonHeader),
       },
       rbe::detail::member_layout {
-        .offset = {.bytes = offsetof(MessageWithArrayBe, traderID), .bits = 0},
+        .offset = std::meta::offset_of(^^MessageWithArrayBe::traderID),
         .size   = sizeof(std::uint16_t),
       },
       rbe::detail::member_layout {
-        .offset     = {.bytes = offsetof(MessageWithArrayBe, senderID), .bits = 0},
+        .offset     = std::meta::offset_of(^^MessageWithArrayBe::senderID),
         .size       = sizeof(MessageWithArrayBe::senderID),
         .endianness = rbe::endian::order::little,
       },
@@ -633,15 +634,15 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 //     .size    = sizeof(PaddedStruct),
 //     .members = rbe::static_array {
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(PaddedStruct, a), .bits = 0},
+//         .offset = std::meta::offset_of(^^PaddedStruct::a),
 //         .size   = sizeof(int),
 //       },
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(PaddedStruct, b), .bits = 0},
+//         .offset = std::meta::offset_of(^^PaddedStruct::b),
 //         .size   = sizeof(double),
 //       },
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(PaddedStruct, c), .bits = 0},
+//         .offset = std::meta::offset_of(^^PaddedStruct::c),
 //         .size   = sizeof(char),
 //       },
 //     }
@@ -655,15 +656,15 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 //     .size    = sizeof(NonPaddedStruct),
 //     .members = rbe::static_array {
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(NonPaddedStruct, a), .bits = 0},
+//         .offset = std::meta::offset_of(^^NonPaddedStruct::a),
 //         .size   = sizeof(int),
 //       },
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(NonPaddedStruct, b), .bits = 0},
+//         .offset = std::meta::offset_of(^^NonPaddedStruct::b),
 //         .size   = sizeof(int),
 //       },
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(NonPaddedStruct, c), .bits = 0},
+//         .offset = std::meta::offset_of(^^NonPaddedStruct::c),
 //         .size   = sizeof(double),
 //       },
 //     }
@@ -689,11 +690,11 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 //     .size    = sizeof(NoAggregate),
 //     .members = rbe::static_array {
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(NoAggregate, number), .bits = 0},
+//         .offset = std::meta::offset_of(^^NoAggregate::number),
 //         .size   = sizeof(std::uint32_t),
 //       },
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(NoAggregate, number2), .bits = 0},
+//         .offset = std::meta::offset_of(^^NoAggregate::number2),
 //         .size   = sizeof(std::uint32_t),
 //       },
 //     }
@@ -709,15 +710,15 @@ static_assert(rbe::trivially_wirable<MessageWithCArray>);
 //     .size    = sizeof(AggregateDerived),
 //     .members = rbe::static_array {
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(AggregateDerived, number), .bits = 0},
+//         .offset = std::meta::offset_of(^^AggregateDerived::number),
 //         .size   = sizeof(std::uint32_t),
 //       },
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(AggregateDerived, number2), .bits = 0},
+//         .offset = std::meta::offset_of(^^AggregateDerived::number2),
 //         .size   = sizeof(std::uint32_t),
 //       },
 //       rbe::detail::member_layout {
-//         .offset = {.bytes = offsetof(AggregateDerived, numbers_derived), .bits = 0},
+//         .offset = std::meta::offset_of(^^AggregateDerived::numbers_derived),
 //         .size   = sizeof(std::uint32_t),
 //       },
 //     }
