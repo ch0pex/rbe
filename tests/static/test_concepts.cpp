@@ -69,7 +69,7 @@ constexpr auto wirable_structs = std::array{
   // ^^NonPaddedStruct, (doubles not supported yet)
   ^^PaddedStruct, ^^PacketHeader, ^^AddOrder, ^^ReduceSize,  ^^NoPack, ^^Packed, ^^MixedEndian, ^^Complex,
   ^^NonPaddedStruct2, ^^CommonHeader, ^^MessageWithHeader, ^^NoAggregateCustomSerder,
-  ^^Message, ^^MessageWithEnum
+  ^^Message, ^^MessageWithEnum, ^^FriendlyNoAggregate
 };
 
 constexpr auto no_wirable_structs = std::array{
@@ -80,6 +80,11 @@ constexpr auto no_wirable_structs = std::array{
 static_assert(test_concept(^^rbe::wirable, trivially_wirable_primitives));
 static_assert(test_concept(^^rbe::wirable, wirable_structs));
 static_assert(not test_concept(^^rbe::wirable, no_wirable_structs));
+
+// --- Access: a non-public member closes a type unless its author opens it, and only for itself ---
+static_assert(not rbe::wirable<NoAggregate>);
+static_assert(rbe::wirable<FriendlyNoAggregate>);
+static_assert(not rbe::wirable<FriendlyDoesNotOpenMembers>);
 
 // --- Trivially wirable ---
 

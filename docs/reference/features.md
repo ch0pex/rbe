@@ -16,6 +16,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Enumerations | ✅ | Including `std::byte` |
 | Arrays | ✅ | `std::array` and bounded C arrays of integral or enumeration types. Arrays of aggregates are ❌ |
 | Nested structs | ✅ | |
+| Classes with non-public members | ✅ | Only when the type is annotated `=rbe::friendly`; a private member without it makes the type not wirable |
 | Fixed-size strings | ✅ | As `char` arrays, e.g. `char[8]` padded with spaces |
 | Floating point | ❌ | `float`, `double` |
 | Bit-fields | ❌ | Accepted by `wirable`, but RBE's behavior with them is currently undefined |

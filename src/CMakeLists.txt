@@ -27,6 +27,7 @@ target_sources(
         rbe/annotations/empty.hpp
         rbe/annotations/endianness.hpp
         rbe/annotations/format.hpp
+        rbe/annotations/friendly.hpp
         rbe/annotations/id.hpp
         rbe/annotations/length.hpp
         rbe/annotations/annotation_concepts.hpp

@@ -40,6 +40,14 @@ static_assert(not rbe::wirable<std::array<Point, 2>>);  // nor arrays of aggrega
 static_assert(not rbe::wirable<std::vector<int>>);      // nor variable-size ranges
 static_assert(not rbe::wirable<Derived>);               // nor base classes
 
+class [[=rbe::friendly]] Account {                      // not an aggregate: friendly opens its private members to RBE
+public:
+  constexpr auto balance() const -> std::int32_t { return balance_; }
+private:
+  std::int32_t balance_ {};
+};
+static_assert(rbe::wirable<Account>);
+
 static_assert(rbe::trivially_wirable<Point>);           // in-memory layout == wire layout: one memcpy
 static_assert(not rbe::trivially_wirable<Packed>);      // packed and byte-swapped: member by member
 

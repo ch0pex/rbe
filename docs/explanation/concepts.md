@@ -14,16 +14,25 @@ The foundational requirement. A type is **introspectable** if RBE can enumerate 
 
 A type is **wirable** if it can be serialized to and deserialized from a wire format. A type satisfies this concept if it meets any of the following:
 
-- It is an arithmetic type (`std::is_arithmetic_v`)
+- It is an integral type (`std::is_integral_v`)
 - It is an enumeration type (`std::is_enum_v`)
-- It has a custom serder — a user-provided or RBE-provided serialization specialization
+- It has a custom serder — a user-provided `rbe::custom<T>` specialization (planned)
 - It is an array type, provided its element type is also wirable
-- It is an aggregate class such that:
+- It is a class such that:
   - It has at least one member variable
-  - Member variables exist in only one class within the inheritance hierarchy (inheritance is allowed, but fields cannot be split across multiple levels)
+  - It has no base classes
   - All member variables are wirable
+  - All member variables are public, or the class is annotated `rbe::friendly`
 
-> **Note:** This restriction simplifies layout computation and avoids ambiguity in field ordering across inheritance hierarchies.
+> **Decision (October 2026): encapsulation stays with the author.** RBE enumerates members with an
+> unchecked access context, so it *can* read a non-public member; the access rule says when it *may*. A
+> member is private to protect an invariant, and the member-wise decode bypasses every constructor, so a
+> purely structural rule would let RBE build objects the class itself cannot. Three options were weighed:
+> keep the structural rule (where Java's `Serializable` ended up), respect access with no escape (Go's
+> exported-fields rule), or respect access with an opt-in written by the type's author (serde's `derive`,
+> Boost.Serialization's `friend access`). The third was chosen: `rbe::friendly` on the type, not inherited
+> by member types, with `rbe::custom` (planned) as the answer for classes whose invariants need a real
+> constructor.
 
 ---
 

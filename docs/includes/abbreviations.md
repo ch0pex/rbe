@@ -3,7 +3,7 @@
 *[annotation range]: The annotations one rule is checked against: a struct's own, or a member's own plus its type's.
 *[dimension]: A group of annotations answering one question (byte order, alignment, id, length...). At most one per annotation range.
 *[dimensions]: Groups of annotations each answering one question (byte order, alignment, id, length...). At most one per annotation range.
-*[wirable]: A type RBE can write to and read from the wire: integers, enumerations, arrays of them, aggregates of wirable members, custom types.
+*[wirable]: A type RBE can write to and read from the wire: integers, enumerations, arrays of them, classes of public wirable members with no base class, or classes annotated rbe::friendly.
 *[trivially wirable]: A wirable type whose in-memory layout is its wire layout: every operation is a memcpy or a reinterpretation.
 *[wire layout]: Where each member sits and how wide it is on the wire, after annotations.
 *[serde]: Serialization and deserialization, taken together.

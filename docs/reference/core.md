@@ -16,7 +16,7 @@ Headers: `rbe/core/wirable_concepts.hpp`, `rbe/core/trivially_wirable_concepts.h
 | `rbe::trivially_wirable_primitive<T>` | An integral type (`bool` and character types included) or an enumeration. |
 | `rbe::custom_wirable<T>` | A type with an `rbe::custom<T>` specialization that is not a primitive. |
 | `rbe::wirable_primitive<T>` | Either of the two above. |
-| `rbe::wirable<T>` | A primitive; an array (`std::array` or bounded C array) of primitives; or a class type with no base classes, at least one member, and every member wirable. |
+| `rbe::wirable<T>` | A primitive; an array (`std::array` or bounded C array) of primitives; or a class type with no base classes, at least one member, every member wirable, and every member public unless the class is annotated [`friendly`](annotations.md#friendly). |
 | `rbe::wirable_class<T>` | `wirable` and a class type. |
 | `rbe::wirable_range<T>` | `wirable` and a `std::ranges::range`. |
 | `rbe::trivially_wirable<T>` | `wirable`, not `custom_wirable`, and a type whose wire layout equals its in-memory layout: a primitive, an array of them, or a trivially copyable standard-layout class whose members are all trivially wirable and whose annotations change nothing (no `pack` that removes padding, no byte swap on this host). |
@@ -26,7 +26,13 @@ Headers: `rbe/core/wirable_concepts.hpp`, `rbe/core/trivially_wirable_concepts.h
 --8<-- "example/docs/reference_core.cpp:concepts"
 ```
 
-Not wirable today: floating point, arrays of aggregates, variable-size ranges (`std::vector`,
+A wirable class does not have to be an aggregate, but its members have to be public: a class with a private
+member is not wirable until it is annotated [`=rbe::friendly`](annotations.md#friendly), the author's
+consent to put its representation on the wire. Constructors and member functions do not matter. What a
+class is does limit the strategies: the eager one needs it default constructible, and the in-place ones need
+it trivially wirable, which asks for standard layout as well.
+
+Not wirable today: floating point, arrays of classes, variable-size ranges (`std::vector`,
 `std::string`), `std::optional`, base classes, bit-fields. The [feature matrix](features.md#wirable-types)
 tracks them.
 

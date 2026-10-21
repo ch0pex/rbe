@@ -302,6 +302,29 @@ public:
   bool operator==(NoAggregate const&) const = default;
 };
 
+// The same shape with the author's consent: friendly opens the non-public members to RBE
+struct [[= rbe::friendly]] FriendlyNoAggregate {
+  constexpr FriendlyNoAggregate() = default;
+  constexpr FriendlyNoAggregate(std::uint32_t const number_, std::int32_t const secret) :
+    number(number_), secret_(secret) { }
+
+  std::uint32_t number {};
+
+  bool operator==(FriendlyNoAggregate const&) const = default;
+
+private:
+  std::int32_t secret_ {};
+};
+
+struct FriendlyInMemberIsWrong {
+  [[= rbe::friendly]] int number;
+};
+
+// friendly is not inherited: NoAggregate has to open itself
+struct [[= rbe::friendly]] FriendlyDoesNotOpenMembers {
+  NoAggregate inner;
+};
+
 struct AggregateWithPtr {
   std::uint32_t number;
   std::uint32_t number2;

@@ -95,6 +95,25 @@ static_assert(rbe::explicitly_empty<Ping>);
 static_assert(rbe::wire_size_of<Ping>() == 0);
 // --8<-- [end:empty]
 
+// --8<-- [start:friendly]
+class Sealed { std::uint32_t v_ {}; };            // a non-public member: not wirable, the author did not say so
+
+class [[=rbe::friendly]] Opened {                  // the author grants RBE access to its representation
+public:
+  constexpr Opened() = default;
+  constexpr explicit Opened(std::uint32_t const v) : v_(v) { }
+  [[nodiscard]] constexpr auto v() const -> std::uint32_t { return v_; }
+private:
+  std::uint32_t v_ {};
+};
+
+struct [[=rbe::friendly]] Holder { Sealed inner; };   // not inherited: Sealed has to open itself
+
+static_assert(not rbe::wirable<Sealed>);
+static_assert(rbe::wirable<Opened>);
+static_assert(not rbe::wirable<Holder>);
+// --8<-- [end:friendly]
+
 // --8<-- [start:fmt]
 struct [[=rbe::fmt]] Debuggable { std::uint32_t v; };      // std::format("{}", Debuggable {}) works
 struct [[=rbe::pack_be, =rbe::debug]] Both { std::uint32_t v; };   // rbe::debug == derive<fmt>, combines with the rest
@@ -167,6 +186,7 @@ static_assert(rbe::well_annotated<Order>);
 static_assert(rbe::well_annotated<Msg>);
 static_assert(rbe::well_annotated<Tick>);
 static_assert(rbe::well_annotated<Ping>);
+static_assert(rbe::well_annotated<Opened>);
 
 } // namespace example
 

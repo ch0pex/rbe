@@ -259,17 +259,14 @@ inline constexpr TestCase message_with_header_member_be_test {
   ),
 };
 
-// NoAggregate structure test case
-// constexpr TestCase no_aggregate_test {
-//   .structure = NoAggregate {
-//     .number = 0xCAFEBABE,
-//     .number2 = 0xDEADC0DE,
-//   },
-//   .wire = bytes(
-//       0xBE, 0xBA, 0xFE, 0xCA,           // number
-//       0xDE, 0xC0, 0xAD, 0xDE            // number2
-//   ),
-// };
+// A class with a private member, opened with rbe::friendly: read and written member by member
+inline constexpr TestCase friendly_no_aggregate_test {
+  .structure = FriendlyNoAggregate {0xCAFEBABE, 0x7EADC0DE},
+  .wire      = bytes(
+      0xBE, 0xBA, 0xFE, 0xCA, // number
+      0xDE, 0xC0, 0xAD, 0x7E // secret_
+  ),
+};
 
 // MessageWithCArray structure test case
 inline constexpr TestCase message_with_c_array_test {

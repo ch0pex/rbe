@@ -7,7 +7,7 @@ The words the documentation uses with a precise meaning.
 | **Annotation** | A C++26 construct, `[[=value]]`, attaching a constant to a declaration. RBE reads its own annotations back through reflection; they have no effect on the struct. |
 | **Annotation range** | The set of annotations one rule is checked against: a struct's own, or a member's own together with those of the member's type. At most one annotation per dimension per range. |
 | **Dimension** | A group of annotations that answer one question (byte order, alignment, id, length, ...). One per range; some dimensions add a rule across the whole type. |
-| **Wirable** | A type RBE can write to and read from the wire: integers, enumerations, arrays of them, aggregates of wirable members with no base class, and types with an `rbe::custom` specialization. |
+| **Wirable** | A type RBE can write to and read from the wire: integers, enumerations, arrays of them, and classes of public wirable members with no base class, or classes annotated `rbe::friendly`. |
 | **Trivially wirable** | A wirable type whose in-memory layout is its wire layout, so that every operation on it is a `memcpy` or a reinterpretation. |
 | **Wire layout, struct layout** | Where each member sits and how wide it is on the wire, after annotations; and in memory, as the compiler lays it out. Equal for a trivially wirable type. |
 | **Size, length** | *Size* is what the code knows: `rbe::wire_size_of<T>()`, `sizeof`. *Length* is what the wire says: a `frame_length` field, a header's `length()`. They agree unless the protocol has moved on. |

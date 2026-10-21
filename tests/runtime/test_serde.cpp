@@ -166,6 +166,7 @@ TEST_SUITE_BEGIN("serde");
 SERDE_TEST_CASE(trivially_wirable_no_padding);
 SERDE_TEST_CASE(trivially_wirable_with_paddings);
 SERDE_TEST_CASE(padded_struct_test);
+SERDE_TEST_CASE(friendly_no_aggregate_test);
 SERDE_TEST_CASE(wirable_custom_serder);
 SERDE_TEST_CASE(packed_test);
 SERDE_TEST_CASE(mixed_endian_test);

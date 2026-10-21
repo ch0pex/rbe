@@ -25,6 +25,7 @@ possibly nested, type.
 | Length | `self_length` / `header_length`, `frame_length`, `payload_length`, `payload_count`, `length(k)` | at most one | each kind at most once |
 | Count | `count("field")` | at most one | |
 | Empty | `empty` | at most one | only written on a type, never on a member |
+| Friendly | `friendly` | at most one | only written on a type, never on a member; not inherited by member types |
 | Format | `fmt` | at most one | only written on a type, never on a member; nested types carry their own |
 
 Struct-level annotations are inherited by every member. A member's own annotations, or its type's for a
@@ -166,6 +167,30 @@ Header: `rbe/annotations/empty.hpp`
 An empty struct is not `wirable` (it has nothing to write), so without the annotation it cannot be a payload.
 With it, it is a valid `rbe::frames::any` candidate, a header-only message, and `match` hands it over by
 value.
+
+## Friendly
+
+Header: `rbe/annotations/friendly.hpp`
+
+| Annotation | Scope | Description |
+|---|---|---|
+| `=rbe::friendly` | struct | Grants RBE access to the type's non-public members. Only on the type itself, never on a member. |
+
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:friendly"
+```
+
+A class is [wirable](core.md#type-concepts) only if every member it declares is public, unless it is
+annotated `friendly`. Members are private to protect an invariant, and the member-wise decode that makes a
+class wirable writes them without going through any constructor, so RBE does not take that decision on the
+author's behalf. The annotation is the author saying that the members are the representation and that an
+object built from the wire is valid by construction: the role `friend` plays for other serialization
+libraries.
+
+It is not inherited: a friendly type does not open the types of its members, each of them has to say so
+itself. Which strategies apply to an opened class is decided as for any other: the eager one needs a
+default constructor, the in-place ones need the class trivially wirable, and a class with mixed access is
+not standard layout, so it is read member by member.
 
 ## Format
 

@@ -18,5 +18,6 @@
 #include <rbe/annotations/empty.hpp>
 #include <rbe/annotations/endianness.hpp>
 #include <rbe/annotations/format.hpp>
+#include <rbe/annotations/friendly.hpp>
 #include <rbe/annotations/id.hpp>
 #include <rbe/annotations/length.hpp>

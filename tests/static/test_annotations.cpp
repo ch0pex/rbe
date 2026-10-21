@@ -149,6 +149,8 @@ static_assert(not rbe::well_annotated<DuplicatedAnnotations>);
 static_assert(not rbe::well_annotated<BadParent>);
 static_assert(not rbe::well_annotated<EmptyInMemberIsWrong>);
 static_assert(not rbe::well_annotated<FmtInMemberIsWrong>); // type_only: fmt is written on types, never on members
+static_assert(not rbe::well_annotated<FriendlyInMemberIsWrong>); // type_only: so is friendly
+static_assert(rbe::well_annotated<FriendlyNoAggregate>);
 static_assert(rbe::well_annotated<Outer>); // ...but a fmt type may hold members of other fmt types
 static_assert(rbe::well_annotated<Deep>); // at any depth
 

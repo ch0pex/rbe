@@ -43,6 +43,7 @@ private: user code never needs to name them, and they change without notice.
 | `rbe/annotations/count.hpp` | `count` |
 | `rbe/annotations/empty.hpp` | `empty`, `explicitly_empty` |
 | `rbe/annotations/format.hpp` | `fmt` |
+| `rbe/annotations/friendly.hpp` | `friendly` |
 | `rbe/annotations/derive.hpp` | `derive`, `pack_le`, `pack_be`, `debug` |
 | `rbe/annotations/annotation_concepts.hpp` | `well_annotated`, `contains_annotation` |
 

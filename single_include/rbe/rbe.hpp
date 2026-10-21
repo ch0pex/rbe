@@ -2,7 +2,7 @@
  * Copyright (c) 2026 Alvaro Cabrera Barrio
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
-// rbe 0.0.1: single header, auto-generated from the library headers (82 headers).
+// rbe 0.0.1: single header, auto-generated from the library headers (83 headers).
 
 #pragma once
 
@@ -1578,6 +1578,51 @@ concept explicitly_empty = contains_annotation<T, empty> and std::is_empty_v<T>;
 
 } // namespace rbe
 
+// ===== rbe/annotations/friendly.hpp =====
+
+/**
+ * @file friendly.hpp
+ * @date 21/10/2026
+ * @brief The `friendly` annotation: a type's consent to put its non-public members on the wire
+ */
+
+
+// --- Includes ---
+
+// --- STD ---
+
+namespace rbe {
+
+namespace detail {
+
+struct friendly_dim {
+  // not `unique`: a type holding two members of one friendly type is not annotated twice
+  static constexpr auto kind = dimension_kind::exclusive | dimension_kind::type_only;
+};
+
+struct friendly_tag {
+  using dimension = friendly_dim;
+};
+
+} // namespace detail
+
+/**
+ * @brief Grants RBE access to the non-public members of the annotated type.
+ *
+ * A class is wirable only if every member it declares is public, unless the class itself is annotated
+ * `friendly`. Members are private to protect an invariant, and the member-wise decode that makes a class
+ * wirable writes them without going through any constructor, so RBE does not take that decision on the
+ * author's behalf. The annotation is the author saying that the members are the representation and that an
+ * object built from the wire is valid by construction: the role `friend` plays for other serialization
+ * libraries, under a name that can be spelled.
+ *
+ * It is written on the type, never on a member, and it is not inherited by the types of the members: each
+ * class with non-public members speaks for itself. It combines freely with annotations of other dimensions.
+ */
+inline constexpr detail::annotation_kind<detail::friendly_tag> friendly {};
+
+} // namespace rbe
+
 // ===== rbe/annotations/id.hpp =====
 
 /**
@@ -2054,13 +2099,25 @@ namespace rbe {
 
 namespace detail {
 
+/**
+ * @brief Whether RBE may put the members of `type` on the wire: every member is public, or the type is
+ * annotated `rbe::friendly`.
+ *
+ * Members are enumerated with an unchecked access context, so a non-public member *can* be read; this is
+ * what decides whether it *may*. The annotation is looked up on the type alone: a friendly enclosing type
+ * does not open the types of its members.
+ */
+consteval auto members_accessible(std::meta::info const type) -> bool {
+  return std::ranges::all_of(nsdm(type), std::meta::is_public) or has_annotations(type, friendly);
+}
+
 consteval auto is_wirable_class_type(std::meta::info type) -> bool {
   type = normalize_type(type);
   if (is_wirable_primitive(remove_all_extents(type))) { // leaf case
     return true;
   }
 
-  if (is_class_type(type) and not is_empty_type(type) and bases_of(type).empty()) {
+  if (is_class_type(type) and not is_empty_type(type) and bases_of(type).empty() and members_accessible(type)) {
     return std::ranges::all_of(nsdm(type), is_wirable_class_type, std::meta::type_of);
   }
   return false;
@@ -2076,15 +2133,13 @@ concept introspectable = std::meta::is_enumerable_type(^^T);
  *        through the wire using RBE.
  *
  * A type is wirable if it satisfies any of the following:
- *   - It is an arithmetic type (`std::is_arithmetic_v`)
+ *   - It is an integral type (`std::is_integral_v`)
  *   - It is an enumeration type (`std::is_enum_v`)
  *   - It has a custom serder (user-provided or RBE-provided specialization)
  *   - It is a class such that:
  *       - It has at least one member variable
-         - Member variables exist in only one class within the inheritance
- *         hierarchy (inheritance is allowed, but fields cannot be split
- *         across multiple levels)
  *       - All member variables are wirable
+ *       - All member variables are public, or the class is annotated `rbe::friendly`
  *       - It hasn't any base classes (base classes are not supported yet)
  *
  * Not supported yet:
