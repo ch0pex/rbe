@@ -9,6 +9,12 @@ matches the wire is copied with one `memcpy`.
 This page walks through the three layers of the library on one small protocol: a packet header followed by
 a run of messages, each one introduced by its own header. The whole example is `example/docs/overview.cpp`.
 
+!!! abstract "Vocabulary"
+    The documentation uses a few words with a precise meaning: wirable, trivially wirable, frame, header,
+    payload, delimiting, narrow and wider contract. They are collected in the
+    [glossary](../reference/glossary.md), and wherever one appears in the text, hovering over it shows its
+    definition.
+
 ## Describe the wire format
 
 An annotation is written as `[[=value]]` on a struct or on one of its members. RBE reads it back through

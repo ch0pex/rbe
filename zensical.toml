@@ -29,6 +29,11 @@ site_author = "<your name here>"
 # Read more: https://zensical.org/docs/setup/basics/#site_url
 #site_url = "https://www.example.com/"
 
+# Files under docs/ that are snippet sources, not pages
+exclude_docs = """
+includes/
+"""
+
 # Repository link shown next to the search bar
 repo_url = "https://github.com/ch0pex/rbe"
 repo_name = "ch0pex/rbe"
@@ -414,6 +419,8 @@ pygments_lang_class = true
 base_path = ["."]
 check_paths = true
 dedent_subsections = true
+# glossary tooltips: every term in docs/includes/abbreviations.md gets a hover definition on every page
+auto_append = ["docs/includes/abbreviations.md"]
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
   { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }
