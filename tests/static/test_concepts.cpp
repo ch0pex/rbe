@@ -22,6 +22,11 @@
 
 namespace {
 
+// clang-format off
+static_assert(rbe::detail::invoke_concept(^^rbe::wirable, {^^int}) == rbe::wirable<int>);
+static_assert(rbe::detail::invoke_concept(^^std::ranges::range, {^^std::vector<int>}) == rbe::trivially_wirable<int>);
+static_assert(rbe::detail::invoke_trait(^^std::is_class, {^^ReduceSize}) == std::is_class_v<ReduceSize>);
+
 template<std::meta::reflection_range R = std::initializer_list<std::meta::info>>
 consteval auto test_concept(std::meta::info const concept_rfl, R&& type_list) -> bool {
   return std::ranges::all_of(std::forward<R>(type_list), [concept_rfl](std::meta::info const type) {
@@ -36,8 +41,6 @@ consteval auto test_not_a_concept(std::meta::info const not_a_concept) -> bool t
 catch (std::meta::exception const&) {
   return true;
 }
-
-// clang-format off
 
 // --- Wire primitives ---
 constexpr std::array trivially_wirable_primitives = {
