@@ -3187,11 +3187,30 @@ constexpr auto deserialize(std::span<std::byte const> const input, dsrl::lazy_t 
  *         are satisfied, or std::nullopt if the buffer is invalid or misaligned.
  */
 template<wirable T, dsrl::strategy S>
+  requires(not std::same_as<S, dsrl::in_place_mut_t>)
 constexpr auto try_deserialize(std::span<std::byte const> const input, S str)
     -> std::optional<dsrl::return_type<S, T>> //
 {
   return detail::satisfy_preconditions<T>(input, str) //
              ? std::optional<dsrl::return_type<S, T>> {deserialize<T>(input, str)} //
+             : std::nullopt; //
+}
+
+/**
+ * @brief Safer wrapper for the mutable in-place `deserialize`: checks buffer size and alignment.
+ *
+ * The mutable strategy is the one form that needs a mutable buffer, so it has its own overload: the
+ * generic one takes a read-only span and could not hand a `T&` back. The checks are the same as for
+ * `in_place`.
+ *
+ * @tparam T The `trivially_wirable` type to reinterpret the buffer as.
+ * @param input A mutable span of bytes.
+ * @return A `T&` into the buffer if it is large enough and aligned for `T`, or std::nullopt.
+ */
+template<trivially_wirable T>
+constexpr auto try_deserialize(std::span<std::byte> const input, dsrl::in_place_mut_t /**/) -> std::optional<T&> {
+  return detail::satisfy_preconditions<T>(input, dsrl::in_place_mut) //
+             ? std::optional<T&> {deserialize<T>(input, dsrl::in_place_mut)} //
              : std::nullopt; //
 }
 

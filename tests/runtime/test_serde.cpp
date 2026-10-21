@@ -292,6 +292,27 @@ TEST_CASE("serde - hardened deserialize checks buffer size and alignment") {
   RBE_CHECK(not misaligned_view.has_value());
 }
 
+TEST_CASE("serde - hardened mutable in-place deserialize checks size and alignment, and writes through") {
+  alignas(CommonHeader) std::array<std::byte, sizeof(CommonHeader) + 1> storage {};
+  auto const buffer = std::span<std::byte> {storage}.first(sizeof(CommonHeader));
+
+  // conformant: the reference aliases the buffer
+  auto header = rbe::try_deserialize<CommonHeader>(buffer, rbe::dsrl::in_place_mut);
+  RBE_REQUIRE(header.has_value());
+  RBE_CHECK(static_cast<void const*>(&header.value()) == static_cast<void const*>(buffer.data()));
+  header->version = 42;
+  RBE_CHECK(rbe::deserialize<CommonHeader>(buffer, rbe::dsrl::in_place).version == 42);
+
+  // non-conformant: buffer too short
+  RBE_CHECK(
+      not rbe::try_deserialize<CommonHeader>(buffer.first(buffer.size() - 1), rbe::dsrl::in_place_mut).has_value()
+  );
+
+  // non-conformant: misaligned buffer
+  RBE_CHECK(not rbe::try_deserialize<CommonHeader>(std::span<std::byte> {storage}.subspan(1), rbe::dsrl::in_place_mut)
+                    .has_value());
+}
+
 TEST_CASE("serde - hardened serialize checks buffer size and alignment") {
   auto const value = message_with_array_be_test.structure;
   auto buffer      = testing_buffer<MessageWithArrayBe>();
