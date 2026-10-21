@@ -123,7 +123,7 @@ Rejected alternatives:
 
 ## 5. Static layout: anchor and delta
 
-With a variable-size member, `get_wire_layout`'s `{offset, size}` per member can no longer be fully static:
+With a variable-size member, `wire_layout_of`'s `{offset, size}` per member can no longer be fully static:
 everything after the vector moves depending on the bytes. The layout stays **compile-time and shallow** (one
 entry per direct member, like today), but an offset becomes:
 
@@ -179,7 +179,7 @@ layout; the static layout says which entry each member is measured from.
 (`std::array<size_type, table_entries>`). For fixed-size `T` it is an empty type held with `[[no_unique_address]]`,
 so a fixed-size `proxy` takes exactly the space it takes today.
 
-**How offsets are recovered**, giving what `get_wire_layout` would return if it could:
+**How offsets are recovered**, giving what `wire_layout_of` would return if it could:
 
 ```
 offset(i) = (anchor(i) ? table[*anchor(i)] : 0) + delta(i)
@@ -235,7 +235,7 @@ adios.field<"sayonara">();
 
 ## 8. Resolution: shallow per level
 
-The runtime resolution follows the same model as the compile-time code: `get_wire_layout` is shallow, and
+The runtime resolution follows the same model as the compile-time code: `wire_layout_of` is shallow, and
 recursion only appears to compute nested sizes in `wire_size_of`, and nested lengths in the runtime `resolve`.
 
 Compile time:
@@ -374,7 +374,7 @@ table = [ 12 | 16 | 24 | 40 ]
           └ e0: end of numbers (relative to Hola)
 ```
 
-Applying `offset = table[anchor] + delta` recovers what `get_wire_layout` would return, with lengths in place of the static sizes:
+Applying `offset = table[anchor] + delta` recovers what `wire_layout_of` would return, with lengths in place of the static sizes:
 
 | `Hola` | Offset | Length | | `Adios` (relative) | Offset | Length |
 | --- | --- | --- | --- | --- | --- | --- |

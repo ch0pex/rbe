@@ -28,7 +28,7 @@ consteval auto is_trivially_wirable_type() -> bool {
   if constexpr (wirable_class<T>) {
     return is_trivially_copyable_type(info) //
            and is_standard_layout_type(info) //
-           and get_host_layout<T>() == get_wire_layout<T>(); //
+           and host_layout_of<T>() == wire_layout_of<T>(); //
   }
   return is_integral_type(info) or is_enum_type(info);
 }
@@ -40,7 +40,7 @@ consteval auto is_trivially_wirable(std::meta::info const info) -> bool {
          ( //
              is_class_type(info) //
              and not is_empty_type(info) //
-             and detail::get_host_layout(info) == detail::get_wire_layout(info) //
+             and detail::host_layout_of(info) == detail::wire_layout_of(info) //
              and is_trivially_copyable_type(info) //
              and is_standard_layout_type(info) //
              and std::ranges::all_of(detail::nsdm(info), is_trivially_wirable, std::meta::type_of) //

@@ -25,7 +25,7 @@ namespace rbe::detail {
  * threaded down through recursive serialize/deserialize calls as a single non-type template parameter.
  *
  * A member nested arbitrarily deep under an annotated ancestor, but with no explicit annotation of its
- * own anywhere along the way, must still inherit the ancestor's annotation. `get_wire_layout`/`serialize`/
+ * own anywhere along the way, must still inherit the ancestor's annotation. `wire_layout_of`/`serialize`/
  * `deserialize` recompute a fresh `context` at every recursive step via `merge_context`, so the value
  * threads down one hop at a time instead of resetting to the dimension's default at each level.
  */

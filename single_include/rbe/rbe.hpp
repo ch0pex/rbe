@@ -2294,7 +2294,7 @@ namespace rbe::detail {
  * threaded down through recursive serialize/deserialize calls as a single non-type template parameter.
  *
  * A member nested arbitrarily deep under an annotated ancestor, but with no explicit annotation of its
- * own anywhere along the way, must still inherit the ancestor's annotation. `get_wire_layout`/`serialize`/
+ * own anywhere along the way, must still inherit the ancestor's annotation. `wire_layout_of`/`serialize`/
  * `deserialize` recompute a fresh `context` at every recursive step via `merge_context`, so the value
  * threads down one hop at a time instead of resetting to the dimension's default at each level.
  */
@@ -2372,19 +2372,16 @@ consteval auto wire_size_of(std::meta::info const info, context const ctx) -> st
  */
 consteval auto wire_size_of(std::meta::info const info) -> std::size_t { return wire_size_of(info, context {}); }
 
-consteval auto get_host_layout(std::meta::info const info) -> type_layout {
-  auto const members = nsdm(info);
+consteval auto host_layout_of(std::meta::info const info) -> type_layout {
+  if (not is_class_type(info)) {
+    return {.size = size_of(info)};
+  }
 
+  auto const members = nsdm(info);
   std::vector<member_layout> member_layouts;
 
   for (auto const& member: members) {
-    member_layouts.emplace_back(
-        member_layout {
-          .offset     = offset_of(member),
-          .size       = size_of(type_of(member)),
-          .endianness = endian::order::native,
-        }
-    );
+    member_layouts.emplace_back(offset_of(member), size_of(type_of(member)), endian::order::native);
   }
   return {
     .size    = size_of(info),
@@ -2399,8 +2396,8 @@ consteval auto get_host_layout(std::meta::info const info) -> type_layout {
  */
 consteval auto get_wire_layout_padded(std::meta::info const info, context const ctx) -> type_layout {
   auto const local = merge_context(ctx, info); // info's own annotation overrides the ambient
-  std::vector<member_layout> member_layouts;
 
+  std::vector<member_layout> member_layouts;
   for (auto const m: nsdm(info)) {
     auto const member_ctx = merge_context(local, m); // member's own annotation wins over local
     member_layouts.emplace_back(
@@ -2453,8 +2450,14 @@ consteval auto get_wire_layout_packed(std::meta::info const info, context const 
  * to `ctx` (whatever an outer ancestor resolved) instead of always assuming native padding, making
  * `pack` propagate correctly through arbitrarily deep unannotated nesting, exactly like endianness.
  */
-consteval auto get_wire_layout(std::meta::info const info, context const ctx) -> type_layout {
-  if (merge_context(ctx, info).alignment != alignment_mode::align) {
+consteval auto wire_layout_of(std::meta::info const info, context const ctx) -> type_layout {
+  auto const local = merge_context(ctx, info);
+
+  if (not is_class_type(info)) {
+    return {.size = wire_size_of(info, ctx), .endianness = local.endianness};
+  }
+
+  if (local.alignment != alignment_mode::align) {
     return get_wire_layout_packed(info, ctx);
   }
   return get_wire_layout_padded(info, ctx);
@@ -2462,9 +2465,9 @@ consteval auto get_wire_layout(std::meta::info const info, context const ctx) ->
 
 /**
  * Context-free overload: no ambient annotation is inherited from anywhere -- the behavior every
- * existing caller (is_trivially_wirable, get_wire_layout<T>(), ...) already relies on, unchanged.
+ * existing caller (is_trivially_wirable, wire_layout_of<T>(), ...) already relies on, unchanged.
  */
-consteval auto get_wire_layout(std::meta::info const info) -> type_layout { return get_wire_layout(info, context {}); }
+consteval auto wire_layout_of(std::meta::info const info) -> type_layout { return wire_layout_of(info, context {}); }
 
 // NOTE: at some point if compile times get really bad maybe we should consider caching the results
 // of these functions in static constexpr variables. Referencing to static constexpr however is
@@ -2496,14 +2499,14 @@ consteval auto wire_size_of() -> std::size_t {
 }
 
 template<wirable_class T>
-consteval auto get_host_layout() -> type_layout {
-  static constexpr auto layout = get_host_layout(^^T);
+consteval auto host_layout_of() -> type_layout {
+  static constexpr auto layout = host_layout_of(^^T);
   return layout;
 }
 
 template<wirable_class T, context Ctx = context {}>
-consteval auto get_wire_layout() -> type_layout {
-  static constexpr auto layout = get_wire_layout(^^T, Ctx);
+consteval auto wire_layout_of() -> type_layout {
+  static constexpr auto layout = wire_layout_of(^^T, Ctx);
   return layout;
 }
 
@@ -2570,7 +2573,7 @@ consteval auto is_trivially_wirable_type() -> bool {
   if constexpr (wirable_class<T>) {
     return is_trivially_copyable_type(info) //
            and is_standard_layout_type(info) //
-           and get_host_layout<T>() == get_wire_layout<T>(); //
+           and host_layout_of<T>() == wire_layout_of<T>(); //
   }
   return is_integral_type(info) or is_enum_type(info);
 }
@@ -2582,7 +2585,7 @@ consteval auto is_trivially_wirable(std::meta::info const info) -> bool {
          ( //
              is_class_type(info) //
              and not is_empty_type(info) //
-             and detail::get_host_layout(info) == detail::get_wire_layout(info) //
+             and detail::host_layout_of(info) == detail::wire_layout_of(info) //
              and is_trivially_copyable_type(info) //
              and is_standard_layout_type(info) //
              and std::ranges::all_of(detail::nsdm(info), is_trivially_wirable, std::meta::type_of) //
@@ -2862,7 +2865,7 @@ constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   using std::ranges::to;
 
   static constexpr auto local   = merge_context(Ctx, ^^T);
-  static constexpr auto wire    = get_wire_layout<T, local>();
+  static constexpr auto wire    = wire_layout_of<T, local>();
   static constexpr auto members = nsdm(^^T) | std::ranges::to<static_array>();
 
   T value;
@@ -3054,7 +3057,7 @@ public:
     requires(wirable_class<value_type>)
   [[nodiscard]] constexpr auto field() const {
     using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
-    static constexpr auto wire          = rbe::detail::get_wire_layout<T, local>();
+    static constexpr auto wire          = rbe::detail::wire_layout_of<T, local>();
     static constexpr auto member_layout = wire.members[Index];
     static constexpr auto member_ctx    = rbe::detail::merge_context(local, rbe::detail::nsdm(^^value_type, Index));
 
@@ -6306,7 +6309,7 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
   using std::ranges::to;
 
   static constexpr auto local   = merge_context(Ctx, ^^T);
-  static constexpr auto wire    = get_wire_layout<T, local>();
+  static constexpr auto wire    = wire_layout_of<T, local>();
   static constexpr auto members = nsdm(^^T) | to<static_array>();
 
   template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {

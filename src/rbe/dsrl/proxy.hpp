@@ -91,7 +91,7 @@ public:
     requires(wirable_class<value_type>)
   [[nodiscard]] constexpr auto field() const {
     using member_type                   = [:type_of(rbe::detail::nsdm(^^value_type, Index)):];
-    static constexpr auto wire          = rbe::detail::get_wire_layout<T, local>();
+    static constexpr auto wire          = rbe::detail::wire_layout_of<T, local>();
     static constexpr auto member_layout = wire.members[Index];
     static constexpr auto member_ctx    = rbe::detail::merge_context(local, rbe::detail::nsdm(^^value_type, Index));
 

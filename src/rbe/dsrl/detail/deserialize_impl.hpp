@@ -120,7 +120,7 @@ constexpr auto deserialize(std::span<std::byte const> const input) -> T {
   using std::ranges::to;
 
   static constexpr auto local   = merge_context(Ctx, ^^T);
-  static constexpr auto wire    = get_wire_layout<T, local>();
+  static constexpr auto wire    = wire_layout_of<T, local>();
   static constexpr auto members = nsdm(^^T) | std::ranges::to<static_array>();
 
   T value;

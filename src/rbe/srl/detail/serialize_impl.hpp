@@ -104,7 +104,7 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
   using std::ranges::to;
 
   static constexpr auto local   = merge_context(Ctx, ^^T);
-  static constexpr auto wire    = get_wire_layout<T, local>();
+  static constexpr auto wire    = wire_layout_of<T, local>();
   static constexpr auto members = nsdm(^^T) | to<static_array>();
 
   template for (constexpr auto [layout, member]: std::views::zip(wire.members, members)) {

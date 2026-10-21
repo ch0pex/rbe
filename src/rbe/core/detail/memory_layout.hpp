@@ -72,19 +72,16 @@ consteval auto wire_size_of(std::meta::info const info, context const ctx) -> st
  */
 consteval auto wire_size_of(std::meta::info const info) -> std::size_t { return wire_size_of(info, context {}); }
 
-consteval auto get_host_layout(std::meta::info const info) -> type_layout {
-  auto const members = nsdm(info);
+consteval auto host_layout_of(std::meta::info const info) -> type_layout {
+  if (not is_class_type(info)) {
+    return {.size = size_of(info)};
+  }
 
+  auto const members = nsdm(info);
   std::vector<member_layout> member_layouts;
 
   for (auto const& member: members) {
-    member_layouts.emplace_back(
-        member_layout {
-          .offset     = offset_of(member),
-          .size       = size_of(type_of(member)),
-          .endianness = endian::order::native,
-        }
-    );
+    member_layouts.emplace_back(offset_of(member), size_of(type_of(member)), endian::order::native);
   }
   return {
     .size    = size_of(info),
@@ -99,8 +96,8 @@ consteval auto get_host_layout(std::meta::info const info) -> type_layout {
  */
 consteval auto get_wire_layout_padded(std::meta::info const info, context const ctx) -> type_layout {
   auto const local = merge_context(ctx, info); // info's own annotation overrides the ambient
-  std::vector<member_layout> member_layouts;
 
+  std::vector<member_layout> member_layouts;
   for (auto const m: nsdm(info)) {
     auto const member_ctx = merge_context(local, m); // member's own annotation wins over local
     member_layouts.emplace_back(
@@ -153,8 +150,14 @@ consteval auto get_wire_layout_packed(std::meta::info const info, context const 
  * to `ctx` (whatever an outer ancestor resolved) instead of always assuming native padding, making
  * `pack` propagate correctly through arbitrarily deep unannotated nesting, exactly like endianness.
  */
-consteval auto get_wire_layout(std::meta::info const info, context const ctx) -> type_layout {
-  if (merge_context(ctx, info).alignment != alignment_mode::align) {
+consteval auto wire_layout_of(std::meta::info const info, context const ctx) -> type_layout {
+  auto const local = merge_context(ctx, info);
+
+  if (not is_class_type(info)) {
+    return {.size = wire_size_of(info, ctx), .endianness = local.endianness};
+  }
+
+  if (local.alignment != alignment_mode::align) {
     return get_wire_layout_packed(info, ctx);
   }
   return get_wire_layout_padded(info, ctx);
@@ -162,9 +165,9 @@ consteval auto get_wire_layout(std::meta::info const info, context const ctx) ->
 
 /**
  * Context-free overload: no ambient annotation is inherited from anywhere -- the behavior every
- * existing caller (is_trivially_wirable, get_wire_layout<T>(), ...) already relies on, unchanged.
+ * existing caller (is_trivially_wirable, wire_layout_of<T>(), ...) already relies on, unchanged.
  */
-consteval auto get_wire_layout(std::meta::info const info) -> type_layout { return get_wire_layout(info, context {}); }
+consteval auto wire_layout_of(std::meta::info const info) -> type_layout { return wire_layout_of(info, context {}); }
 
 // NOTE: at some point if compile times get really bad maybe we should consider caching the results
 // of these functions in static constexpr variables. Referencing to static constexpr however is
@@ -196,14 +199,14 @@ consteval auto wire_size_of() -> std::size_t {
 }
 
 template<wirable_class T>
-consteval auto get_host_layout() -> type_layout {
-  static constexpr auto layout = get_host_layout(^^T);
+consteval auto host_layout_of() -> type_layout {
+  static constexpr auto layout = host_layout_of(^^T);
   return layout;
 }
 
 template<wirable_class T, context Ctx = context {}>
-consteval auto get_wire_layout() -> type_layout {
-  static constexpr auto layout = get_wire_layout(^^T, Ctx);
+consteval auto wire_layout_of() -> type_layout {
+  static constexpr auto layout = wire_layout_of(^^T, Ctx);
   return layout;
 }
 

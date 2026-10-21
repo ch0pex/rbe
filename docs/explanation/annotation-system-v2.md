@@ -248,16 +248,16 @@ struct [[=rbe::big]] ParentNode {
 };
 ```
 
-`Leaf` and `MiddleNode` have no endianness annotation of their own; the comment documents that they should still end up resolving to `big`, inherited transitively from `ParentNode`, two and one levels up respectively. **The current shipped code does not do this** — `core/memory_layout.hpp`'s `get_wire_layout<T>()` is computed once per *type*, in isolation (`static constexpr auto wire = get_wire_layout<T>();`), with no notion of "what struct am I embedded in this time." `srl/detail/serialize_impl.hpp` (currently dead code, not `#include`d anywhere) already has a `// TODO: With 2 deep structures this is not gonna work, should I propagate toppest endianness to bottom?` marking exactly this gap.
+`Leaf` and `MiddleNode` have no endianness annotation of their own; the comment documents that they should still end up resolving to `big`, inherited transitively from `ParentNode`, two and one levels up respectively. **The current shipped code does not do this** — `core/memory_layout.hpp`'s `wire_layout_of<T>()` is computed once per *type*, in isolation (`static constexpr auto wire = wire_layout_of<T>();`), with no notion of "what struct am I embedded in this time." `srl/detail/serialize_impl.hpp` (currently dead code, not `#include`d anywhere) already has a `// TODO: With 2 deep structures this is not gonna work, should I propagate toppest endianness to bottom?` marking exactly this gap.
 
-**Why this is genuinely hard, not just a missing loop:** the effective annotation of an unannotated nested field is a property of the *specific usage path* from wherever resolution starts down to that field — not of the nested type alone. The same `Leaf` could be embedded in one context that implies `big` and, elsewhere in the same program, in a context that implies `little`; `get_wire_layout<Leaf>()` cannot be a single cached answer if `Leaf` ever relies on an inherited (rather than explicit) endianness.
+**Why this is genuinely hard, not just a missing loop:** the effective annotation of an unannotated nested field is a property of the *specific usage path* from wherever resolution starts down to that field — not of the nested type alone. The same `Leaf` could be embedded in one context that implies `big` and, elsewhere in the same program, in a context that implies `little`; `wire_layout_of<Leaf>()` cannot be a single cached answer if `Leaf` ever relies on an inherited (rather than explicit) endianness.
 
 `std::meta::parent_of(r)` was suggested as a tool here and is worth being precise about. Verified against GCC 16.1.1:
 
 - ✅ `parent_of(member)`, given a *non-static data member* reflection, reliably returns the class it's declared in (`parent_of(nonstatic_data_members_of(^^MiddleNode, ctx)[0]) == ^^MiddleNode`). This is genuinely useful: `resolve`'s explicit `parent` parameter becomes redundant and can be derived from `member` instead, so the two-argument `(parent, member)` signatures throughout collapse to one.
 - ⚠️ `parent_of`, given a *type* reflection, returns that type's **lexical declaration scope** (the namespace/class it was *written* in), not any struct that merely *uses* it as a field's type: `parent_of(^^Leaf)` is a namespace, not `^^MiddleNode`, confirmed by `static_assert`. So `parent_of` cannot, by itself, answer "what is `Leaf` embedded in this time" — it does not solve the path-dependence problem above. Concrete counter-example, also verified: embed the *same* `MiddleNode` in a second, unrelated struct (`struct OtherOuter { MiddleNode also_here; };`). Walking `parent_of` up from either embedding's member, through the type, lands on the exact same result (`MiddleNode`'s declaration namespace) regardless of which outer struct — or how many — actually embed it. `parent_of(^^MiddleNode)` genuinely cannot distinguish "embedded in `ParentNode`" from "embedded in `OtherOuter`" from "embedded nowhere," because that information was never recorded on the type in the first place — composition (HAS-A) isn't visible to a query about lexical declaration scope.
 
-The path *is* already being walked, though — by the existing recursive traversal in `serialize`/`deserialize`/`get_wire_layout` itself, which visits `ParentNode` → `node` → `MiddleNode` → `leaf` → `Leaf` in order as it lays a message out. `parent_of` being ruled out above confirms the original idea for this problem is the right one: the recursion itself, not a reflection query, has to carry the answer down as it descends — each recursive step should receive whatever was already resolved by its caller one level up and fall back to *that* first, instead of starting its lookup over from scratch and falling straight to the dimension's global default the moment its *own* immediate scope has nothing explicit.
+The path *is* already being walked, though — by the existing recursive traversal in `serialize`/`deserialize`/`wire_layout_of` itself, which visits `ParentNode` → `node` → `MiddleNode` → `leaf` → `Leaf` in order as it lays a message out. `parent_of` being ruled out above confirms the original idea for this problem is the right one: the recursion itself, not a reflection query, has to carry the answer down as it descends — each recursive step should receive whatever was already resolved by its caller one level up and fall back to *that* first, instead of starting its lookup over from scratch and falling straight to the dimension's global default the moment its *own* immediate scope has nothing explicit.
 
 **Where the context lives, and why the public API doesn't need to change.** `rbe::serialize(buffer, value)`, called directly by a user, is always the *root* of its own operation — `T` genuinely has no ambient context at that point (as the `OtherOuter` counter-example above shows, the same `T` can be embedded with different implied annotations in several unrelated outer structs, so "the" context of a bare type isn't even well-defined outside of one specific usage path). The public signature stays exactly as it is today. What needs the ambient value is only the *internal* recursive step, when `serialize`'s own body reaches a member that is itself a `wirable_class` and needs to lay *that* out too — and that's an ordinary compile-time template argument, not a value threaded through a runtime function parameter, so "can a reflection be passed to a non-`consteval` function" never comes up.
 
@@ -353,10 +353,10 @@ consteval auto merge_context(context const ambient, std::meta::info const entity
   return result;
 }
 
-// get_wire_layout gains the same parameter, since a member's resolved offset/size/endianness
+// wire_layout_of gains the same parameter, since a member's resolved offset/size/endianness
 // now depends on what was inherited, not just on T in isolation.
 template<wirable_class T, context Ctx>
-consteval auto get_wire_layout() -> type_layout {
+consteval auto wire_layout_of() -> type_layout {
   std::vector<member_layout> members;
   for (auto const member : nsdm(^^T)) {
     auto const member_ctx = merge_context(Ctx, member); // member's own annotations win over Ctx
@@ -378,7 +378,7 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
 template<wirable_class T, context Ctx = context{}> // top-level calls seed the true dimension defaults
 constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {
   static constexpr auto local = merge_context(Ctx, ^^T);   // T's own annotations override the inherited ambient
-  static constexpr auto wire  = get_wire_layout<T, local>();
+  static constexpr auto wire  = wire_layout_of<T, local>();
 
   std::size_t written = 0;
   template for (constexpr auto [layout, member] : std::views::zip(wire.members, nsdm(^^T))) {
@@ -400,7 +400,7 @@ constexpr auto deserialize(std::span<std::byte const> const in, dsrl::eager_t) -
 template<wirable_class T, context Ctx = context{}>
 constexpr auto deserialize(std::span<std::byte const> const in, dsrl::eager_t) -> T {
   static constexpr auto local = merge_context(Ctx, ^^T);
-  static constexpr auto wire  = get_wire_layout<T, local>();
+  static constexpr auto wire  = wire_layout_of<T, local>();
 
   T value;
   template for (constexpr auto [layout, member] : std::views::zip(wire.members, nsdm(^^T))) {
@@ -423,7 +423,7 @@ public:
   template<static_string Name>
   constexpr auto field() const {
     static constexpr auto member     = find_member(^^T, Name);
-    static constexpr auto layout     = get_wire_layout<T, local>().members[index_of(member)];
+    static constexpr auto layout     = wire_layout_of<T, local>().members[index_of(member)];
     using member_type = typename[:type_of(member):];
 
     // today's code already collapses nested-struct fields to an eager recursive call
@@ -441,7 +441,7 @@ constexpr auto deserialize(std::span<std::byte const> const in, dsrl::lazy_t) ->
 }
 
 // ── in_place: context still decides WHETHER T qualifies, but never touches the actual read ──
-// trivially_wirable<T> already requires get_host_layout<T>() == get_wire_layout<T>() -- computing
+// trivially_wirable<T> already requires host_layout_of<T>() == wire_layout_of<T>() -- computing
 // the wire-layout side of that comparison needs the correctly resolved context (an unannotated T
 // embedded somewhere that implies non-native endianness must NOT be trivially_wirable, even though
 // T's own bytes match its own struct layout in isolation). Once a type has passed that check, the
