@@ -1,5 +1,11 @@
 # RBE Design Document
 
+> **Partly superseded.** The Packet Composition and `any_msg` sections below predate the frames layer, which
+> implements both: see the [Frames reference](../reference/frames.md) and the
+> [framing design notes](framing-design-notes.md). The annotation tables are the shorter version of the
+> [Annotations reference](../reference/annotations.md). This page needs a rewrite; until then it is kept
+> for the principles and non-goals.
+
 > This document describes RBE's intended design. Pieces that are not implemented yet are marked 🚧 **Planned**; everything else reflects the current state of the library. See [Requirements](requirements.md) for the exhaustive, numbered specification and [Type Concepts](concepts.md) for the concept hierarchy that drives dispatch between code paths.
 
 ## Core Principles

@@ -66,6 +66,7 @@ auto as_text(std::span<std::byte const> const bytes) -> std::string_view {
   return {reinterpret_cast<char const*>(bytes.data()), bytes.size()};
 }
 
+// --8<-- [start:wire]
 /// Serializes the parts back to back: what a feed handler would find in a datagram.
 template<typename... Ts>
 auto wire(Ts const&... parts) -> std::vector<std::byte> {
@@ -74,7 +75,9 @@ auto wire(Ts const&... parts) -> std::vector<std::byte> {
   ((offset += rbe::serialize(std::span {out}.subspan(offset), parts)), ...);
   return out;
 }
+// --8<-- [end:wire]
 
+// --8<-- [start:aquis]
 /// Aquis: a UDP payload is a `PacketHeader` followed by `count` messages. The packet is parsed once and its
 /// payload is a `many`: iterate it, and let every frame dispatch on the id its header carries.
 void aquis_packet() {
@@ -103,8 +106,9 @@ void aquis_packet() {
     ); // clang-format on
   }
 }
+// --8<-- [end:aquis]
 
-
+// --8<-- [start:nasdaq]
 /// Nasdaq: SoupBinTCP wraps exactly one ITCH message and its `payload_length` says how long it is. The ITCH
 /// message has no length of its own, the enclosing packet bounds it.
 void nasdaq_packet() {
@@ -139,7 +143,9 @@ void nasdaq_packet() {
       [](rbe::unmatched auto const other) { std::println("  not handled, id known: {}", other.known_id); }
   );
 }
+// --8<-- [end:nasdaq]
 
+// --8<-- [start:london]
 /// London: like Aquis, but every message carries its own length, so the packet payload is a `many` that can be
 /// filtered with the views before touching a single field: `with_ids` keeps the ids you ask for, `known_ids` the ones
 /// the code knows.
@@ -173,7 +179,9 @@ void london_packet() {
     );
   }
 }
+// --8<-- [end:london]
 
+// --8<-- [start:cboe_top]
 /// Cboe TOP: a line-oriented ASCII feed. `line` is a custom frame that delimits by the LF, so `many<line>` walks
 /// the stream line by line and an unknown message type is yielded as an unknown id and iteration goes on.
 void cboe_top_lines() {
@@ -195,7 +203,9 @@ void cboe_top_lines() {
     ); // clang-format on
   }
 }
+// --8<-- [end:cboe_top]
 
+// --8<-- [start:opra]
 /// OPRA: the message header carries no length and the category picks the layout. `Control` is a header-only message,
 /// an `rbe::empty` alternative with a wire size of 0.
 void opra_message() {
@@ -212,6 +222,7 @@ void opra_message() {
       [](rbe::unmatched auto const other) { std::println("opra: not handled, id known: {}", other.known_id); }
   );
 }
+// --8<-- [end:opra]
 
 } // namespace
 

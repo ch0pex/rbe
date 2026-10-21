@@ -477,3 +477,33 @@ This is a self-contained follow-up design (touching the `wirable`/`trivially_wir
 | `core/memory_layout.hpp` | `endiannes_from_annotation`/`has_endianness_annotation`/`get_member_endianness` collapse into one call to the generic `resolve<endian::order>`. |
 | `tests/common/common_structs.hpp`, `tests/static/test_annotations.cpp` | Mechanical fallout: `annotation_a`/`annotation_c` gain a trait specialization instead of inheriting `base_annotation`; a couple of assertions that iterated the old central lists need rewriting against the new discovery mechanism. |
 | `example/**`, `test_package/**`, `docs/**` | No changes — all existing usage (`rbe::pack`, `rbe::little`, `derive<...>`, `pack_le`/`pack_be`/`debug`) keeps identical names and `[[=...]]` syntax. |
+
+## Appendix: writing a new annotation
+
+!!! warning "Internal extension point"
+    The recipe below names `rbe::detail` types. They are the mechanism the library's own annotations are
+    built with, not stable API: they may change in any `0.x` release. It is documented here, with the
+    design, rather than in the reference.
+
+Every annotation in RBE, built-in or your own, is written the same way: a **tag** type says what the
+annotation means, `rbe::detail::annotation_kind<Tag>` is the object you spell, and calling it produces the
+annotation. Named annotations are aliases of such a call.
+
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:new_annotation"
+```
+
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:new_annotation_use"
+```
+
+That is the whole recipe: there is no registry to edit and no trait to specialize. The optional members of
+a tag:
+
+| On the tag | Effect |
+|---|---|
+| `using dimension = SomeDim;` | the dimension the annotation belongs to, with `static constexpr auto kind = rbe::detail::dimension_kind::...` (`exclusive`, `unique`, `type_only`, combinable with the bitwise or). Absent: no conflict checks at all |
+| `using value_type = T;` | the annotation carries a `T`. Absent: a pure marker. `rbe::detail::deduced`: whatever type it is handed |
+| `static constexpr bool marker = true;` | the bare factory object is an annotation too, so `unit` and `unit(v)` both work; this is how `rbe::id` and `rbe::id(value)` coexist |
+| `static constexpr auto identity = rbe::detail::identity_kind::kind;` | two annotations from this tag count as the same one even with different values, for the "at most once across the whole type" rule |
+| `static consteval auto check(rbe::detail::annotation_info, std::meta::info entity) -> bool;` | the annotation's own correctness rule, run by `rbe::well_annotated` with the whole annotation and the declaration it sits on |

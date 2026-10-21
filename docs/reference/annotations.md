@@ -1,6 +1,10 @@
 # Annotations Reference
 
-RBE annotations are C++26 structured annotations (`[[=expr]]`) attached to a struct or to one of its non-static data members. They carry no runtime representation — they are read back through reflection at compile time to derive layout and behavior.
+Header: `rbe/annotations.hpp`
+
+RBE annotations are C++26 annotations (`[[=expr]]`) attached to a struct or to one of its non-static data
+members. They have no runtime representation: RBE reads them back through reflection at compile time to
+derive the wire layout and the behavior of frames.
 
 ```cpp
 --8<-- "example/docs/reference_annotations.cpp:basic"
@@ -8,17 +12,25 @@ RBE annotations are C++26 structured annotations (`[[=expr]]`) attached to a str
 
 ## Dimensions
 
-Annotations are grouped into orthogonal **dimensions**. At most one annotation from a given dimension may apply to the same *annotation range* — the struct's own annotations, or a member's own annotations combined with its type's annotations. Annotations from different dimensions freely combine. See [Design Overview](../explanation/design-overview.md) and [Requirements](../explanation/requirements.md#annotation-system-requirements) for the full inheritance, override, and conflict-detection rules.
+Annotations are grouped into **dimensions**. At most one annotation of a dimension may apply to the same
+*annotation range*: the struct's own annotations, or a member's own annotations combined with those of its
+type. Annotations from different dimensions combine freely. Some dimensions add a rule across the whole,
+possibly nested, type.
 
-| Dimension | Annotations | Constraint |
-|---|---|---|
-| Endianness | `little`, `big`, `bits(msb, lsb)` (little is the implicit default) | at most one per annotation range |
-| Alignment | `pack`, `align` | at most one per annotation range |
-| Id | `id`, `id(value)` | at most one per annotation range, and each may appear at most once across the whole (possibly nested) type |
-| Length | `self_length`, `frame_length`, `payload_length`, `header_length` | at most one per annotation range, and each may appear at most once across the whole (possibly nested) type |
-| — (unconstrained) | `fmt` | none — freely repeatable/combinable |
+| Dimension | Annotations | Per annotation range | Across the whole type |
+|---|---|---|---|
+| Endianness | `little`, `big`, `order(o)`, `bits(msb, lsb)` | at most one | |
+| Alignment | `pack`, `align`, `alignment(m)` | at most one | |
+| Id | `id`, `id(value)` | at most one | at most once |
+| Length | `self_length` / `header_length`, `frame_length`, `payload_length`, `payload_count`, `length(k)` | at most one | each kind at most once |
+| Count | `count("field")` | at most one | |
+| Empty | `empty` | at most one | once, and only on the type itself |
+| Format | `fmt` | at most one | once, and only on the type itself |
 
-Struct-level annotations are inherited by every member; a member's own annotations (or its type's annotations, for nested structs) take precedence and fully replace the inherited ones on a per-dimension basis.
+Struct-level annotations are inherited by every member. A member's own annotations, or its type's for a
+nested struct, take precedence and replace the inherited ones one dimension at a time. See
+[Annotate a type](../examples/howto/annotations.md) for the rules in action and the
+[design notes](../explanation/annotation-system-v2.md) for how the system is built.
 
 ---
 
@@ -28,13 +40,20 @@ Header: `rbe/annotations/endianness.hpp`
 
 | Annotation | Scope | Description |
 |---|---|---|
-| `=rbe::little` | struct, member | Fields are serialized in little-endian byte order. Spelled in full: `=rbe::order(rbe::endian::order::little)`. |
-| `=rbe::big` | struct, member | Fields are serialized in big-endian byte order. Spelled in full: `=rbe::order(rbe::endian::order::big)`. |
-| `=rbe::bits(msb, lsb)` | member | Reserved for explicit bit-range placement. Lives in its own header, `rbe/annotations/bits.hpp`, and joins the endianness dimension from there, so it is included in its conflict checks — but it is not yet consumed by layout computation, **not implemented yet**. |
+| `=rbe::little` | struct, member | Little-endian byte order. Spelled in full: `=rbe::order(rbe::endian::order::little)`. |
+| `=rbe::big` | struct, member | Big-endian byte order. Spelled in full: `=rbe::order(rbe::endian::order::big)`. |
+| `=rbe::order(o)` | struct, member | The general form; `o` is an `rbe::endian::order`, an alias of `std::endian`. `order::native` asks for the host's order. |
+| `=rbe::bits(msb, lsb)` | member | Reserved for explicit bit placement, both ends inclusive. The field must be integral and `msb` must fit in it. It joins this dimension for conflict checks but **is not consumed by the layout yet**. Header: `rbe/annotations/bits.hpp`. |
 
-**Little-endian is the default** whenever no endianness annotation is present anywhere in scope ([REQ-077](../explanation/requirements.md#implicit-annotations)) — a fixed byte order, deliberately not the host's. A host-dependent default would mean the same program, built for a little-endian and a big-endian machine, serializes the same struct two different ways and the two cannot interoperate; the failure only appears once there are two machines involved.
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:endianness"
+```
 
-If the bytes never leave the machine, the host's order can be asked for explicitly with `=rbe::order(rbe::endian::order::native)`, which is free on every target.
+**Little-endian is the default** whenever no endianness annotation is in scope
+([REQ-077](../explanation/requirements.md#implicit-annotations)): a fixed byte order, deliberately not the
+host's. A host-dependent default would make the same program serialize a struct two different ways on two
+machines. If the bytes never leave the machine, `=rbe::order(rbe::endian::order::native)` says so and is
+free on every target.
 
 ## Alignment
 
@@ -42,25 +61,49 @@ Header: `rbe/annotations/alignment.hpp`
 
 | Annotation | Scope | Description |
 |---|---|---|
-| `=rbe::pack` | struct, member | The annotated struct's members are packed on the wire with no padding between them. Spelled in full: `=rbe::alignment(rbe::alignment_mode::pack)`. |
-| `=rbe::align` | struct, member | Explicit opt-in to standard (non-packed) C++ alignment. Functionally equivalent to omitting an alignment annotation; provided so that alignment can be stated explicitly, e.g. to override an inherited `pack`. Spelled in full: `=rbe::alignment(rbe::alignment_mode::align)`. |
+| `=rbe::pack` | struct, member | Members are laid out on the wire with no padding between them. Spelled in full: `=rbe::alignment(rbe::alignment_mode::pack)`. |
+| `=rbe::align` | struct, member | The regular C++ layout, padding included. The default; provided to state it explicitly, e.g. to override an inherited `pack`. Spelled in full: `=rbe::alignment(rbe::alignment_mode::align)`. |
+| `=rbe::alignment(m)` | struct, member | The general form; `m` is an `rbe::alignment_mode`, `pack` or `align`. |
 
-## Message id
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:alignment"
+```
+
+`pack` propagates into nested structs that say nothing about alignment; a nested struct annotated `align`
+keeps its padding inside a packed parent.
+
+## Id
 
 Header: `rbe/annotations/id.hpp`
 
 | Annotation | Scope | Description |
 |---|---|---|
-| `=rbe::id` | member | Marks the field the id is read from on the wire. The annotated field must be equality comparable. |
-| `=rbe::id(value)` | struct | Declares the id the annotated message type is dispatched under. The value's type must be equality comparable, and is preserved as-is (`rbe::id(msg_type_t::heartbeat)` carries a `msg_type_t`, not an `int`). |
+| `=rbe::id` | member | Marks the field the id is read from on the wire. The field's type must be equality comparable. |
+| `=rbe::id(value)` | struct | Declares the id the type answers to. `value` keeps its type (`rbe::id(msg_type::heartbeat)` carries a `msg_type`, not an `int`) and must be equality comparable. On a member it is an error. |
 
 ```cpp
 --8<-- "example/docs/reference_annotations.cpp:id"
 ```
 
-The two are the halves of message identity — where the id lives on the wire, and which id a type answers to — so they share one dimension: they may not appear in the same annotation range, and neither may repeat across the whole (possibly nested) type. Nested messages keep their own `id(value)`, as in the example above.
+The two are the halves of one thing, where the id lives and which id a type answers to, so they share a
+dimension and neither may repeat across the whole type. Frames consume both: a header's `id` field is
+`header.id()`, and `rbe::frames::any` selects the candidate whose `id(value)` matches it. See
+[Frames](frames.md#any-view).
 
-Both are reserved for the type-erased dispatch mechanism (`any_msg`) described in the design overview — **dispatch is not implemented yet**; today they only participate in their dimension's correctness checks.
+### Id concepts and queries
+
+| Symbol | Kind | Meaning |
+|---|---|---|
+| `rbe::identifiable<T>` | concept | `T` declares `[[=rbe::id(value)]]`. |
+| `rbe::identifying<T>` | concept | `T` has a direct field marked `[[=rbe::id]]`. Nested types are not searched. |
+| `rbe::self_identifying<T>` | concept | Both of the above. |
+| `rbe::id_like<T>` | concept | Equality comparable and copyable: what an id value has to be. |
+| `rbe::id_of<T>()` | consteval function | The id `T` declares, with the type it was written with. Requires `identifiable<T>`. |
+| `rbe::id_type_of<T>` | alias | The type of `id_of<T>()`. |
+
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:id_concepts"
+```
 
 ## Length
 
@@ -68,60 +111,105 @@ Header: `rbe/annotations/length.hpp`
 
 | Annotation | Scope | Description |
 |---|---|---|
-| `=rbe::self_length` | member | Marks the field that encodes the length of the annotated type itself. Spelled in full: `=rbe::length(rbe::length_kind::self)`. |
-| `=rbe::frame_length` | member | Marks the field that encodes the total frame length on the wire — header + payload. Spelled in full: `=rbe::length(rbe::length_kind::frame)`. |
-| `=rbe::payload_length` | member | Marks the field that encodes the payload length — the frame minus its header. Spelled in full: `=rbe::length(rbe::length_kind::payload)`. |
-| `=rbe::header_length` | member | Alias for `self_length`, convenient for use in a frame header type. Spelled in full: `=rbe::length(rbe::length_kind::self)`. |
+| `=rbe::frame_length` | member | The total length of the frame on the wire, header and payload. `=rbe::length(rbe::length_kind::frame)`. |
+| `=rbe::payload_length` | member | The length of the payload alone, the frame minus its header. `=rbe::length(rbe::length_kind::payload)`. |
+| `=rbe::header_length` | member | The length of the annotated type itself, so that a header may be longer on the wire than the code knows (a newer protocol version appended fields). The same object as `=rbe::self_length`: `=rbe::length(rbe::length_kind::self)`. |
+| `=rbe::payload_count` | member | How many elements the payload holds, for a payload that is a run. `=rbe::length(rbe::length_kind::count)`. |
+| `=rbe::length(k)` | member | The general form; `k` is an `rbe::length_kind`: `frame`, `payload`, `self`, `count`. |
 
-The four are independent: a message may carry any combination of them, each at most once across the whole (possibly nested) type. The annotated field must be convertible to `std::size_t`. Like `id`, they currently only participate in their dimension's uniqueness check — **none of them is read by serialization/deserialization yet**.
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:length"
+```
 
-## Debugging
+The kinds are independent: a header may carry any combination, each at most once across the whole type. The
+field must be convertible to `std::size_t`. Frames read all four: they decide how a frame is
+[delimited](frames.md#delimiting) and feed `header.frame_length()`, `payload_length()`, `length()` and
+`payload_count()`. Outside frames, serialization and deserialization of a plain struct do not read them.
+
+## Count
+
+Header: `rbe/annotations/count.hpp`
+
+| Annotation | Scope | Description |
+|---|---|---|
+| `=rbe::count("field")` | member | Names the earlier member that holds the number of elements of the annotated one. The annotated member must be a contiguous, owning range without a compile-time size (`std::vector`, not `std::array`), and `field` must be declared before it and convert to `std::size_t`. |
+
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:count"
+```
+
+🚧 The annotation is checked by `well_annotated` but **nothing reads it yet**: variable-size members are not
+wirable. It is the vocabulary the [variable-size design](../explanation/variable-size.md) settles on.
+
+## Empty
+
+Header: `rbe/annotations/empty.hpp`
+
+| Annotation | Scope | Description |
+|---|---|---|
+| `=rbe::empty` | struct | Declares a type with no members as deliberately empty: zero bytes on the wire. Only on the type itself, never on a member. |
+
+| Symbol | Kind | Meaning |
+|---|---|---|
+| `rbe::explicitly_empty<T>` | concept | `T` is annotated `empty` and `std::is_empty_v<T>`. |
+
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:empty"
+```
+
+An empty struct is not `wirable` (it has nothing to write), so without the annotation it cannot be a payload.
+With it, it is a valid `rbe::frames::any` candidate, a header-only message, and `match` hands it over by
+value.
+
+## Format
 
 Header: `rbe/annotations/format.hpp`
 
 | Annotation | Scope | Description |
 |---|---|---|
-| `=rbe::fmt` | struct | Opts the type into RBE's universal `std::format`/`std::ostream` formatter ([`rbe/core/fmt.hpp`](../explanation/concepts.md)), which prints every member recursively, including base classes and bit-fields. Not part of any dimension — it can be combined freely with any other annotation. |
+| `=rbe::fmt` | struct | Opts the type into RBE's `std::format` / `std::ostream` formatter ([Core](core.md#formatting)), which prints every member recursively. Its own dimension, once per type and on the type only, so it combines with any wire annotation. It has no effect on the wire. |
 
-## Composing annotations — `derive`
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:fmt"
+```
+
+## Presets: `derive`
 
 Header: `rbe/annotations/derive.hpp`
 
-`rbe::derive<Args...>` groups several annotations into a single value, so they can be applied together with one `=` clause or reused as a named preset:
+`rbe::derive<Args...>` groups annotations into a single value, applied with one `=` clause or named and
+reused:
 
 ```cpp
 --8<-- "example/docs/reference_annotations.cpp:derive"
 ```
 
-RBE ships three built-in presets:
+| Preset | Equivalent to |
+|---|---|
+| `rbe::pack_le` | `derive<pack, little>` |
+| `rbe::pack_be` | `derive<pack, big>` |
+| `rbe::debug` | `derive<fmt>` |
 
-| Preset | Equivalent to | Description |
+## Correctness
+
+Header: `rbe/annotations/annotation_concepts.hpp`
+
+| Symbol | Kind | Meaning |
 |---|---|---|
-| `rbe::pack_le` | `derive<pack, little>` | Packed, little-endian. |
-| `rbe::pack_be` | `derive<pack, big>` | Packed, big-endian. |
-| `rbe::debug` | `derive<fmt>` | Enables the debug formatter. |
+| `rbe::well_annotated<T>` | concept | Every rule above holds for `T` and, recursively, for its members: no annotation twice in one range, one per dimension per range, the whole-type rules of Id, Length, Empty and Format, and each annotation's own check (an integral field for `bits`, an earlier count field for `count`, ...). |
+| `rbe::contains_annotation<T, A>` | concept | `A` appears somewhere in `T`, on the type, on a member or inside a nested member type. `A` may be a `derive<...>` list, in which case every element must appear. |
+
+```cpp
+--8<-- "example/docs/reference_annotations.cpp:concepts"
+```
+
+A type that fails `well_annotated` is still a type; the error surfaces where RBE is asked to use it, as a
+`consteval` diagnostic that names the rule.
 
 ---
 
-## Writing a new annotation
+## Writing your own annotation
 
-Every annotation in RBE — built-in or your own — is written the same way: a **tag** type says what the
-annotation means, `rbe::detail::annotation_kind<Tag>` is the object you spell, and calling it produces the
-annotation. Named annotations are aliases of such a call.
-
-```cpp
---8<-- "example/docs/reference_annotations.cpp:new_annotation"
-```
-
-```cpp
---8<-- "example/docs/reference_annotations.cpp:new_annotation_use"
-```
-
-That is the whole recipe — there is no registry to edit and no trait to specialize. Two optional members
-cover the remaining cases:
-
-| On the tag | Effect |
-|---|---|
-| `static constexpr bool marker = true;` | the bare factory object is an annotation too, so `unit` and `unit(v)` both work — this is how `rbe::id` and `rbe::id(value)` coexist |
-| `static constexpr auto identity = rbe::detail::identity_kind::kind;` | two annotations from this tag count as the same one even with different values, for the "at most once across the whole type" rule (`rbe::id(1)` and `rbe::id(2)` are one id said twice) |
-| `using value_type = rbe::detail::deduced;` | the annotation carries whatever type it is handed, instead of a fixed one |
+Every annotation in RBE is built from one recipe, and user code can follow it. The recipe names types in
+`rbe::detail`, which is not stable API, so it is documented with the design notes:
+[Annotation System, appendix](../explanation/annotation-system-v2.md#appendix-writing-a-new-annotation).

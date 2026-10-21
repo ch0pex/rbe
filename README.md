@@ -119,32 +119,30 @@ using packet = rbe::frames::frame<
     >
 >;
 
-// Read it back: the strategy picks the view, just like a plain struct
-auto packet_view = rbe::deserialize<packet>(buffer, rbe::dsrl::lazy);
-auto sequence    = packet_view.header().field<"sequence">();  
+// Read it back as a view over the buffer: headers are proxies, the run is a range
+auto packet_view = rbe::deserialize<packet>(buffer);
+auto sequence    = packet_view.header().field<"sequence">();
 
 for (auto [hdr, payload] : packet_view.payload()) {
   payload.match( // match supports both eager and lazy dispatch
-    [](AddOrder add_order) { /* ... */ },,
-    [](ReduceSize reduce_size) { /* ... */ },
-    [](rbe::proxy<Tick> tick) { /* ... */}, 
-    [](rbe::unknown auto id) { /* unknown message type, handle error */ }
+    [](AddOrder const& add_order) { /* decoded */ },
+    [](ReduceSize const& reduce_size) { /* decoded */ },
+    [](rbe::dsrl::proxy<Tick> tick) { /* read field by field */ },
+    [](rbe::unmatched auto other) { /* unknown or unhandled message type */ }
   );
 }
 
-// Write it as one value, value_type is automatically generated from the frame's template parameters ...
-rbe::serialize(buffer, packet::value_type { 
-    .header  = packet_header,
-    .payload = {{msg_header0, add_order}, {msg_header1, reduce_size}},
-});
-
-// ...or message by message, straight into the buffer
-packet::srl_type {buffer} 
-    .header(packet_header)
-    .payload()
-        .append(msg_header, add_order)
-        .append(msg_header, reduce_size);
+// Write it part by part, each where the previous one ended
+auto out = std::span {buffer};
+out = out.subspan(rbe::serialize(out, packet_header));
+out = out.subspan(rbe::serialize(out, msg_header0));
+out = out.subspan(rbe::serialize(out, add_order));
 ```
+
+> [!NOTE]
+> A value type generated from the frame (`packet::value_type`) and a writer that appends header and messages
+> into the buffer (`packet::srl_type`) are designed but not implemented yet. See the
+> [feature matrix](https://ch0pex.github.io/rbe/reference/features/).
 
 ## Key Features
 
@@ -169,10 +167,10 @@ Full documentation lives at **[ch0pex.github.io/rbe](https://ch0pex.github.io/rb
 
 | Section | Start here |
 |---|---|
-| Tutorials | [Getting started](https://ch0pex.github.io/rbe/tutorials/getting-started/) |
-| How-to guides | [Index](https://ch0pex.github.io/rbe/how-to/) |
-| Reference | [Annotations](https://ch0pex.github.io/rbe/reference/annotations/) · [Serialization](https://ch0pex.github.io/rbe/reference/serialization/) · [Deserialization](https://ch0pex.github.io/rbe/reference/deserialization/) · [Feature matrix](https://ch0pex.github.io/rbe/reference/features/) |
-| Explanation | [Design overview](https://ch0pex.github.io/rbe/explanation/design-overview/) · [Message framing](https://ch0pex.github.io/rbe/explanation/framing/) · [Type concepts](https://ch0pex.github.io/rbe/explanation/concepts/) · [Requirements](https://ch0pex.github.io/rbe/explanation/requirements/) |
+| Getting started | [Overview](https://ch0pex.github.io/rbe/getting-started/overview/) · [Installation](https://ch0pex.github.io/rbe/getting-started/installation/) |
+| Examples | [How-to](https://ch0pex.github.io/rbe/examples/howto/annotations/) · [Market data feeds](https://ch0pex.github.io/rbe/examples/market-data/) |
+| Reference | [Annotations](https://ch0pex.github.io/rbe/reference/annotations/) · [Serialization](https://ch0pex.github.io/rbe/reference/serialization/) · [Deserialization](https://ch0pex.github.io/rbe/reference/deserialization/) · [Frames](https://ch0pex.github.io/rbe/reference/frames/) · [Feature matrix](https://ch0pex.github.io/rbe/reference/features/) |
+| Design notes | [Design overview](https://ch0pex.github.io/rbe/explanation/design-overview/) · [Framing](https://ch0pex.github.io/rbe/explanation/framing/) · [Type concepts](https://ch0pex.github.io/rbe/explanation/concepts/) · [Requirements](https://ch0pex.github.io/rbe/explanation/requirements/) |
 
 ## Contributing
 

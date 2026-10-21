@@ -51,7 +51,7 @@ Copyright &copy; 2026 The authors
 nav = [
   { "Home" = "index.md" },
   { "Getting Started" = [
-      { "Quick Start" = "getting-started/quick-start.md" },
+      { "Overview" = "getting-started/overview.md" },
       { "Installation" = "getting-started/installation.md" },
       { "Contributing" = "getting-started/contributing.md" },
   ] },
@@ -74,9 +74,22 @@ nav = [
       ] },
   ] },
   { "Examples" = [
-      { "Annotations" = "examples/annotations.md" },
-      { "Deserialization Modes" = "examples/deserialization.md" },
-      { "Market Data" = "examples/market-data.md" },
+      { "How-to" = [
+          { "Annotate a type" = "examples/howto/annotations.md" },
+          { "Serialize into a buffer" = "examples/howto/serialize.md" },
+          { "Choose a deserialization mode" = "examples/howto/deserialization-modes.md" },
+          { "Read fields lazily" = "examples/howto/lazy-fields.md" },
+          { "Handle short buffers" = "examples/howto/wide-contracts.md" },
+          { "Dispatch on a message id" = "examples/howto/any-match.md" },
+          { "Walk a run of messages" = "examples/howto/many.md" },
+          { "Flatten nested frames" = "examples/howto/flatten.md" },
+          { "Write a custom frame" = "examples/howto/custom-frame.md" },
+          { "Encode a non-aggregate type" = "examples/howto/custom.md" },
+          { "Print a type for debugging" = "examples/howto/format.md" },
+      ] },
+      { "Complete examples" = [
+          { "Market data feeds" = "examples/market-data.md" },
+      ] },
   ] },
   { "Reference" = [
       { "Annotations" = "reference/annotations.md" },

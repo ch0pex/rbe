@@ -966,6 +966,7 @@ using messages = rbe::frames::any<
 /// for, so a `many<message>` would land on that LF -- `line` is the frame for a TOP stream.
 using message = rbe::frames::frame<Header, messages>;
 
+// --8<-- [start:line_view]
 /// One TOP message as it sits on the wire: `message` plus its terminating LF and any LF padding after it.
 ///
 /// TOP is line-oriented, so the end of a message is readable without knowing its type: the first LF
@@ -1023,7 +1024,9 @@ private:
 
   size_type line_length_;
 };
+// --8<-- [end:line_view]
 
+// --8<-- [start:line]
 /// The vocabulary serder for `line_view`: what makes `rbe::frames::many<line>` compose, exactly as `rbe::frames::blob`
 /// or `rbe::frames::frame` do. It keeps the header-plus-payload shape, so the delimiting concepts classify it.
 struct line {
@@ -1035,6 +1038,7 @@ struct line {
 
 /// A run of TOP lines, LF padding included.
 using lines = rbe::frames::many<line>;
+// --8<-- [end:line]
 
 } // namespace top
 

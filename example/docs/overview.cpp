@@ -3,8 +3,8 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  ************************************************************************/
 /**
- * @file quick_start.cpp
- * @brief Full example (annotations, serde modes, framing) mirroring the README, for the Quick start page
+ * @file overview.cpp
+ * @brief The README tour (annotations, serde modes, framing), included by docs/getting-started/overview.md
  */
 
 // clang-format off
@@ -66,8 +66,11 @@ void serde() {
   // --8<-- [start:serde]
   alignas(Tick) std::array<std::byte, 1500> buffer{};
 
-  // Serialize to raw buffer
+  // Serialize to raw buffer: returns the number of bytes written
   auto size = rbe::serialize(buffer, AddOrder{});
+
+  // Wide contract: std::nullopt instead of undefined behavior when the buffer is too small
+  auto checked = rbe::try_serialize(std::span{buffer}.first(4), AddOrder{});
 
   // Eager: decode every field up front, get the struct back
   auto order = rbe::deserialize<AddOrder>(buffer, rbe::dsrl::eager);
@@ -83,7 +86,7 @@ void serde() {
   auto& tick = rbe::deserialize<Tick>(buffer, rbe::dsrl::in_place);
   // --8<-- [end:serde]
   // clang-format on
-  (void)size, (void)price, (void)timestamp, (void)tick;
+  (void)size, (void)checked, (void)price, (void)timestamp, (void)tick;
 }
 
 // clang-format off
@@ -122,18 +125,29 @@ auto frames(std::span<std::byte const> buffer) -> bool {
 
 } // namespace example
 
+namespace example {
+
+auto write() -> std::vector<std::byte> {
+  // clang-format off
+  // --8<-- [start:frame_write]
+  // One packet holding a single AddOrder: the parts are written one after the other
+  constexpr auto message_size = rbe::wire_size_of<MessageHeader>() + rbe::wire_size_of<AddOrder>();
+
+  auto datagram = std::vector<std::byte>(rbe::wire_size_of<PacketHeader>() + message_size);
+  auto out      = std::span {datagram};
+
+  out = out.subspan(rbe::serialize(out, PacketHeader {.length = 0, .count = 1, .unit = 1, .sequence = 7}));
+  out = out.subspan(rbe::serialize(out, MessageHeader {.length = message_size, .message_type = msg_type::add_order}));
+  out = out.subspan(rbe::serialize(out, AddOrder {.time_offset = 1, .order_id = 42, .side_indicator = 'B',
+                                                  .quantity = 100, .symbol = 0x4143'4d45, .price = 2500}));
+  // --8<-- [end:frame_write]
+  // clang-format on
+  return datagram;
+}
+
+} // namespace example
+
 auto main() -> int {
   example::serde();
-
-  // One packet holding a single AddOrder; the run of messages ends with the buffer
-  auto constexpr message_size = rbe::wire_size_of<MessageHeader>() + rbe::wire_size_of<AddOrder>();
-  auto datagram               = std::vector<std::byte>(rbe::wire_size_of<PacketHeader>() + message_size);
-  auto out                    = std::span {datagram};
-  auto header                 = PacketHeader {};
-  header.sequence             = 7;
-  out                         = out.subspan(rbe::serialize(out, header));
-  out = out.subspan(rbe::serialize(out, MessageHeader {.length = message_size, .message_type = msg_type::add_order}));
-  rbe::serialize(out, AddOrder {});
-
-  return example::frames(datagram) ? 0 : 1;
+  return example::frames(example::write()) ? 0 : 1;
 }

@@ -53,8 +53,8 @@ The library source code is available on [GitHub](https://github.com/ch0pex/rbe) 
     `rbe::wire_size_of<SaveGame>()` is 38.
 
 !!! tip "Next steps"
-    - [Quick start](getting-started/quick-start.md): build your first layout step by step
-    - [Installation](getting-started/installation.md): compiler requirements, CMake and Conan
-    - [User's Guide](guide/annotations.md): annotations, serde and frames in depth
-    - [Examples](examples/annotations.md): complete programs, from annotations to real market data feeds
-    - [Feature matrix](reference/features.md): what is implemented today
+    - [Overview](getting-started/overview.md): the whole library on one protocol, annotations to frames
+    - [Installation](getting-started/installation.md): compiler requirements, Conan, CMake and the single header
+    - [How-to examples](examples/howto/annotations.md): one short, compiled program per task
+    - [Market data feeds](examples/market-data.md): five real protocols modelled end to end
+    - [Reference](reference/annotations.md) and [feature matrix](reference/features.md): every symbol, and what is implemented today

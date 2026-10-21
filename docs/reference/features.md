@@ -14,7 +14,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 |---|---|---|
 | Integral types | ✅ | Including `bool` and character types |
 | Enumerations | ✅ | Including `std::byte` |
-| Arrays | ✅ | `std::array` and bounded C arrays |
+| Arrays | ✅ | `std::array` and bounded C arrays of integral or enumeration types. Arrays of aggregates are ❌ |
 | Nested structs | ✅ | |
 | Fixed-size strings | ✅ | As `char` arrays, e.g. `char[8]` padded with spaces |
 | Floating point | ❌ | `float`, `double` |
@@ -40,7 +40,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Compile-time correctness checks | ✅ | `well_annotated` |
 | Correctness diagnostics | ❌ | Explains what is wrong with the annotations. Planned once `std::format` is `constexpr` |
 | Bit ranges | ❌ | `=rbe::bits(msb, lsb)`. Conflict checks only, not used by the layout |
-| Explicit counts | ❌ | `=rbe::count`. Explicit count for dynamic sized ranges |
+| Explicit counts | 🚧 | `=rbe::count("field")`: declared and checked by `well_annotated`, not read |
 | Explicit strides | ❌ | `=rbe::stride`. Explicit stride for dynamic sized ranges |
 | Range dimension | ❌ | `=rbe::dimension<count_type, stride_type>`: the wire types of a range's count and stride |
 
@@ -50,7 +50,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 |---|---|---|
 | `serialize` | ✅ | Narrow contract serialization |
 | `try_serialize` | ✅ | Wide contract serialization |
-| Custom types `rbe::custom<T>` | ❌ |  Planned mid-term |
+| Custom types `rbe::custom<T>` | 🚧 | Dispatched and tested. The wire slot is `sizeof(T)`, the specialization cannot state its own size yet |
 | Variable-size types | ❌ | Planned short-term|
 
 ## Deserialization
@@ -58,11 +58,11 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Feature | Implemented | Notes |
 |---|---|---|
 | `deserialize` | ✅ | Narrow contract deserialization |
-| `try_deserialize` | ✅ | Wider contract deserialization with bound checking |
-| Lazy deserialization | ✅ | `dsrl::proxy<T>`, fields by name or index, checked at compile time |
+| `try_deserialize` | ✅ | Wide contract: size check for every strategy, alignment check for the in-place ones |
+| Lazy deserialization | ✅ | `dsrl::proxy<T>`: fields by name, index, nested path or annotation, checked at compile time |
 | Eager deserialization | ✅ | Decodes into `T` |
 | In-place deserialization | ✅ | `T const&` (`in_place`) and `T&` (`in_place_mut`) |
-| Custom types | ❌ | `rbe::custom<T>` |
+| Custom types | 🚧 | `rbe::custom<T>`, eager and through `proxy::value()`. Not in place |
 | Variable-size types | ❌ | |
 
 ## Frames
@@ -72,27 +72,30 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Feature | Implemented | Notes |
 |---|---|---|
 | Frame | ✅ | `frame<Header, Payload>`, recursive |
-| Many | ✅ | `many<T>`: run of self-delimited frames |
-| Any | ✅ | `any<T...>`: one of several types, picked by `id` |
+| Many | ✅ | `many<T>`: run of self-delimited, constant-length frames |
+| Any | ✅ | `any<T...>`: one of several types, picked by `id`; `is<T>()`, `as<T>(strategy)` |
 | Blob | ✅ | `blob`: opaque bytes |
-| Custom frames | ✅ | Built on `base_frame` |
-| Delimiting classification | ✅ | At compile time: length, count, static, … |
+| Custom frames | ✅ | Built on `base_frame`: the derived view supplies `make`, `delimiting_concept` and optionally `length()` |
+| Delimiting classification | ✅ | At compile time: buffer, length, count, static stride, implicit, static |
+| Length and distance | ✅ | `rbe::frames::length` (O(1), `constant_length`), `distance` (walks) |
+| Public building blocks | ✅ | `payload_extent`, `construct_payload`, `counted_extent` and their `try_` forms |
 
 ### Lazy deserialization
 
 | Feature | Implemented | Notes |
 |---|---|---|
-| Frame views | ✅ | `deserialize<Frame>` / `try_deserialize<Frame>`: views over the buffer |
-| Header and payload access | ✅ | Including iteration over `many` |
-| Matching | ✅ | `match` on `any`, with an `unmatched` fallback |
-| Range adaptors | ✅ | Filter by id, known / unknown ids |
+| Frame views | ✅ | `deserialize<Frame>` / `try_deserialize<Frame>`: views over the buffer, no strategy argument |
+| Header and payload access | ✅ | Structured bindings, iteration and manual stepping over `many`, partial-buffer detection |
+| Header lengths | ✅ | `frame_length`, `payload_length`, `header_length` with `is_extended` / `extension_span`, `payload_count` |
+| Matching | ✅ | `match` on `any`, by value or proxy, with an `unmatched` fallback |
+| Range adaptors | ✅ | `views::many`, `with_ids`, `known_ids`, `unknown_ids` |
 | Flatten | ✅ | `flatten` |
 
 ### Eager deserialization
 
 | Feature | Implemented | Notes |
 |---|---|---|
-| Eager matching | ✅ | `match` callbacks taking the decoded struct |
+| Eager matching | ✅ | `match` callbacks taking the decoded struct, `any::as<T>(eager)` |
 | Whole-frame decoding | ❌ | Decoding a whole frame into a value |
 
 ### Value type

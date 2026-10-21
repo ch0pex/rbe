@@ -1,14 +1,21 @@
 # Serialization Reference
 
-Header: `rbe/srl/serialize.hpp`
+Header: `rbe/srl.hpp` (`rbe/srl/serialize.hpp`)
 
-Serialization is a single, eager, free function:
+Serialization is eager and has two forms, one per contract:
 
 ```cpp
 --8<-- "example/docs/reference_serialization.cpp:signature"
 ```
 
-`buffer` is a `std::span<std::byte>` (or anything convertible to one, e.g. `std::vector<std::byte>`, `std::array<std::byte, N>`) sized to hold at least [`rbe::wire_size_of<T>()`](../explanation/concepts.md) bytes. `value` is any [wirable](../explanation/concepts.md#wirable) object. The call writes the wire representation into `buffer` starting at offset 0 and returns the number of bytes written.
+| Function | Returns | Contract |
+|---|---|---|
+| `rbe::serialize(buffer, value)` | `std::size_t`, the bytes written | **Narrow.** `buffer` must hold at least `rbe::wire_size_of<T>()` bytes; otherwise the behavior is undefined. |
+| `rbe::try_serialize(buffer, value)` | `std::optional<std::size_t>` | **Wide.** Checks the size first and returns `std::nullopt`, writing nothing, when the buffer is too small. |
+
+`buffer` is a `std::span<std::byte>`; `std::vector<std::byte>`, `std::array<std::byte, N>` and byte arrays
+convert to it. `value` is any [wirable](core.md#type-concepts) object. The bytes are written from offset 0
+and the count returned is always `rbe::wire_size_of<T>()`, trailing padding included.
 
 ```cpp
 --8<-- "example/docs/reference_serialization.cpp:example_type"
@@ -16,22 +23,37 @@ Serialization is a single, eager, free function:
 --8<-- "example/docs/reference_serialization.cpp:example_call"
 ```
 
+```cpp
+--8<-- "example/docs/reference_serialization.cpp:try_serialize"
+```
+
 ## Dispatch
 
-`rbe::serialize` is overloaded; the compiler picks the right one based on which [type concept](../explanation/concepts.md) `T` satisfies — there is nothing to select explicitly:
+`rbe::serialize` is overloaded on the [type concept](core.md#type-concepts) `T` satisfies; there is nothing
+to select by hand.
 
-| `T` satisfies | Behavior |
+| `T` is | Behavior |
 |---|---|
-| [`trivially_wirable`](../explanation/concepts.md#trivially-wirable) | Direct `memcpy` of the object's bytes — no per-member work at runtime. |
-| `custom_wirable` | Delegates to the user-provided `rbe::custom<T>::serialize(out, value)` specialization ([`rbe/core/custom.hpp`](../reference/annotations.md)). |
-| `wirable_class` (non-trivial) | Iterates the type's non-static data members in declaration order and recursively serializes each one at the offset given by its [wire layout](../explanation/concepts.md), normalizing endianness per member first. |
+| `trivially_wirable`, with no byte order or packing inherited from an enclosing type | One `memcpy` of the object's bytes. |
+| a `trivially_wirable_primitive` under an inherited non-default byte order | Byte-swapped and stored. |
+| `custom_wirable` | `rbe::custom<T>::serialize(out, value)`, the user's specialization ([Core](core.md#custom-types)). |
+| a `wirable_range` that is not trivially copyable as a whole | Element by element. |
+| a `wirable_class` otherwise | Member by member, in declaration order, each at the offset its [wire layout](core.md#wire-size) gives it and with the byte order its resolved annotations give it. |
 
-Trivially wirable types are the fast path described in [Type Concepts](../explanation/concepts.md#trivially-wirable): whenever a struct's in-memory layout already matches its wire layout, the whole call collapses to one `memcpy`.
+The resolution is recursive: a nested struct is serialized with the annotations it inherits, so a struct
+that is trivially wirable on its own becomes member-by-member work inside a big-endian parent.
 
-## Endianness
+## Composing several values
 
-For the non-trivial (member-by-member) path, each member is converted to the byte order given by its resolved [endianness annotation](annotations.md#endianness) before being written — struct-level annotations apply to all members unless a member overrides them explicitly. See [Requirements → Endianness and Packing](../explanation/requirements.md#endianness-and-packing) for the exact inheritance/override rules.
+Each call writes at the start of the span it is given. To write a header and its payload back to back,
+advance the span by the count returned:
+
+```cpp
+--8<-- "example/docs/reference_serialization.cpp:compose"
+```
 
 ## Planned
 
-🚧 A variadic overload for composing a header with one or more payloads in a single call (`rbe::serialize(buffer, header, payload)`) is not implemented yet — see the Packet Composition section of the [Design Overview](../explanation/design-overview.md).
+🚧 Frames are not serializable yet: `rbe::serialize(buffer, frame_value)` and a writer that appends header
+and payload into the buffer are designed but not implemented. See [Frames](frames.md#planned) and the
+[feature matrix](features.md#frames).
