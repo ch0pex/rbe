@@ -9,15 +9,12 @@
 
 #include <rbe/annotations.hpp>
 #include <rbe/core.hpp>
-#include <rbe/dsrl.hpp>
-#include <rbe/srl.hpp>
 
 #include <array>
 #include <bit>
 #include <cstddef>
 #include <cstdint>
 #include <format>
-#include <span>
 #include <string>
 #include <vector>
 
@@ -34,9 +31,9 @@ struct Derived : Base { std::uint8_t d; };
 static_assert(rbe::wirable<std::uint32_t>);             // integers...
 static_assert(rbe::wirable<kind>);                      // ...enumerations...
 static_assert(rbe::wirable<std::array<kind, 4>>);       // ...arrays of integers or enumerations...
-static_assert(rbe::wirable<Point>);                     // ...and aggregates of wirable members
+static_assert(rbe::wirable<Point>);                     // ...and classes of wirable members
 static_assert(not rbe::wirable<double>);                // floating point is not supported yet
-static_assert(not rbe::wirable<std::array<Point, 2>>);  // nor arrays of aggregates
+static_assert(not rbe::wirable<std::array<Point, 2>>);  // nor arrays of classes
 static_assert(not rbe::wirable<std::vector<int>>);      // nor variable-size ranges
 static_assert(not rbe::wirable<Derived>);               // nor base classes
 
@@ -90,38 +87,6 @@ auto show(Outer const& value) -> std::string {
 }
 // --8<-- [end:fmt]
 
-} // namespace example
-
-// --8<-- [start:custom]
-class Celsius {   // not an aggregate: RBE cannot enumerate its members
-public:
-  constexpr Celsius() = default;
-  constexpr explicit Celsius(std::int16_t const tenths) : tenths_(tenths) { }
-  [[nodiscard]] constexpr auto tenths() const -> std::int16_t { return tenths_; }
-private:
-  std::int16_t tenths_ {};
-};
-
-template<>
-struct rbe::custom<Celsius> {
-  static constexpr auto serialize(std::span<std::byte> const out, Celsius const& value) -> std::size_t {
-    rbe::endian::store<std::int16_t, std::endian::big>(out.data(), value.tenths());
-    return sizeof(std::int16_t);
-  }
-  static constexpr auto deserialize(std::span<std::byte const> const in) -> Celsius {
-    return Celsius {rbe::endian::load<std::int16_t, std::endian::big>(in.data())};
-  }
-};
-
-static_assert(rbe::custom_wirable<Celsius>);
-static_assert(rbe::wire_size_of<Celsius>() == sizeof(Celsius));   // the slot a custom type gets on the wire
-
-struct Reading { std::uint32_t sensor; Celsius temperature; };    // usable as a member like any other
-// --8<-- [end:custom]
-// clang-format on
-
-namespace example {
-
 auto overload_set() -> bool {
   // clang-format off
   // --8<-- [start:overload]
@@ -134,16 +99,10 @@ auto overload_set() -> bool {
   return visit(std::uint32_t {7}) == 1 and visit(std::string {"x"}) == 2;
 }
 
-auto custom_round_trip() -> bool {
-  std::array<std::byte, rbe::wire_size_of<Reading>()> bytes {};
-  rbe::serialize(bytes, Reading {.sensor = 1, .temperature = Celsius {215}});
-  return rbe::deserialize<Reading>(bytes, rbe::dsrl::eager).temperature.tenths() == 215;
-}
-
 } // namespace example
 
 auto main() -> int {
-  return example::endian_helpers() and example::overload_set() and example::custom_round_trip() and
+  return example::endian_helpers() and example::overload_set() and
                  example::show(example::Outer {.inner = {.x = 1}, .y = 2}).starts_with("Outer {")
              ? 0
              : 1;

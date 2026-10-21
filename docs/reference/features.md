@@ -14,7 +14,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 |---|---|---|
 | Integral types | ✅ | Including `bool` and character types |
 | Enumerations | ✅ | Including `std::byte` |
-| Arrays | ✅ | `std::array` and bounded C arrays of integral or enumeration types. Arrays of aggregates are ❌ |
+| Arrays | ✅ | `std::array` and bounded C arrays of integral or enumeration types. Arrays of classes are ❌ |
 | Nested structs | ✅ | |
 | Classes with non-public members | ✅ | Only when the type is annotated `=rbe::friendly`; a private member without it makes the type not wirable |
 | Fixed-size strings | ✅ | As `char` arrays, e.g. `char[8]` padded with spaces |
@@ -51,7 +51,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 |---|---|---|
 | `serialize` | ✅ | Narrow contract serialization |
 | `try_serialize` | ✅ | Wider contract: checks the buffer size |
-| Custom types `rbe::custom<T>` | 🚧 | Dispatched and tested. The wire slot is `sizeof(T)`, the specialization cannot state its own size yet |
+| Custom types `rbe::custom<T>` | ❌ | Planned. The primary template is declared and detected by `custom_wirable`, but a specialization cannot state its wire size |
 | Variable-size types | ❌ | Planned short-term|
 
 ## Deserialization
@@ -63,7 +63,7 @@ What RBE supports today. RBE is experimental: the API may change in any of them.
 | Lazy deserialization | ✅ | `dsrl::proxy<T>`: fields by name, index, nested path or annotation, checked at compile time |
 | Eager deserialization | ✅ | Decodes into `T` |
 | In-place deserialization | ✅ | `T const&` (`in_place`) and `T&` (`in_place_mut`) |
-| Custom types | 🚧 | `rbe::custom<T>`, eager and through `proxy::value()`. Not in place |
+| Custom types | ❌ | Planned, with `rbe::custom<T>` |
 | Variable-size types | ❌ | |
 
 ## Frames

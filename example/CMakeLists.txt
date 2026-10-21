@@ -16,7 +16,6 @@ add_example(howto_any_match howto/any_match.cpp)
 add_example(howto_many howto/many.cpp)
 add_example(howto_flatten howto/flatten.cpp)
 add_example(howto_format howto/format.cpp)
-add_example(howto_custom howto/custom.cpp)
 
 # Snippets included by the documentation (docs/), kept here so every documented example compiles
 add_example(docs_home docs/home.cpp)

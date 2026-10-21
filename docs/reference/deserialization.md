@@ -118,8 +118,7 @@ What `field<...>()` returns depends on the member:
 - an integer or enumeration: the decoded value, by value;
 - a struct, `std::array` included: another `proxy` over the member's bytes. Its type carries the
   annotations the member inherits, so it is not spelled `proxy<Member>`: write `auto`, and call `value()`
-  to decode it;
-- a `custom_wirable` type: a proxy as well, which only offers `value()`.
+  to decode it.
 
 The view is a span: copy it freely, and keep the buffer alive for as long as any copy is read.
 

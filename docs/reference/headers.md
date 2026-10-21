@@ -28,7 +28,7 @@ private: user code never needs to name them, and they change without notice.
 | `rbe/core/memory_layout.hpp` | `wire_size_of` |
 | `rbe/core/endian.hpp` | `rbe::endian::order`, `to_native`, `native_to`, `load`, `store` |
 | `rbe/core/fmt.hpp` | The `std::formatter` and `operator<<` for `=rbe::fmt` types |
-| `rbe/core/custom.hpp` | `rbe::custom<T>` |
+| `rbe/core/custom.hpp` | `rbe::custom<T>`, the primary template of the planned customization point |
 | `rbe/core/overload_set.hpp` | `rbe::overload` |
 
 ## Annotations

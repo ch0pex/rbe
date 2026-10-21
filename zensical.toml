@@ -89,7 +89,6 @@ nav = [
           { "Walk a run of messages" = "examples/howto/many.md" },
           { "Flatten nested frames" = "examples/howto/flatten.md" },
           { "Write a custom frame" = "examples/howto/custom-frame.md" },
-          { "Encode a non-aggregate type" = "examples/howto/custom.md" },
           { "Print a type for debugging" = "examples/howto/format.md" },
       ] },
       { "Complete examples" = [

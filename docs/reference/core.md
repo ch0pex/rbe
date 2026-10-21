@@ -3,7 +3,7 @@
 Header: `rbe/core.hpp`
 
 The layer the others build on: the concepts that say what RBE can encode, the one layout query, byte order
-helpers, the debug formatter, the customization point for opaque types and a small overload set.
+helpers, the debug formatter and a small overload set.
 
 ## Type concepts
 
@@ -14,7 +14,7 @@ Headers: `rbe/core/wirable_concepts.hpp`, `rbe/core/trivially_wirable_concepts.h
 |---|---|
 | `rbe::introspectable<T>` | A type whose members reflection can enumerate (`std::meta::is_enumerable_type`). |
 | `rbe::trivially_wirable_primitive<T>` | An integral type (`bool` and character types included) or an enumeration. |
-| `rbe::custom_wirable<T>` | A type with an `rbe::custom<T>` specialization that is not a primitive. |
+| `rbe::custom_wirable<T>` | A type with an `rbe::custom<T>` specialization that is not a primitive. Reserved for the [planned](#custom-types) customization point. |
 | `rbe::wirable_primitive<T>` | Either of the two above. |
 | `rbe::wirable<T>` | A primitive; an array (`std::array` or bounded C array) of primitives; or a class type with no base classes, at least one member, every member wirable, and every member public unless the class is annotated [`friendly`](annotations.md#friendly). |
 | `rbe::wirable_class<T>` | `wirable` and a class type. |
@@ -50,8 +50,7 @@ Header: `rbe/core/memory_layout.hpp`
 
 `rbe::wire_size_of<T>()` is the number of bytes `T` occupies on the wire, honoring its annotations: with
 `pack`, the sum of its members' wire sizes; otherwise `sizeof(T)`; zero for an [`empty`](annotations.md#empty)
-type; `sizeof(T)` for a [custom](#custom-types) type. It is `consteval`, so it sizes arrays and feeds
-`static_assert`s. It is the only layout query the library exposes.
+type. It is `consteval`, so it sizes arrays and feeds `static_assert`s. It is the only layout query the library exposes.
 
 ## Byte order
 
@@ -69,8 +68,7 @@ Header: `rbe/core/endian.hpp`, namespace `rbe::endian`
 --8<-- "example/docs/reference_core.cpp:endian"
 ```
 
-All four are `constexpr` and work on integral types; `load` and `store` are what a
-[custom](#custom-types) serializer typically calls.
+All four are `constexpr` and work on integral types.
 
 ## Formatting
 
@@ -92,30 +90,13 @@ A nested struct needs a formatter of its own: `=rbe::fmt` on it, or a `std::form
 
 Header: `rbe/core/custom.hpp`
 
-`rbe::custom<T>` is the customization point for a type RBE cannot derive: a class that is not an aggregate,
-or one whose encoding is not the layout of its members. Specialize it with two static functions:
-
-```cpp
---8<-- "example/docs/reference_core.cpp:custom"
-```
-
-| Member | Contract |
-|---|---|
-| `static serialize(std::span<std::byte> out, T const& value) -> std::size_t` | Write `value` at the start of `out`; return the bytes written. |
-| `static deserialize(std::span<std::byte const> in) -> T` | Read a `T` from the start of `in`. |
-
-Rules and limits:
-
-- The specialization is detected by its existence (`is_complete_type`), so it must be visible before `T`
-  is first used with RBE. The members are not checked until they are called.
-- `rbe::wire_size_of<T>()` is `sizeof(T)` for a custom type: that is the slot it gets inside an enclosing
-  struct and the size the `try_` functions check. An encoding narrower than `sizeof(T)` must fit in it.
-- Both strategies that decode call `deserialize`; the lazy view of an enclosing struct exposes a custom
-  member as a proxy that only offers `value()`. The in-place strategies are not available: a custom type
-  is never trivially wirable.
-
-🚧 Experimental: the shape of the customization point may change, in particular to let the specialization
-state its wire size. See the [feature matrix](features.md#serialization).
+!!! info "Planned"
+    `rbe::custom<T>` is meant to be the customization point for a type whose encoding is not the layout of
+    its members. Today only the primary template is declared, and `custom_wirable` detects a specialization
+    of it, but the path through it is not usable: a custom type gets `sizeof(T)` bytes on the wire with no
+    way to state its own size, and only the eager strategies reach the specialization. The intended shape is
+    two static functions, `serialize(std::span<std::byte>, T const&) -> std::size_t` and
+    `deserialize(std::span<std::byte const>) -> T`. See the [feature matrix](features.md#serialization).
 
 ## Overload set
 

@@ -48,7 +48,6 @@ to select by hand.
 |---|---|
 | `trivially_wirable`, with no byte order or packing inherited from an enclosing type | One `memcpy` of the object's bytes. |
 | a `trivially_wirable_primitive` under an inherited non-default byte order | Byte-swapped and stored. |
-| `custom_wirable` | `rbe::custom<T>::serialize(out, value)`, the user's specialization ([Core](core.md#custom-types)). |
 | a `wirable_range` that is not trivially copyable as a whole | Element by element. |
 | a `wirable_class` otherwise | Member by member, in declaration order, each at the offset its [wire layout](core.md#wire-size) gives it and with the byte order its resolved annotations give it. |
 
