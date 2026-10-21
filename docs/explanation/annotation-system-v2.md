@@ -356,7 +356,7 @@ consteval auto merge_context(context const ambient, std::meta::info const entity
 // get_wire_layout gains the same parameter, since a member's resolved offset/size/endianness
 // now depends on what was inherited, not just on T in isolation.
 template<wirable_class T, context Ctx>
-consteval auto get_wire_layout() -> struct_layout {
+consteval auto get_wire_layout() -> type_layout {
   std::vector<member_layout> members;
   for (auto const member : nsdm(^^T)) {
     auto const member_ctx = merge_context(Ctx, member); // member's own annotations win over Ctx
@@ -458,7 +458,7 @@ While designing the above, the need for a `count(field_name)` annotation came up
 
 `count` itself fits the annotation-dimension mechanism above trivially: one member-scope-only annotation, one trait specialization. The problem is **not** annotation identity — it's that `count` cannot actually be *acted upon* without a bigger change elsewhere:
 
-- `core/memory_layout.hpp`'s `struct_layout`/`member_layout`/`wire_size_of<T>()` are all `consteval`, computed once per *type* and cached as a static table of `{offset, size, endianness}` triples. This is only valid when every member's size is knowable from its type alone.
+- `core/memory_layout.hpp`'s `type_layout`/`member_layout`/`wire_size_of<T>()` are all `consteval`, computed once per *type* and cached as a static table of `{offset, size, endianness}` triples. This is only valid when every member's size is knowable from its type alone.
 - With a `count`-driven member, the wire size of the type as a whole can only be known **at runtime**: for serialization, from the live object's `.size()`; for deserialization, only after the count-source field has actually been read off the buffer (which is why it must appear *before* the variable-length field on the wire — a natural consequence of REQ-051/052, fixed field order).
 - This means such types need a second, explicitly runtime code path: `wire_size_of(value)` (taking the actual object, not just `<T>()`), and `srl::serialize`/`dsrl::deserialize` walking members with a *running byte cursor* that accumulates as it goes, instead of looking up a precomputed static offset per member. `dsrl::proxy<T>::field<Index>()` (today true random access, since offsets are constant) would also need to become effectively sequential for any field positioned after a variable-length one.
 

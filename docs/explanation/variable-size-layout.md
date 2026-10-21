@@ -133,7 +133,7 @@ The anchor is that previous member; where it ended is only known at runtime and 
 spans only fixed-size members, so it is static. Directions like "3 metres after the second tree" are the
 analogy: the tree's position goes in the table, the 3 metres in the static layout.
 
-**Proposed — extending `member_layout` / `struct_layout`** (`rbe/core/memory_layout.hpp`) with defaulted fields,
+**Proposed — extending `member_layout` / `type_layout`** (`rbe/core/memory_layout.hpp`) with defaulted fields,
 so the fixed-size case stays exactly as it is:
 
 ```cpp
@@ -148,7 +148,7 @@ struct member_layout {
   constexpr bool operator==(member_layout const&) const = default;
 };
 
-struct struct_layout {
+struct type_layout {
   std::size_t size {};                       // static wire size; for variable-size types, see end below
   static_array<member_layout> members {};
   std::size_t table_entries {};              // 0 for fixed-size types
@@ -433,7 +433,7 @@ For variable-size `T`:
 ## Pending work
 
 - [ ] Settle the `count` annotation spelling (§2).
-- [ ] Extend `member_layout` / `struct_layout` with `anchor`, `end_entry`, `slice`, `table_entries` and the struct end (§5).
+- [ ] Extend `member_layout` / `type_layout` with `anchor`, `end_entry`, `slice`, `table_entries` and the struct end (§5).
 - [ ] `table_entries` and the per-level `resolve` (§8).
 - [ ] `proxy`: narrow at construction, offset table behind `offset_of(index)`, private constructor for nested slices (§3, §6, §7).
 - [ ] Lazy ranges over vectors, random access or forward depending on the element size (§9).
