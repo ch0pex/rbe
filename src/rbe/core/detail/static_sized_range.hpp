@@ -16,6 +16,7 @@
 
 // --- STD ---
 #include <ranges>
+#include <utility>
 
 namespace rbe::detail {
 
@@ -24,7 +25,13 @@ concept static_sized_range = std::ranges::sized_range<T> && requires(T& t) { std
 
 template<static_sized_range T>
 consteval auto static_size_of() {
-  return decltype([](T& t) { return std::cw<std::ranges::size(t)>; }(declval<T&>()))::value;
+  return decltype([](T& t) { return std::cw<std::ranges::size(t)>; }(std::declval<T&>()))::value;
 }
+
+template<typename T>
+concept owning_range = std::ranges::range<T> and not std::ranges::borrowed_range<std::remove_cvref_t<T>>;
+
+template<typename T>
+concept dynamic_sized_range = std::ranges::sized_range<T> and not static_sized_range<T>;
 
 } // namespace rbe::detail

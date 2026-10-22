@@ -289,7 +289,7 @@ its own table, so element tables are not kept. The root's table still stores whe
 
 ## 10. Native alignment
 
-`get_wire_layout_padded` takes member offsets from the C++ layout (`offset_of(m)`). Past a `std::vector` member
+`get_class_wire_padded` takes member offsets from the C++ layout (`offset_of(m)`). Past a `std::vector` member
 that is meaningless: the C++ offset of the next member depends on `sizeof(std::vector)` (24 bytes on x86-64), not
 on the vector's wire length.
 
