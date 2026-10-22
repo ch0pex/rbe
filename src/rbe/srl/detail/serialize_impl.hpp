@@ -130,6 +130,7 @@ constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std:
  * @param value The range to serialize.
  * @return Number of bytes written to the buffer.
  */
+// NOTE: actually wirable_static_range
 template<wirable_range T, context Ctx>
   requires(not trivially_wirable_range<T> or Ctx != context {})
 constexpr auto serialize(std::span<std::byte> const out, T const& value) -> std::size_t {

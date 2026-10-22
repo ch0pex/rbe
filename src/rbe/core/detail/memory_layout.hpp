@@ -16,6 +16,7 @@
 #include <rbe/core/detail/context.hpp>
 #include <rbe/core/detail/introspection.hpp>
 #include <rbe/core/detail/static_array.hpp>
+#include <rbe/core/detail/static_sized_range.hpp>
 #include <rbe/core/endian.hpp>
 #include <rbe/core/wirable_concepts.hpp>
 
@@ -49,9 +50,16 @@ struct type_layout {
 
 
 /**
- * @brief Wire size of `info` given an inherited `ctx` -- an unannotated member's packing falls back
- * to `ctx` (whatever an outer ancestor resolved) instead of always assuming native padding, making
- * `pack` propagate correctly through arbitrarily deep unannotated nesting, exactly like endianness.
+ * @brief Wire size of `info` given an inherited `ctx`
+ *
+ * Posibilities:
+ *   - If `info` is a primitive type:
+ *      - enum or integral type: return sizeof(info)
+ *      - wirable_static_range: return wire_size_of(element_type) * static_size_of(info)
+ *   - if `info` is a class type:
+ *      - iterate over its members and return the sum of their wire_size_of(member_type, merge_context(ctx, member))
+ *
+ * @return The number of bytes `info` occupies on the wire, honoring its annotations
  */
 consteval auto wire_size_of(std::meta::info const info, context const ctx) -> std::size_t {
   auto const local = merge_context(ctx, info);
@@ -94,7 +102,7 @@ consteval auto host_layout_of(std::meta::info const info) -> type_layout {
  * back to `ctx` (whatever an outer ancestor resolved) instead of the dimension's global default,
  * making annotations propagate correctly through arbitrarily deep unannotated nesting.
  */
-consteval auto get_wire_layout_padded(std::meta::info const info, context const ctx) -> type_layout {
+consteval auto get_class_wire_padded(std::meta::info const info, context const ctx) -> type_layout {
   auto const local = merge_context(ctx, info); // info's own annotation overrides the ambient
 
   std::vector<member_layout> member_layouts;
@@ -116,14 +124,13 @@ consteval auto get_wire_layout_padded(std::meta::info const info, context const 
   };
 }
 
-consteval auto get_wire_layout_packed(std::meta::info const info, context const ctx) -> type_layout {
+consteval auto get_class_wire_packed(std::meta::info const info, context const ctx) -> type_layout {
   auto const local   = merge_context(ctx, info);
   auto const members = nsdm(info);
 
   std::vector<member_layout> member_layouts;
   member_layouts.reserve(members.size());
 
-  // TODO: this implementation do not support bit fields
   member_offset current_offset {};
   for (auto const& member: members) {
     auto const member_ctx  = merge_context(local, member);
@@ -153,14 +160,21 @@ consteval auto get_wire_layout_packed(std::meta::info const info, context const 
 consteval auto wire_layout_of(std::meta::info const info, context const ctx) -> type_layout {
   auto const local = merge_context(ctx, info);
 
-  if (not is_class_type(info)) {
-    return {.size = wire_size_of(info, ctx), .endianness = local.endianness};
+  if (is_class_type(info)) {
+    return local.alignment != alignment_mode::align //
+               ? get_class_wire_packed(info, ctx)
+               : get_class_wire_padded(info, ctx);
   }
 
-  if (local.alignment != alignment_mode::align) {
-    return get_wire_layout_packed(info, ctx);
-  }
-  return get_wire_layout_padded(info, ctx);
+  // clang-format off
+  // TODO: dimension annotations to gather the size of the dimension
+  // dimension might be smaller/bigger if specified by the user or even 0
+  // if remote count/strides used.
+  auto const dimension_size = 8U; 
+  return invoke_concept(^^dynamic_sized_range, {info})
+             ? type_layout {.size = wire_size_of(info, ctx) + dimension_size, .endianness = local.endianness}
+             : type_layout {.size = wire_size_of(info, ctx), .endianness = local.endianness};
+  // clang-format on
 }
 
 /**

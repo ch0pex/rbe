@@ -17,7 +17,11 @@ function(create_test_suite target_name)
 endfunction()
 
 
-find_package(doctest CONFIG REQUIRED)
+find_package(doctest CONFIG QUIET)
+if(NOT doctest_FOUND)
+    message(FATAL_ERROR "doctest not found: the top-level project is the development build, "
+                        "run conan install with -c user.rbe.build:all=True (see CONTRIBUTING.md)")
+endif()
 enable_testing()
 include(doctest)
 find_program(MEMORYCHECK_COMMAND valgrind)
