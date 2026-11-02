@@ -65,13 +65,9 @@ jobs:
             exit 1
           fi
 
-      - name: Set up ccache
+      - name: Configure ccache
         shell: bash
         run: |
-          mkdir -p /usr/local/lib/ccache
-          ln -sf "$(command -v ccache)" /usr/local/lib/ccache/gcc
-          ln -sf "$(command -v ccache)" /usr/local/lib/ccache/g++
-          echo "/usr/local/lib/ccache" >> "$GITHUB_PATH"
           echo "CCACHE_DIR=${HOME}/.cache/ccache" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=200M" >> "$GITHUB_ENV"
 
