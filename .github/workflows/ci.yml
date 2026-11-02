@@ -114,7 +114,7 @@ jobs:
       - name: Build and test (conan create)
         shell: bash
         run: |
-          conan create . -b missing \
+          conan create . -b missing -b "rbe/*" \
             -s build_type=${{ matrix.build_type }} \
             -s compiler=${{ matrix.compiler }} \
             -s compiler.version=${{ matrix.compiler_version }} \
